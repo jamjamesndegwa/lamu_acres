@@ -11,6 +11,7 @@
     <title>{{ $title }}</title>
     <meta name="description" content="{{ $description }}">
     <link rel="canonical" href="{{ url()->current() }}">
+    @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-sand-50 text-stone-900 antialiased">
@@ -30,8 +31,8 @@
                 @auth
                     <a href="{{ auth()->user()->workspaceHomeUrl() }}" class="font-medium text-lamu-800">Account</a>
                 @else
-                    <a href="{{ route('login') }}" data-turbo-frame="modal" class="font-medium text-lamu-800">Login</a>
-                    <a href="{{ route('register') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 font-medium text-white">Register</a>
+                    <a href="{{ route('login') }}" class="font-medium text-lamu-800">Login</a>
+                    <a href="{{ route('register') }}" class="rounded-full bg-lamu-900 px-4 py-2 font-medium text-white">Register</a>
                 @endauth
                 <details class="relative lg:hidden">
                     <summary class="cursor-pointer list-none rounded-full border border-sand-200 px-3 py-2 text-sm font-medium text-lamu-900">Menu</summary>

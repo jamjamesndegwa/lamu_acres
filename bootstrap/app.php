@@ -43,6 +43,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'private.cache' => PreventPrivateCaching::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'payments/mpesa/callback',
+        ]);
+
         $middleware->redirectGuestsTo(fn () => route('login'));
 
         $middleware->redirectUsersTo(function (Request $request) {

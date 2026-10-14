@@ -1,0 +1,259 @@
+<?php
+
+namespace App\Services\Buyer;
+
+use App\Enums\DocumentAccessStatus;
+use App\Enums\OfferStatus;
+use App\Enums\PropertyMatchStatus;
+use App\Enums\SiteVisitStatus;
+use App\Models\BuyerTimelineEntry;
+use App\Models\DocumentAccessRequest;
+use App\Models\Enquiry;
+use App\Models\Offer;
+use App\Models\PropertyMatch;
+use App\Models\SiteVisit;
+use App\Models\SourcingMatch;
+use App\Models\User;
+use App\Notifications\DocumentAccessDecidedNotification;
+use App\Notifications\MatchApprovedNotification;
+use App\Notifications\OfferStatusNotification;
+use App\Notifications\OfferSubmittedNotification;
+use App\Notifications\SiteVisitUpdatedNotification;
+use App\Notifications\ViewingAcknowledgedNotification;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
+
+class InterestWorkflow
+{
+    public function approve(SourcingMatch $match, User $staff): PropertyMatch
+    {
+        $match->loadMissing('sourcingRequest', 'property');
+        $buyer = $match->sourcingRequest->buyer;
+        $enquiry = Enquiry::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('property_id', $match->property_id)
+            ->latest()
+            ->first();
+
+        $propertyMatch = PropertyMatch::query()->updateOrCreate(
+            [
+                'buyer_id' => $buyer->id,
+                'property_id' => $match->property_id,
+            ],
+            [
+                'sourcing_request_id' => $match->sourcing_request_id,
+                'enquiry_id' => $enquiry?->id,
+                'approved_by' => $staff->id,
+                'status' => PropertyMatchStatus::Shortlisted,
+                'buyer_feedback' => null,
+                'approved_at' => now(),
+            ],
+        );
+
+        $summary = $match->property->title.' added to the shortlist.';
+        $this->timeline($buyer, $summary, $propertyMatch, $staff);
+        $buyer->notify(new MatchApprovedNotification($propertyMatch));
+
+        return $propertyMatch;
+    }
+
+    public function reject(PropertyMatch $match, User $buyer, string $feedback): PropertyMatch
+    {
+        $match->status = PropertyMatchStatus::Rejected;
+        $match->buyer_feedback = trim($feedback);
+        $match->save();
+        $this->timeline($buyer, $match->property->title.' removed from the shortlist.', $match, $buyer);
+
+        return $match;
+    }
+
+    public function requestVisit(PropertyMatch $match, User $buyer, Carbon $requestedFor, ?string $notes): SiteVisit
+    {
+        $visit = $match->visits()->create([
+            'buyer_id' => $buyer->id,
+            'property_id' => $match->property_id,
+            'enquiry_id' => $match->enquiry_id,
+            'status' => SiteVisitStatus::Requested,
+            'requested_for' => $requestedFor,
+            'notes' => $notes,
+        ]);
+
+        $this->timeline($buyer, 'Site visit requested for '.$match->property->title.'.', $match, $buyer);
+        $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer requested a site visit.'));
+
+        return $visit;
+    }
+
+    public function assignVisit(SiteVisit $visit, User $agent, User $actor): SiteVisit
+    {
+        $visit->assigned_to = $agent->id;
+        $visit->save();
+        $visit->match?->forceFill(['assigned_to' => $agent->id])->save();
+        $this->timeline($visit->buyer, 'A site visit agent was assigned.', $visit->match, $actor);
+        $agent->notify(new SiteVisitUpdatedNotification($visit, 'A site visit was assigned to you.'));
+
+        return $visit;
+    }
+
+    public function transitionVisit(SiteVisit $visit, SiteVisitStatus $status, User $actor, ?Carbon $confirmedFor = null): SiteVisit
+    {
+        if (! in_array($status, $visit->status->transitions(), true)) {
+            throw ValidationException::withMessages([
+                'status' => 'This visit cannot move to that status.',
+            ]);
+        }
+
+        $visit->status = $status;
+
+        if ($status === SiteVisitStatus::Confirmed) {
+            $visit->confirmed_for = $confirmedFor ?? $visit->requested_for;
+        }
+
+        if ($status === SiteVisitStatus::Cancelled) {
+            $visit->cancelled_at = now();
+        }
+
+        if ($status === SiteVisitStatus::Completed) {
+            $visit->completed_at = now();
+        }
+
+        $visit->save();
+        $this->timeline($visit->buyer, 'Site visit '.$status->label().' for '.$visit->property->title.'.', $visit->match, $actor);
+
+        if ($actor->is($visit->buyer)) {
+            $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
+        } else {
+            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
+        }
+
+        return $visit;
+    }
+
+    public function acknowledge(SiteVisit $visit, User $buyer): SiteVisit
+    {
+        if ($visit->status !== SiteVisitStatus::Completed || $visit->buyer_acknowledged_at !== null) {
+            throw ValidationException::withMessages([
+                'visit' => 'A completed visit can be acknowledged once.',
+            ]);
+        }
+
+        $visit->buyer_acknowledged_at = now();
+        $visit->save();
+        $this->timeline($buyer, 'Viewing acknowledged for '.$visit->property->title.'.', $visit->match, $buyer);
+
+        $recipient = $visit->assignee;
+        if ($recipient) {
+            $recipient->notify(new ViewingAcknowledgedNotification($visit));
+        } else {
+            $this->notifyDesk(new ViewingAcknowledgedNotification($visit));
+        }
+
+        return $visit;
+    }
+
+    public function submitOffer(PropertyMatch $match, User $buyer, int $amount, ?string $message): Offer
+    {
+        $open = $match->offers()->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])->exists();
+
+        if ($open) {
+            throw ValidationException::withMessages([
+                'amount' => 'An offer for this property is already open.',
+            ]);
+        }
+
+        $offer = $match->offers()->create([
+            'buyer_id' => $buyer->id,
+            'property_id' => $match->property_id,
+            'enquiry_id' => $match->enquiry_id,
+            'amount' => $amount,
+            'currency' => 'KES',
+            'message' => $message,
+            'status' => OfferStatus::Submitted,
+        ]);
+
+        $this->timeline($buyer, 'Offer submitted for '.$match->property->title.'.', $match, $buyer);
+
+        $sales = User::permission('staff.sales')->get();
+        $desk = $sales->isNotEmpty() ? $sales : User::permission('staff.buyers')->get();
+        Notification::send($desk, new OfferSubmittedNotification($offer));
+
+        return $offer;
+    }
+
+    public function transitionOffer(Offer $offer, OfferStatus $status, User $actor): Offer
+    {
+        if (! in_array($status, $offer->status->transitions(), true)) {
+            throw ValidationException::withMessages([
+                'status' => 'This offer cannot move to that status.',
+            ]);
+        }
+
+        $offer->status = $status;
+        $offer->save();
+
+        $this->timeline($offer->buyer, 'Offer '.$status->label().' for '.$offer->property->title.'.', $offer->match, $actor);
+
+        if ($actor->is($offer->buyer)) {
+            $this->notifyDesk(new OfferStatusNotification($offer));
+        } else {
+            $offer->buyer->notify(new OfferStatusNotification($offer));
+        }
+
+        return $offer;
+    }
+
+    public function requestDocuments(PropertyMatch $match, User $buyer, ?string $note): DocumentAccessRequest
+    {
+        $existing = $match->documentRequests()->where('status', DocumentAccessStatus::Requested)->exists();
+
+        if ($existing) {
+            throw ValidationException::withMessages([
+                'note' => 'A document request is already waiting for review.',
+            ]);
+        }
+
+        $request = $match->documentRequests()->create([
+            'buyer_id' => $buyer->id,
+            'property_id' => $match->property_id,
+            'status' => DocumentAccessStatus::Requested,
+            'note' => $note,
+        ]);
+
+        $this->timeline($buyer, 'Document access requested for '.$match->property->title.'.', $match, $buyer);
+        $this->notifyDesk(new DocumentAccessDecidedNotification($request, 'A buyer requested document access.'));
+
+        return $request;
+    }
+
+    public function decideDocuments(DocumentAccessRequest $request, DocumentAccessStatus $status, User $staff): DocumentAccessRequest
+    {
+        if ($request->status !== DocumentAccessStatus::Requested || $status === DocumentAccessStatus::Requested) {
+            throw ValidationException::withMessages([
+                'status' => 'This document request has already been decided.',
+            ]);
+        }
+
+        $request->status = $status;
+        $request->approved_by = $staff->id;
+        $request->save();
+        $this->timeline($request->buyer, 'Document access '.$status->label().' for '.$request->property->title.'.', $request->match, $staff);
+        $request->buyer->notify(new DocumentAccessDecidedNotification($request, 'Document access is '.$status->label().'.'));
+
+        return $request;
+    }
+
+    private function timeline(User $buyer, string $summary, ?PropertyMatch $match, User $actor): void
+    {
+        BuyerTimelineEntry::record($buyer, $summary, [
+            'property_id' => $match?->property_id,
+            'sourcing_request_id' => $match?->sourcing_request_id,
+            'property_match_id' => $match?->id,
+        ], $actor);
+    }
+
+    private function notifyDesk(object $notification): void
+    {
+        Notification::send(User::permission('staff.buyers')->get(), $notification);
+    }
+}

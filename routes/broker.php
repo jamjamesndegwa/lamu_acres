@@ -1,7 +1,12 @@
 <?php
 
+use App\Http\Controllers\Account\MembershipController;
+use App\Http\Controllers\Broker\ListingController;
+use App\Http\Controllers\Broker\ListingMediaController;
+use App\Http\Controllers\Broker\ReferralController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
+use App\Http\Controllers\WorkspaceNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'private.cache', 'workspace:broker'])
@@ -9,6 +14,28 @@ Route::middleware(['auth', 'private.cache', 'workspace:broker'])
     ->name('broker.')
     ->group(function () {
         Route::get('/', WorkspaceDashboardController::class)->name('dashboard');
+        Route::get('/listings', [ListingController::class, 'index'])->name('listings.index');
+        Route::get('/listings/create', [ListingController::class, 'create'])->name('listings.create');
+        Route::post('/listings', [ListingController::class, 'store'])->name('listings.store');
+        Route::get('/listings/{property}', [ListingController::class, 'show'])->name('listings.show');
+        Route::get('/listings/{property}/media/{propertyMedia}', [ListingController::class, 'media'])->name('listings.media');
+        Route::post('/listings/{property}/photos', [ListingMediaController::class, 'store'])->name('listings.photos.store');
+        Route::delete('/listings/{property}/media/{propertyMedia}', [ListingMediaController::class, 'destroy'])->name('listings.media.destroy');
+        Route::post('/listings/{property}/requests/{informationRequest}', [ListingController::class, 'respond'])->name('listings.respond');
+        Route::get('/referrals', [ReferralController::class, 'index'])->name('referrals.index');
+        Route::get('/referrals/create', [ReferralController::class, 'create'])->name('referrals.create');
+        Route::post('/referrals', [ReferralController::class, 'store'])->name('referrals.store');
+        Route::get('/referrals/{referral}', [ReferralController::class, 'show'])->name('referrals.show');
+        Route::get('/referrals/{referral}/files/{kind}', [ReferralController::class, 'file'])
+            ->whereIn('kind', ['consent', 'evidence'])
+            ->name('referrals.file');
+        Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
+        Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
+        Route::post('/subscription', [MembershipController::class, 'store'])->name('subscription.store');
+        Route::post('/subscription/cancellation', [MembershipController::class, 'cancel'])->name('subscription.cancel');
+        Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');
+        Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     });

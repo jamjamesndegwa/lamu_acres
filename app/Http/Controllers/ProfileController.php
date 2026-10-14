@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\Workspace;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Notifications\AccountEmailChanged;
+use App\Services\Account\AccountAvatar;
 use App\Services\Auth\OtpLogin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends Controller
 {
@@ -79,6 +82,33 @@ class ProfileController extends Controller
             : 'Profile updated.';
 
         return redirect()->route($workspace->homeRoute())->with('status', $status);
+    }
+
+    public function showAvatar(Request $request): StreamedResponse
+    {
+        $path = $request->user()->avatar_path;
+
+        abort_unless(is_string($path) && $path !== '' && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path, null, ['Content-Type' => 'image/jpeg']);
+    }
+
+    public function storeAvatar(Request $request, AccountAvatar $avatars): RedirectResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        $avatars->store($request->user(), $request->file('avatar'));
+
+        return back()->with('status', 'Profile photo updated.');
+    }
+
+    public function destroyAvatar(Request $request, AccountAvatar $avatars): RedirectResponse
+    {
+        $avatars->delete($request->user());
+
+        return back()->with('status', 'Profile photo removed.');
     }
 
     public function confirmPhone(Request $request, OtpLogin $otp): RedirectResponse

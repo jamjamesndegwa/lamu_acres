@@ -7,7 +7,9 @@ use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\SavedProperty;
+use App\Services\Verification\VerificationDesk;
 use App\Services\Catalog\PropertyCatalog;
+use App\Services\Catalog\PublicListing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -36,7 +38,7 @@ class LandDirectoryController extends Controller
         abort_unless($property->areaCounty?->slug === $county, 404);
         abort_unless($property->areaLocality?->slug === $locality, 404);
 
-        return $this->listing($property);
+        return $this->listing($property, app(PublicListing::class));
     }
 
     public function showItem(Property $property): View|RedirectResponse
@@ -49,10 +51,10 @@ class LandDirectoryController extends Controller
             return redirect()->route('land.show', [$property->areaCounty, $property->areaLocality, $property]);
         }
 
-        return $this->listing($property);
+        return $this->listing($property, app(PublicListing::class));
     }
 
-    private function listing(Property $property): View
+    private function listing(Property $property, PublicListing $publicListing): View
     {
         $saved = false;
         $user = auth()->user();
@@ -64,9 +66,19 @@ class LandDirectoryController extends Controller
                 ->exists();
         }
 
+        $listing = $publicListing->present($property);
+
+        foreach (['seller_name', 'seller_contact', 'parcel_identifier', 'restricted_latitude', 'restricted_longitude'] as $field) {
+            $property->offsetUnset($field);
+        }
+
+        $property->unsetRelation('media');
+
         return view('public.land.show', [
-            'listing' => $property,
+            'listing' => $listing,
+            'property' => $property,
             'saved' => $saved,
+            'passport' => app(VerificationDesk::class)->publicSummary($property->load('verificationItems')),
         ]);
     }
 

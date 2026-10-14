@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Controllers\Staff;
+
+use App\Enums\OfferStatus;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Staff\UpdateOfferStatusRequest;
+use App\Models\Offer;
+use App\Services\Buyer\InterestWorkflow;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class OfferController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $this->authorize('viewAny', Offer::class);
+        abort_unless(
+            $request->user()->hasPermission('staff.buyers') || $request->user()->hasPermission('staff.sales'),
+            403,
+        );
+
+        $offers = Offer::query()
+            ->visibleToStaff($request->user())
+            ->with(['buyer', 'property'])
+            ->latest()
+            ->paginate(20);
+
+        return view('staff.offers.index', [
+            'offers' => $offers,
+            'statuses' => array_filter(
+                OfferStatus::cases(),
+                fn (OfferStatus $status): bool => $status !== OfferStatus::Withdrawn,
+            ),
+        ]);
+    }
+
+    public function update(UpdateOfferStatusRequest $request, Offer $offer, InterestWorkflow $workflow): RedirectResponse
+    {
+        $workflow->transitionOffer($offer, $request->enum('status', OfferStatus::class), $request->user());
+
+        return back()->with('status', 'Offer status updated.');
+    }
+}

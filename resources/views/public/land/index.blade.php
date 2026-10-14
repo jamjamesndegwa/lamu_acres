@@ -97,7 +97,7 @@
                     @endforeach
                 </ul>
             @else
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($listings as $listing)
                         <x-listing-card :listing="$listing" />
                     @endforeach

@@ -10,9 +10,11 @@ use App\Notifications\AccountEmailChanged;
 use App\Notifications\ApplicationOutcomeNotification;
 use App\Services\Auth\OtpDeliveryResult;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class AccountAccessTest extends FoundationTestCase
@@ -276,5 +278,48 @@ class AccountAccessTest extends FoundationTestCase
         ])->assertRedirect();
 
         Notification::assertSentTo($buyer, ResetPassword::class);
+    }
+
+    public function test_the_account_menu_shows_the_role_and_stores_a_profile_photo(): void
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagejpeg')) {
+            $this->markTestSkipped('GD is required to store a profile photo.');
+        }
+
+        $broker = User::factory()->withRoles('broker')->create(['name' => 'Amina Hassan']);
+
+        $this->actingAs($broker)
+            ->get('/broker')
+            ->assertOk()
+            ->assertSee('aria-label="Account menu"', false)
+            ->assertSee('Broker')
+            ->assertSee('Add photo')
+            ->assertSee('Settings')
+            ->assertSee('Logout');
+
+        Storage::fake('local');
+
+        $this->actingAs($broker)
+            ->post(route('account.avatar.store'), [
+                'avatar' => UploadedFile::fake()->image('face.jpg', 40, 40),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Profile photo updated.');
+
+        $broker->refresh();
+        $this->assertNotNull($broker->avatar_path);
+        Storage::disk('local')->assertExists($broker->avatar_path);
+
+        $this->actingAs($broker)
+            ->get(route('account.avatar.show'))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
+
+        $this->actingAs($broker)
+            ->delete(route('account.avatar.destroy'))
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Profile photo removed.');
+
+        $this->assertNull($broker->fresh()->avatar_path);
     }
 }

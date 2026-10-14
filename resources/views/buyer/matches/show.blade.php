@@ -1,0 +1,130 @@
+<x-workspace-layout :heading="$match->property->title">
+    <p class="mt-3 text-sm text-stone-600">{{ $match->status->label() }} · {{ $match->property->locationLabel() }}</p>
+
+    <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+        <h2 class="font-semibold text-lamu-900">Directions</h2>
+        @if ($directions && $directions['latitude'] !== null)
+            <p class="mt-3 text-sm text-stone-700">Exact location: {{ $directions['latitude'] }}, {{ $directions['longitude'] }}</p>
+        @else
+            <p class="mt-3 text-sm text-stone-700">Exact directions stay hidden until a visit is confirmed.</p>
+        @endif
+    </section>
+
+    @if ($match->status->value === 'shortlisted')
+        <form method="POST" action="{{ route('buyer.matches.reject', $match) }}" data-turbo-frame="_top" data-confirm="Remove this property from your shortlist?" class="mt-6 max-w-3xl">
+            @csrf
+            <label for="buyer_feedback" class="block text-sm font-medium">Rejection feedback</label>
+            <textarea id="buyer_feedback" name="buyer_feedback" required minlength="5" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
+            <button class="mt-3 rounded-full border border-sand-200 px-5 py-3 text-sm font-medium">Remove from shortlist</button>
+        </form>
+
+        <form method="POST" action="{{ route('buyer.matches.visits.store', $match) }}" data-turbo-frame="_top" data-confirm="Request this site visit?" class="mt-6 max-w-3xl space-y-3">
+            @csrf
+            <h2 class="font-semibold text-lamu-900">Request a site visit</h2>
+            <div>
+                <label for="requested_for" class="block text-sm font-medium">Preferred time</label>
+                <input id="requested_for" type="datetime-local" name="requested_for" required class="mt-1 rounded-lg border border-sand-200 px-3 py-2">
+            </div>
+            <div>
+                <label for="notes" class="block text-sm font-medium">Notes</label>
+                <textarea id="notes" name="notes" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
+            </div>
+            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request visit</button>
+        </form>
+
+        <form method="POST" action="{{ route('buyer.matches.offers.store', $match) }}" data-turbo-frame="_top" data-confirm="Submit this offer?" class="mt-6 max-w-3xl space-y-3">
+            @csrf
+            <h2 class="font-semibold text-lamu-900">Make an offer</h2>
+            <div>
+                <label for="amount" class="block text-sm font-medium">Amount (KSh)</label>
+                <input id="amount" name="amount" required class="mt-1 rounded-lg border border-sand-200 px-3 py-2">
+            </div>
+            <div>
+                <label for="message" class="block text-sm font-medium">Message</label>
+                <textarea id="message" name="message" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
+            </div>
+            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Submit offer</button>
+        </form>
+
+        <form method="POST" action="{{ route('buyer.matches.documents.store', $match) }}" data-turbo-frame="_top" data-confirm="Request access to the documents?" class="mt-6 max-w-3xl space-y-3">
+            @csrf
+            <h2 class="font-semibold text-lamu-900">Document access</h2>
+            <textarea name="note" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="What do you need to review?"></textarea>
+            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request documents</button>
+        </form>
+    @endif
+
+    @if ($match->buyer_feedback)
+        <p class="mt-6 max-w-3xl text-sm text-stone-700">Your feedback: {{ $match->buyer_feedback }}</p>
+    @endif
+
+    <section class="mt-8 max-w-3xl">
+        <h2 class="font-semibold text-lamu-900">Visits</h2>
+        <div class="mt-4 space-y-3">
+            @forelse ($match->visits as $visit)
+                <article class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                    <p>{{ $visit->status->label() }} · requested for {{ $visit->requested_for->toDayDateTimeString() }}</p>
+                    @if ($visit->buyer_acknowledged_at)
+                        <p class="mt-2 text-stone-600">Viewing acknowledged {{ $visit->buyer_acknowledged_at->toDayDateTimeString() }}</p>
+                    @endif
+                    @can('cancel', $visit)
+                        <form method="POST" action="{{ route('buyer.visits.cancel', $visit) }}" data-turbo-frame="_top" data-confirm="Cancel this visit?" class="mt-3">
+                            @csrf
+                            <button class="text-sm font-medium text-lamu-700">Cancel visit</button>
+                        </form>
+                    @endcan
+                    @can('acknowledge', $visit)
+                        <form method="POST" action="{{ route('buyer.visits.acknowledge', $visit) }}" data-turbo-frame="_top" data-confirm="Confirm that you attended this viewing?" class="mt-3">
+                            @csrf
+                            <button class="text-sm font-medium text-lamu-700">Acknowledge viewing</button>
+                        </form>
+                    @endcan
+                </article>
+            @empty
+                <p class="text-sm text-stone-600">No visit has been requested.</p>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="mt-8 max-w-3xl">
+        <h2 class="font-semibold text-lamu-900">Offers</h2>
+        <div class="mt-4 space-y-3">
+            @forelse ($match->offers as $offer)
+                <article class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                    <p>KSh {{ number_format($offer->amount) }} · {{ $offer->status->label() }}</p>
+                    @can('withdraw', $offer)
+                        <form method="POST" action="{{ route('buyer.offers.withdraw', $offer) }}" data-turbo-frame="_top" data-confirm="Withdraw this offer?" class="mt-3">
+                            @csrf
+                            <button class="text-sm font-medium text-lamu-700">Withdraw offer</button>
+                        </form>
+                    @endcan
+                </article>
+            @empty
+                <p class="text-sm text-stone-600">No offer has been submitted.</p>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="mt-8 max-w-3xl">
+        <h2 class="font-semibold text-lamu-900">Documents</h2>
+        <ul class="mt-4 space-y-2 text-sm">
+            @forelse ($match->documentRequests as $request)
+                <li>{{ $request->status->label() }}</li>
+            @empty
+                <li class="text-stone-600">No document request has been sent.</li>
+            @endforelse
+        </ul>
+    </section>
+
+    <section class="mt-8 max-w-3xl">
+        <h2 class="font-semibold text-lamu-900">Timeline</h2>
+        <ol class="mt-4 space-y-3">
+            @foreach ($match->timeline as $entry)
+                <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                    <p>{{ $entry->summary }}</p>
+                    <p class="mt-1 text-xs text-stone-500">{{ $entry->occurred_at->toDayDateTimeString() }}</p>
+                </li>
+            @endforeach
+        </ol>
+    </section>
+</x-workspace-layout>

@@ -24,23 +24,17 @@
                             <span>{{ $workspaceRoles }}</span>
                         @endif
                     </p>
-                    <details class="relative">
-                        <summary class="cursor-pointer list-none rounded-md text-sm font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700" aria-label="Account menu">
-                            {{ auth()->user()->name }}
-                        </summary>
-                        <div class="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-sand-200 bg-white p-2 shadow-sm">
-                            @if (count($availableWorkspaces) > 1)
-                                <a href="{{ route('workspaces.index') }}" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Switch Workspace</a>
-                            @endif
-                            @if ($currentWorkspace)
-                                <a href="{{ route($currentWorkspace->value.'.profile') }}" data-turbo-frame="modal" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Profile &amp; Security</a>
-                            @endif
-                            <form method="POST" action="{{ route('logout') }}" data-turbo="false" data-confirm="Log out of Lamu Acres?">
-                                @csrf
-                                <button type="submit" class="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Logout</button>
-                            </form>
-                        </div>
-                    </details>
+                    <div class="ml-auto flex items-center gap-4">
+                        @if ($currentWorkspace && in_array($currentWorkspace, [\App\Enums\Workspace::Broker, \App\Enums\Workspace::Staff], true))
+                            <a href="{{ route($currentWorkspace->value.'.notifications.index') }}" class="rounded-md text-sm font-medium text-lamu-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
+                                Notifications
+                                @if (($unreadNotifications ?? 0) > 0)
+                                    ({{ $unreadNotifications }})
+                                @endif
+                            </a>
+                        @endif
+                        <x-account-menu :role="$accountRole" :workspace="$currentWorkspace" :workspaces="$availableWorkspaces" />
+                    </div>
                 </div>
             </header>
 

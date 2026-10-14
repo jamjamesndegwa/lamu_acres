@@ -39,9 +39,23 @@ class User extends Authenticatable
         return $this->suspended_at !== null;
     }
 
+    public function avatarUrl(): ?string
+    {
+        if (blank($this->avatar_path)) {
+            return null;
+        }
+
+        return route('account.avatar.show', ['v' => $this->updated_at?->getTimestamp()]);
+    }
+
     public function buyerProfile(): HasOne
     {
         return $this->hasOne(BuyerProfile::class);
+    }
+
+    public function sellerProfile(): HasOne
+    {
+        return $this->hasOne(SellerProfile::class);
     }
 
     public function capabilityApplications(): HasMany

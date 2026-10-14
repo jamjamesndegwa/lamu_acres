@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Contracts\Auth\OtpSender;
+use App\Contracts\Payments\MpesaGateway;
 use App\Enums\Workspace;
 use App\Services\Auth\UnconfiguredOtpSender;
+use App\Services\Payments\DarajaMpesaGateway;
+use App\Services\Payments\UnconfiguredMpesaGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
@@ -17,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(OtpSender::class, UnconfiguredOtpSender::class);
+        $this->app->bind(MpesaGateway::class, function () {
+            return config('mpesa.driver') === 'daraja'
+                ? new DarajaMpesaGateway
+                : new UnconfiguredMpesaGateway;
+        });
     }
 
     public function boot(): void
@@ -34,26 +42,32 @@ class AppServiceProvider extends ServiceProvider
             $user = auth()->user();
             $current = session('workspace');
             $workspace = is_string($current) ? Workspace::tryFrom($current) : null;
-            $roleLabels = '';
+            $accountRole = '';
 
             if ($user && $workspace === Workspace::Investor && $user->hasActiveInvestorPass()) {
-                $roleLabels = 'Investor Pass';
+                $accountRole = 'Investor Pass';
             } elseif ($user && $workspace) {
-                $roleLabels = $user->roles
+                $accountRole = $user->roles
                     ->where('workspace', $workspace->value)
                     ->pluck('label')
                     ->filter()
                     ->implode(', ');
+            }
 
-                if ($roleLabels === $workspace->label()) {
-                    $roleLabels = '';
-                }
+            $roleLabels = $accountRole === $workspace?->label() ? '' : $accountRole;
+
+            $unreadNotifications = 0;
+
+            if ($user && in_array($workspace, [Workspace::Broker, Workspace::Staff], true)) {
+                $unreadNotifications = $user->unreadNotifications()->count();
             }
 
             $view->with([
                 'currentWorkspace' => $workspace,
                 'availableWorkspaces' => $user?->workspaces() ?? [],
                 'workspaceRoles' => $roleLabels,
+                'accountRole' => $accountRole,
+                'unreadNotifications' => $unreadNotifications,
             ]);
         });
     }

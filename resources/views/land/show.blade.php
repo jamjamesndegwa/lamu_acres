@@ -28,7 +28,7 @@
                     <a href="{{ route('land.enquiries.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Send enquiry</a>
                 @endcan
             @else
-                <a href="{{ route('login') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Login to save or enquire</a>
+                <a href="{{ route('login') }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Login to save or enquire</a>
             @endauth
         </div>
 

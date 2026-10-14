@@ -64,8 +64,10 @@ class PropertyCatalog
     public function counties(): Collection
     {
         return County::query()
+            ->active()
             ->with(['localities' => function ($query): void {
-                $query->withCount(['properties as available_listings_count' => fn (Builder $listings) => $listings->publiclyListed()])
+                $query->active()
+                    ->withCount(['properties as available_listings_count' => fn (Builder $listings) => $listings->publiclyListed()])
                     ->orderBy('name');
             }])
             ->withCount(['properties as available_listings_count' => fn (Builder $query) => $query->publiclyListed()])
@@ -79,6 +81,7 @@ class PropertyCatalog
     public function localities(?County $county = null): Collection
     {
         return Locality::query()
+            ->active()
             ->with('county:id,name,slug')
             ->when($county, fn (Builder $query) => $query->where('county_id', $county->id))
             ->withCount(['properties as available_listings_count' => fn (Builder $query) => $query->publiclyListed()])
@@ -153,11 +156,11 @@ class PropertyCatalog
         $query->where('acreage', '>', 0);
 
         if (is_numeric($min)) {
-            $query->whereRaw('price_amount / acreage >= ?', [$min]);
+            $query->whereRaw('CAST(price_amount AS REAL) / CAST(acreage AS REAL) >= CAST(? AS REAL)', [$min]);
         }
 
         if (is_numeric($max)) {
-            $query->whereRaw('price_amount / acreage <= ?', [$max]);
+            $query->whereRaw('CAST(price_amount AS REAL) / CAST(acreage AS REAL) <= CAST(? AS REAL)', [$max]);
         }
     }
 
