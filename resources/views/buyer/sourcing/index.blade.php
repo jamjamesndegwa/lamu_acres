@@ -13,25 +13,28 @@
     @endif
 
     <div class="mt-6">
-        <x-workspace.table :columns="['Reference', 'Location', 'Status', 'Exact', 'Near', '']">
+        <x-workspace.table :columns="['Reference', 'Location', 'Acreage', 'Budget', 'Status', 'Updated', '']">
             @forelse ($requests as $sourcingRequest)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4">
                         <a href="{{ route('buyer.sourcing.show', $sourcingRequest) }}" class="font-medium text-lamu-900 hover:underline">{{ $sourcingRequest->reference }}</a>
                     </td>
                     <td class="px-4 py-4 text-sm">{{ $sourcingRequest->location_label ?: 'Map centre' }}</td>
+                    <td class="px-4 py-4 text-sm">{{ $sourcingRequest->min_acreage ?: 'Any' }}–{{ $sourcingRequest->max_acreage ?: 'Any' }}</td>
+                    <td class="px-4 py-4 text-sm">{{ $sourcingRequest->maximum_budget ? 'KSh '.number_format($sourcingRequest->maximum_budget) : 'Not set' }}</td>
                     <td class="px-4 py-4 text-sm"><x-status-badge :label="$sourcingRequest->status->label()" /></td>
-                    <td class="px-4 py-4 text-sm">{{ $sourcingRequest->exact_matches_count }}</td>
-                    <td class="px-4 py-4 text-sm">{{ $sourcingRequest->near_matches_count }}</td>
+                    <td class="px-4 py-4 text-sm text-stone-600">{{ $sourcingRequest->updated_at->toFormattedDateString() }}</td>
                     <td class="px-4 py-4 text-right text-sm">
+                        <a href="{{ route('buyer.sourcing.show', $sourcingRequest) }}" class="font-medium text-lamu-800">View</a>
+                        <a href="{{ route('buyer.sourcing.show', $sourcingRequest) }}" class="ml-3 font-medium text-lamu-800">Matches ({{ $sourcingRequest->exact_matches_count + $sourcingRequest->near_matches_count }})</a>
                         @if ($sourcingRequest->status->value !== 'closed')
-                            <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" data-turbo-frame="modal" class="font-medium text-lamu-800">Edit</a>
+                            <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" data-turbo-frame="modal" class="ml-3 font-medium text-lamu-800">Edit</a>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8">
+                    <td colspan="7" class="px-4 py-8">
                         <x-workspace.empty title="No searches yet" message="No matching land can be found until you record what you want." action="Start a search" :href="route('buyer.sourcing.create')" frame="modal" />
                     </td>
                 </tr>

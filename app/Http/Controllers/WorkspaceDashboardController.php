@@ -138,7 +138,7 @@ class WorkspaceDashboardController extends Controller
         $enquiries = Enquiry::query()->where('buyer_id', $buyerId)->count();
 
         if ($searches === 0 && $saved === 0) {
-            return ['label' => 'Find land for me', 'detail' => 'Choose an area on the map and record the size, budget, and use you want.', 'href' => route('buyer.sourcing.create')];
+            return ['label' => 'Find land for me', 'detail' => 'Choose an area on the map and record the size, budget, and use you want.', 'href' => route('buyer.sourcing.create'), 'frame' => 'modal'];
         }
 
         if ($matches > 0) {

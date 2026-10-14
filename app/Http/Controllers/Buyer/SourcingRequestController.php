@@ -7,6 +7,7 @@ use App\Enums\LandUse;
 use App\Enums\MatchBand;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Buyer\SourcingCriteriaRequest;
+use App\Models\Locality;
 use App\Models\SourcingRequest;
 use App\Services\Buyer\SourcingRequestWriter;
 use Illuminate\Http\RedirectResponse;
@@ -31,11 +32,14 @@ class SourcingRequestController extends Controller
         return view('buyer.sourcing.index', ['requests' => $requests]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->authorize('create', SourcingRequest::class);
 
-        return view('buyer.sourcing.create', $this->formData());
+        return view('buyer.sourcing.create', [
+            ...$this->formData(),
+            'profile' => $request->user()->buyerProfile,
+        ]);
     }
 
     public function store(SourcingCriteriaRequest $request, SourcingRequestWriter $writer): RedirectResponse
@@ -92,6 +96,13 @@ class SourcingRequestController extends Controller
         return [
             'landUses' => LandUse::cases(),
             'amenities' => Amenity::cases(),
+            'places' => Locality::query()
+                ->active()
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->with('county:id,name')
+                ->orderBy('name')
+                ->get(['id', 'county_id', 'name', 'latitude', 'longitude']),
         ];
     }
 }

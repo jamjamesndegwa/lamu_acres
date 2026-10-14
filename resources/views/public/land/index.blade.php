@@ -69,6 +69,49 @@
                 </div>
             </div>
 
+            @php
+                $mapPoints = collect($listings->items())
+                    ->filter(fn ($listing) => $listing->public_latitude !== null && $listing->public_longitude !== null)
+                    ->map(fn ($listing) => [
+                        'title' => $listing->title,
+                        'lat' => (float) $listing->public_latitude,
+                        'lng' => (float) $listing->public_longitude,
+                        'url' => $listing->publicUrl(),
+                    ])
+                    ->values();
+            @endphp
+            @if ($mapPoints->isEmpty())
+                <p class="mt-6 text-sm text-stone-600">No approximate map point is published for these listings.</p>
+            @else
+                <div id="land-directory-map" class="mt-6 h-72 overflow-hidden rounded-2xl border border-sand-200"></div>
+                <p class="mt-2 text-sm text-stone-600">Markers use the published approximate point. They are not parcel boundaries.</p>
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                <script>
+                    (function () {
+                        const points = @json($mapPoints);
+                        const element = document.getElementById('land-directory-map');
+                        if (!element || typeof L === 'undefined' || element.dataset.ready === 'true') {
+                            return;
+                        }
+                        element.dataset.ready = 'true';
+                        const map = L.map(element);
+                        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+                        const group = L.featureGroup();
+                        points.forEach(function (point) {
+                            const link = document.createElement('a');
+                            link.href = point.url;
+                            link.textContent = point.title;
+                            L.circleMarker([point.lat, point.lng], { radius: 7, color: '#143028' })
+                                .bindPopup(link)
+                                .addTo(group);
+                        });
+                        group.addTo(map);
+                        map.fitBounds(group.getBounds().pad(0.2));
+                    })();
+                </script>
+            @endif
+
             @if ($listings->isEmpty())
                 <p class="mt-8 rounded-2xl border border-sand-200 bg-white p-6 text-stone-600">
                     @php

@@ -16,7 +16,7 @@ class EnquiryController extends Controller
 
         $enquiries = Enquiry::query()
             ->where('buyer_id', $request->user()->id)
-            ->with('property')
+            ->with(['property', 'responses' => fn ($query) => $query->where('visible_to_buyer', true)->latest()])
             ->latest()
             ->paginate(12);
 

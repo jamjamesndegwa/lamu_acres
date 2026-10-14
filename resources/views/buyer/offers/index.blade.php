@@ -9,7 +9,7 @@
         />
     @endif
     <div class="mt-6">
-        <x-workspace.table :columns="['Property', 'Amount', 'Status', '']">
+        <x-workspace.table :columns="['Property', 'Amount', 'Notes', 'Status', '']">
             @forelse ($offers as $offer)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4 text-sm">
@@ -18,8 +18,10 @@
                         @else
                             {{ $offer->property->title }}
                         @endif
+                        <p class="text-xs text-stone-500">{{ $offer->property->reference }}</p>
                     </td>
                     <td class="px-4 py-4 text-sm">KSh {{ number_format($offer->amount) }}</td>
+                    <td class="px-4 py-4 text-sm text-stone-700">{{ $offer->message ? \Illuminate\Support\Str::limit($offer->message, 80) : '—' }}</td>
                     <td class="px-4 py-4 text-sm"><x-status-badge :label="$offer->status->label()" /></td>
                     <td class="px-4 py-4 text-right text-sm">
                         @can('withdraw', $offer)
@@ -32,7 +34,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="px-4 py-8"><x-workspace.empty title="No offers" message="Submit an offer from an approved match." action="View matches" :href="route('buyer.matches.index')" /></td>
+                    <td colspan="5" class="px-4 py-8"><x-workspace.empty title="No offers" message="Submit an offer from an approved match." action="View matches" :href="route('buyer.matches.index')" /></td>
                 </tr>
             @endforelse
         </x-workspace.table>

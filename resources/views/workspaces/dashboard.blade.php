@@ -55,7 +55,7 @@
         <section class="mt-8 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5" aria-labelledby="buyer-next">
             <h2 id="buyer-next" class="font-semibold text-lamu-900">Next step</h2>
             <p class="mt-2 text-sm text-stone-700">{{ $nextAction['detail'] }}</p>
-            <a href="{{ $nextAction['href'] }}" class="mt-4 inline-block rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">{{ $nextAction['label'] }}</a>
+            <a href="{{ $nextAction['href'] }}" @if (! empty($nextAction['frame'])) data-turbo-frame="{{ $nextAction['frame'] }}" @endif class="mt-4 inline-block rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">{{ $nextAction['label'] }}</a>
         </section>
     @endif
 

@@ -1,5 +1,11 @@
 <x-workspace-layout :heading="$enquiry->property->title">
-    <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600">{{ $enquiry->property->reference }} <x-status-badge :label="$enquiry->status->label()" /></p>
+    <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600">
+        {{ $enquiry->property->reference }}
+        <x-status-badge :label="$enquiry->status->label()" />
+        @if ($enquiry->property->isPubliclyListed())
+            <a href="{{ $enquiry->property->publicUrl() }}" class="font-medium text-lamu-800 hover:underline">Open property</a>
+        @endif
+    </p>
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
         <h2 class="font-semibold text-lamu-900">Your enquiry</h2>
         <p class="mt-3 whitespace-pre-line text-sm text-stone-700">{{ $enquiry->message }}</p>

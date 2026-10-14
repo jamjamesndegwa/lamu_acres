@@ -1,5 +1,5 @@
 <x-workspace-layout heading="Notifications">
-    <p class="mt-3 max-w-3xl text-stone-700">Updates about your listings and referrals. Opening one marks it as read.</p>
+    <p class="mt-3 max-w-3xl text-stone-700">{{ $intro }}</p>
     <div class="mt-6">
         <x-workspace.table :columns="['Update', 'When']">
             @forelse ($notifications as $notification)
@@ -20,7 +20,7 @@
             @empty
                 <tr>
                     <td colspan="2" class="px-4 py-8">
-                        <x-workspace.empty title="No notifications" message="Staff questions, listing decisions, and referral reviews will appear here." />
+                        <x-workspace.empty title="No notifications" :message="$empty" />
                     </td>
                 </tr>
             @endforelse

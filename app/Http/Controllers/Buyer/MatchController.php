@@ -36,7 +36,7 @@ class MatchController extends Controller
         abort_unless($propertyMatch->isOwnedBy($request->user()), 403);
 
         $propertyMatch->load([
-            'property',
+            'property.amenityStates',
             'sourcingRequest.amenities',
             'visits.assignee',
             'offers',

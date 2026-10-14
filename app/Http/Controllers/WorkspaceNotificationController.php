@@ -14,9 +14,17 @@ class WorkspaceNotificationController extends Controller
         $prefix = strstr($name, '.', true);
         $prefix = in_array($prefix, ['buyer', 'broker', 'seller', 'investor', 'staff', 'admin'], true) ? $prefix : 'buyer';
 
+        $buyer = $prefix === 'buyer';
+
         return view('workspace.notifications.index', [
             'notifications' => $request->user()->notifications()->latest()->paginate(20),
             'openRoute' => $prefix.'.notifications.open',
+            'intro' => $buyer
+                ? 'Matching properties, enquiry replies, site visits, offers, document decisions, and Investor Pass payments appear here. Opening one marks it as read and opens the related record.'
+                : 'Updates about your listings and referrals. Opening one marks it as read.',
+            'empty' => $buyer
+                ? 'Messages about matches, enquiries, visits, offers, and your Investor Pass will appear here.'
+                : 'Staff questions, listing decisions, and referral reviews will appear here.',
         ]);
     }
 

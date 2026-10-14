@@ -1,5 +1,7 @@
 @php
     $current = $sourcingRequest ?? null;
+    $profileDefaults = $current === null ? ($profile ?? null) : null;
+    $places = $places ?? [];
     $selectedMandatory = old('mandatory', $current?->amenities->where('required', true)->map(fn ($amenity) => $amenity->amenity->value)->all() ?? []);
     $selectedPreferred = old('preferred', $current?->amenities->where('required', false)->map(fn ($amenity) => $amenity->amenity->value)->all() ?? []);
     $polygonText = old('polygon_text');
@@ -28,9 +30,25 @@
             <button type="button" id="map-mode-area" class="rounded-full border border-sand-200 px-4 py-2 text-sm font-medium">Draw area</button>
             <button type="button" id="map-clear-area" class="rounded-full border border-sand-200 px-4 py-2 text-sm font-medium">Clear area</button>
         </div>
+        @if ($places !== [])
+            <div>
+                <label for="place-picker" class="block text-sm font-medium">Recorded place</label>
+                @php
+                    $chosenPlace = trim((string) old('location_label', $current?->location_label ?? $profileDefaults?->preferred_locality));
+                @endphp
+                <select id="place-picker" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="">Choose a recorded place, or click the map</option>
+                    @foreach ($places as $place)
+                        @php($placeLabel = $place->county ? $place->name.', '.$place->county->name : $place->name)
+                        <option value="{{ $placeLabel }}" data-lat="{{ $place->latitude }}" data-lng="{{ $place->longitude }}" @selected(strcasecmp($chosenPlace, $placeLabel) === 0 || strcasecmp($chosenPlace, $place->name) === 0)>{{ $placeLabel }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-stone-500">Choosing a place sets the name and the map pin. It does not draw a boundary.</p>
+            </div>
+        @endif
         <div>
             <label for="location_label" class="block text-sm font-medium">Place name</label>
-            <input id="location_label" name="location_label" value="{{ old('location_label', $current?->location_label) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="Shela, Lamu">
+            <input id="location_label" name="location_label" value="{{ old('location_label', $current?->location_label ?? $profileDefaults?->preferred_locality) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="Shela, Lamu">
             @error('location_label') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
         </div>
         <div class="grid gap-4 sm:grid-cols-3">
@@ -63,17 +81,17 @@
         <div class="grid gap-4 sm:grid-cols-3">
             <div>
                 <label for="min_acreage" class="block text-sm font-medium">Minimum acreage</label>
-                <input id="min_acreage" name="min_acreage" value="{{ old('min_acreage', $current?->min_acreage) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                <input id="min_acreage" name="min_acreage" value="{{ old('min_acreage', $current?->min_acreage ?? $profileDefaults?->min_acreage) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
                 @error('min_acreage') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label for="max_acreage" class="block text-sm font-medium">Maximum acreage</label>
-                <input id="max_acreage" name="max_acreage" value="{{ old('max_acreage', $current?->max_acreage) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                <input id="max_acreage" name="max_acreage" value="{{ old('max_acreage', $current?->max_acreage ?? $profileDefaults?->max_acreage) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
                 @error('max_acreage') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label for="maximum_budget" class="block text-sm font-medium">Total budget (KSh)</label>
-                <input id="maximum_budget" name="maximum_budget" value="{{ old('maximum_budget', $current?->maximum_budget) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                <input id="maximum_budget" name="maximum_budget" value="{{ old('maximum_budget', $current?->maximum_budget ?? $profileDefaults?->budget_amount) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
                 @error('maximum_budget') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
             </div>
         </div>
@@ -134,15 +152,51 @@
     <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">{{ $submit }}</button>
 </form>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     (function () {
         const mapElement = document.getElementById('sourcing-map');
-        if (!mapElement || typeof L === 'undefined' || mapElement.dataset.ready === 'true') {
+        if (!mapElement || mapElement.dataset.ready === 'loading' || mapElement.dataset.ready === 'true') {
             return;
         }
-        mapElement.dataset.ready = 'true';
+        mapElement.dataset.ready = 'loading';
 
+        function ensureLeaflet(done) {
+            if (!document.querySelector('link[data-leaflet]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                link.dataset.leaflet = 'true';
+                document.head.appendChild(link);
+            }
+            if (typeof L !== 'undefined') {
+                done();
+                return;
+            }
+            const existing = document.querySelector('script[data-leaflet]');
+            if (existing) {
+                existing.addEventListener('load', done);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.dataset.leaflet = 'true';
+            script.onload = done;
+            script.onerror = function () {
+                mapElement.dataset.ready = 'failed';
+                mapElement.textContent = 'The map could not be loaded. Check the connection and open the search again.';
+            };
+            document.head.appendChild(script);
+        }
+
+        ensureLeaflet(function () {
+            if (mapElement.dataset.ready === 'true' || typeof L === 'undefined') {
+                return;
+            }
+            mapElement.dataset.ready = 'true';
+            startMap();
+        });
+
+        function startMap() {
         const latitude = document.getElementById('centre_latitude');
         const longitude = document.getElementById('centre_longitude');
         const radius = document.getElementById('radius_km');
@@ -210,6 +264,11 @@
                 if (!radius.value) {
                     radius.value = '5';
                 }
+                const near = nearestPlace(event.latlng.lat, event.latlng.lng);
+                if (near && label) {
+                    picker.value = near.value;
+                    label.value = near.value;
+                }
             }
             draw();
         });
@@ -220,6 +279,66 @@
         document.getElementById('map-mode-area').addEventListener('click', function () {
             mode = 'area';
         });
+        const picker = document.getElementById('place-picker');
+        const label = document.getElementById('location_label');
+        function placeDistance(lat1, lng1, lat2, lng2) {
+            const toRad = function (value) { return value * Math.PI / 180; };
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
+        }
+        function nearestPlace(lat, lng) {
+            if (!picker) {
+                return null;
+            }
+            let best = null;
+            let bestKm = 25;
+            Array.from(picker.options).forEach(function (option) {
+                if (!option.dataset.lat) {
+                    return;
+                }
+                const kilometres = placeDistance(lat, lng, Number(option.dataset.lat), Number(option.dataset.lng));
+                if (kilometres < bestKm) {
+                    best = option;
+                    bestKm = kilometres;
+                }
+            });
+            return best;
+        }
+        function selectNamedPlace() {
+            if (!picker || !label) {
+                return;
+            }
+            const current = label.value.trim().toLowerCase();
+            if (current === '') {
+                return;
+            }
+            const match = Array.from(picker.options).find(function (option) {
+                const name = option.value.trim().toLowerCase();
+                return name !== '' && (current === name || current === name.split(',')[0].trim() || name.startsWith(current));
+            });
+            if (match) {
+                picker.value = match.value;
+            }
+        }
+        if (picker) {
+            picker.addEventListener('change', function () {
+                const option = picker.selectedOptions[0];
+                if (!option || !option.dataset.lat) {
+                    return;
+                }
+                label.value = option.value;
+                latitude.value = Number(option.dataset.lat).toFixed(6);
+                longitude.value = Number(option.dataset.lng).toFixed(6);
+                if (!radius.value) {
+                    radius.value = '5';
+                }
+                mode = 'radius';
+                draw();
+                map.setView([Number(option.dataset.lat), Number(option.dataset.lng)], 12);
+            });
+        }
         document.getElementById('map-clear-area').addEventListener('click', function () {
             points = [];
             polygon.value = '';
@@ -233,7 +352,22 @@
         });
 
         points = readPolygon();
+        selectNamedPlace();
+        if (picker && !picker.value && latitude.value && longitude.value) {
+            const near = nearestPlace(Number(latitude.value), Number(longitude.value));
+            if (near && label) {
+                picker.value = near.value;
+                if (!label.value) {
+                    label.value = near.value;
+                }
+            }
+        }
         draw();
-        setTimeout(function () { map.invalidateSize(); }, 0);
+        function refreshMap() {
+            map.invalidateSize();
+        }
+        setTimeout(refreshMap, 0);
+        setTimeout(refreshMap, 300);
+        }
     })();
 </script>

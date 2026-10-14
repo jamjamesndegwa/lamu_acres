@@ -18,7 +18,7 @@ class SiteVisitController extends Controller
 
         $visits = SiteVisit::query()
             ->where('buyer_id', $request->user()->id)
-            ->with('property')
+            ->with(['property', 'assignee:id,name'])
             ->latest()
             ->paginate(12);
 

@@ -1,5 +1,10 @@
 <x-workspace-layout :heading="$match->property->title">
-    <p class="mt-3 text-sm text-stone-600">{{ $match->status->label() }} · {{ $match->property->locationLabel() }}</p>
+    <p class="mt-3 flex flex-wrap items-center gap-3 text-sm text-stone-600">
+        <span>{{ $match->status->label() }} · {{ $match->property->locationLabel() }}</span>
+        @if ($match->property->isPubliclyListed())
+            <a href="{{ $match->property->publicUrl() }}" class="font-medium text-lamu-800 hover:underline">View property</a>
+        @endif
+    </p>
 
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
         <h2 class="font-semibold text-lamu-900">How this land compares</h2>
@@ -19,7 +24,20 @@
                 </div>
                 <div>
                     <dt class="text-stone-500">Asking price</dt>
-                    <dd>{{ $match->property->price_amount ? 'KSh '.number_format($match->property->price_amount) : 'Not published' }}</dd>
+                    <dd>
+                        {{ $match->property->price_amount ? 'KSh '.number_format($match->property->price_amount) : 'Not published' }}
+                        @if ($match->property->pricePerAcre())
+                            · KSh {{ number_format($match->property->pricePerAcre()) }} per acre
+                        @endif
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Distance</dt>
+                    <dd>{{ $fit?->distance_km !== null ? $fit->distance_km.' km from the search centre' : 'Distance not recorded' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Verification</dt>
+                    <dd>{{ $match->property->verification_level?->label() ?? 'Not reviewed' }}</dd>
                 </div>
                 <div>
                     <dt class="text-stone-500">Intended use</dt>
@@ -32,6 +50,15 @@
             </dl>
         @else
             <p class="mt-3 text-sm text-stone-700">This match was approved without a recorded search. You can still request a visit, send an offer, or ask for documents.</p>
+        @endif
+        @if ($match->sourcingRequest && $match->sourcingRequest->amenities->isNotEmpty())
+            <h3 class="mt-5 text-sm font-semibold text-lamu-900">Requirements</h3>
+            <ul class="mt-2 space-y-1 text-sm text-stone-700">
+                @foreach ($match->sourcingRequest->amenities as $wanted)
+                    @php($state = $match->property->amenityStates->first(fn ($row) => $row->amenity === $wanted->amenity))
+                    <li>{{ $wanted->amenity->label() }} · {{ $wanted->required ? 'Required' : 'Preferred' }} · {{ $state?->state?->label() ?? 'Unknown' }}</li>
+                @endforeach
+            </ul>
         @endif
     </section>
 

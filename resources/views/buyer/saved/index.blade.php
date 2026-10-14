@@ -28,8 +28,21 @@
                             <p>{{ rtrim(rtrim(number_format((float) $item->property->acreage, 2), '0'), '.') }} acres</p>
                         @endif
                         <p class="font-medium text-lamu-900">{{ $item->property->formattedPrice() ?? 'Price on request' }}</p>
-                        <div class="mt-auto flex items-center justify-between gap-3 pt-3">
-                            <a href="{{ $item->property->publicUrl() }}" class="text-sm font-medium text-lamu-800 hover:underline">Open details</a>
+                        @if ($item->property->isPubliclyListed())
+                            <p>Available</p>
+                        @else
+                            <p class="text-stone-800">No longer available · {{ $item->property->status->label() }}. It stays in this list so you can see what changed.</p>
+                        @endif
+                        <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
+                            <span class="flex flex-wrap gap-3">
+                                @if ($item->property->isPubliclyListed())
+                                    <a href="{{ $item->property->publicUrl() }}" class="text-sm font-medium text-lamu-800 hover:underline">Open details</a>
+                                    <a href="{{ route('land.enquiries.create', $item->property) }}" data-turbo-frame="modal" class="text-sm font-medium text-lamu-800 hover:underline">Enquire</a>
+                                    <a href="{{ route('land.visits.create', $item->property) }}" data-turbo-frame="modal" class="text-sm font-medium text-lamu-800 hover:underline">Request visit</a>
+                                @else
+                                    <span class="text-sm text-stone-500">The public page is closed</span>
+                                @endif
+                            </span>
                             <form method="POST" action="{{ route('buyer.saved.destroy', $item->property) }}" data-confirm="Remove this saved property?">
                                 @csrf
                                 @method('DELETE')
