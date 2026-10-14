@@ -107,10 +107,10 @@
 
     <section id="partners" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 class="text-2xl font-semibold text-lamu-900">Brokers and sellers</h2>
-        <p class="mt-4 max-w-2xl text-stone-700">Brokers and sellers can apply for a workspace. An account does not by itself publish a listing or approve a commission.</p>
+        <p class="mt-4 max-w-2xl text-stone-700">Apply for a broker or seller workspace, or submit land for review. An account does not by itself publish a listing or approve a commission.</p>
         <div class="mt-6 flex flex-wrap gap-3">
-            <a href="{{ route('register') }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Register</a>
-            <a href="{{ route('login') }}" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Login</a>
+            <a href="{{ route('broker-partners') }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Broker Partners</a>
+            <a href="{{ route('list-property') }}" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">List Property</a>
         </div>
     </section>
 </x-public-layout>

@@ -37,7 +37,7 @@
                 <span class="font-medium">Purpose</span>
                 <select name="purpose" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
                     @foreach (\App\Enums\ListingPurpose::cases() as $purpose)
-                        <option value="{{ $purpose->value }}" @selected(old('purpose') === $purpose->value)>{{ $purpose->label() }}</option>
+                        <option value="{{ $purpose->value }}" @selected(old('purpose', request('purpose')) === $purpose->value)>{{ $purpose->label() }}</option>
                     @endforeach
                 </select>
             </label>

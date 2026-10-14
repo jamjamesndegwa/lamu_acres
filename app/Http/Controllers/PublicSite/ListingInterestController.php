@@ -87,7 +87,15 @@ class ListingInterestController extends Controller
 
     private function publicProperty(Property $property): Property
     {
-        foreach (['seller_name', 'seller_contact', 'parcel_identifier', 'restricted_latitude', 'restricted_longitude'] as $field) {
+        foreach ([
+            'seller_name',
+            'seller_contact',
+            'parcel_identifier',
+            'restricted_latitude',
+            'restricted_longitude',
+            'public_latitude',
+            'public_longitude',
+        ] as $field) {
             $property->offsetUnset($field);
         }
 

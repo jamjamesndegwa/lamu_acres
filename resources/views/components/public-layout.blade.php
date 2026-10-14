@@ -3,6 +3,13 @@
     'description' => 'Lamu Acres publishes land listings and location guides for the Lamu coast. Private coordinates and landowner contacts stay off the public site.',
 ])
 
+@php
+    $brokerPartnersNavActive = request()->routeIs('broker-partners')
+        || (request()->routeIs('account.applications.create') && request()->query('capability') === 'broker');
+    $listPropertyNavActive = request()->routeIs('list-property')
+        || (request()->routeIs('account.applications.create') && request()->query('capability') === 'seller');
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,12 +31,12 @@
                 <a href="{{ route('home') }}#find-land">Find Land for Me</a>
                 <a href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
                 <a href="{{ route('home') }}#intelligence">Investment Intelligence</a>
-                <a href="{{ route('home') }}#partners">Broker Partners</a>
-                <a href="{{ route('home') }}#partners">List Property</a>
+                <a href="{{ route('broker-partners') }}" @class(['font-medium text-lamu-900' => $brokerPartnersNavActive])>Broker Partners</a>
+                <a href="{{ route('list-property') }}" @class(['font-medium text-lamu-900' => $listPropertyNavActive])>List Property</a>
             </nav>
             <div class="flex items-center gap-3 text-sm">
                 @auth
-                    <a href="{{ auth()->user()->workspaceHomeUrl() }}" class="font-medium text-lamu-800">Account</a>
+                    <x-account-menu :role="$accountRole ?? ''" :workspace="$currentWorkspace ?? null" :workspaces="$availableWorkspaces ?? []" />
                 @else
                     <a href="{{ route('login') }}" class="font-medium text-lamu-800">Login</a>
                     <a href="{{ route('register') }}" class="rounded-full bg-lamu-900 px-4 py-2 font-medium text-white">Register</a>
@@ -41,8 +48,8 @@
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#find-land">Find Land for Me</a>
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#intelligence">Investment Intelligence</a>
-                        <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#partners">Broker Partners</a>
-                        <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#partners">List Property</a>
+                        <a @class(['block rounded-lg px-3 py-2 hover:bg-sand-50', 'bg-sand-50 font-medium text-lamu-900' => $brokerPartnersNavActive]) href="{{ route('broker-partners') }}">Broker Partners</a>
+                        <a @class(['block rounded-lg px-3 py-2 hover:bg-sand-50', 'bg-sand-50 font-medium text-lamu-900' => $listPropertyNavActive]) href="{{ route('list-property') }}">List Property</a>
                     </nav>
                 </details>
             </div>
@@ -66,8 +73,8 @@
             </nav>
             <nav class="text-sm" aria-label="Footer partnerships">
                 <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('home') }}#intelligence">Investment Intelligence</a>
-                <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('home') }}#partners">Broker Partners</a>
-                <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('home') }}#partners">List Property</a>
+                <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('broker-partners') }}">Broker Partners</a>
+                <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('list-property') }}">List Property</a>
             </nav>
         </div>
     </footer>

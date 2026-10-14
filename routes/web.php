@@ -11,14 +11,24 @@ use App\Http\Controllers\Land\PropertyController;
 use App\Http\Controllers\Intelligence\FileController;
 use App\Http\Controllers\Intelligence\LibraryController;
 use App\Http\Controllers\Payments\MpesaCallbackController;
+use App\Http\Controllers\PublicSite\BrokerPartnersController;
 use App\Http\Controllers\PublicSite\HomeController;
 use App\Http\Controllers\PublicSite\LandDirectoryController;
+use App\Http\Controllers\PublicSite\ListPropertyController;
 use App\Http\Controllers\PublicSite\ListingInterestController;
 use App\Http\Controllers\PublicSite\PropertyPhotoController;
+use App\Http\Controllers\PublicSite\StartBrokerPartnerApplicationController;
+use App\Http\Controllers\PublicSite\StartPropertyListingController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/broker-partners', BrokerPartnersController::class)->name('broker-partners');
+Route::get('/list-property', ListPropertyController::class)->name('list-property');
+Route::middleware(['auth', 'private.cache'])->group(function () {
+    Route::get('/broker-partners/apply', StartBrokerPartnerApplicationController::class)->name('broker-partners.apply');
+    Route::get('/list-property/start', StartPropertyListingController::class)->name('list-property.start');
+});
 Route::post('/payments/mpesa/callback', MpesaCallbackController::class)->name('payments.mpesa.callback');
 
 Route::get('/intelligence/developments', [LibraryController::class, 'projects'])->name('intelligence.projects.index');
