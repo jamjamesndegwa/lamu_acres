@@ -84,6 +84,67 @@ turbo-frame#modal:empty {
     font-family: var(--home-serif);
 }
 
+.public-mobile-menu {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(340px, 90vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    background: var(--color-sand-50);
+    color: var(--color-lamu-900);
+    box-shadow: -12px 0 40px rgb(0 0 0 / 0.18);
+    transform: translateX(100%);
+    transition: transform 240ms ease, display 240ms allow-discrete, overlay 240ms allow-discrete;
+}
+
+.public-mobile-menu[open] {
+    display: flex;
+    flex-direction: column;
+    transform: translateX(0);
+}
+
+.public-mobile-menu::backdrop {
+    background: rgb(20 48 40 / 0.45);
+    opacity: 0;
+    transition: opacity 240ms ease, display 240ms allow-discrete, overlay 240ms allow-discrete;
+}
+
+.public-mobile-menu[open]::backdrop {
+    opacity: 1;
+}
+
+@starting-style {
+    .public-mobile-menu[open] { transform: translateX(100%); }
+    .public-mobile-menu[open]::backdrop { opacity: 0; }
+}
+
+body:has(.public-mobile-menu[open]) {
+    overflow: hidden;
+}
+
+.public-mobile-links a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.public-mobile-links a:hover,
+.public-mobile-links a:focus-visible {
+    background: var(--color-lamu-100);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .public-mobile-menu,
+    .public-mobile-menu::backdrop { transition: none; }
+}
+
 .investor-backdrop {
     mask-image: linear-gradient(to right, transparent 25%, rgb(0 0 0 / 0.1) 40%, #000 70%);
 }

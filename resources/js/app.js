@@ -4,6 +4,34 @@ import 'sweetalert2/dist/sweetalert2.min.css'
 
 Turbo.session.drive = false
 
+document.addEventListener('click', (event) => {
+    const menu = document.getElementById('public-mobile-menu')
+    if (!(menu instanceof HTMLDialogElement)) return
+
+    if (event.target.closest('[data-public-menu-open]')) {
+        menu.showModal()
+        document.querySelector('[data-public-menu-open]')?.setAttribute('aria-expanded', 'true')
+        return
+    }
+
+    if (event.target.closest('[data-public-menu-close]') || event.target.closest('#public-mobile-menu a')) {
+        menu.close()
+    } else if (event.target === menu) {
+        const bounds = menu.getBoundingClientRect()
+        if (event.clientX < bounds.left || event.clientX > bounds.right) menu.close()
+    }
+})
+
+document.addEventListener('close', (event) => {
+    if (event.target.id === 'public-mobile-menu') {
+        document.querySelector('[data-public-menu-open]')?.setAttribute('aria-expanded', 'false')
+    }
+}, true)
+
+window.matchMedia('(min-width: 1280px)').addEventListener('change', (event) => {
+    if (event.matches) document.getElementById('public-mobile-menu')?.close()
+})
+
 const swalDefaults = {
     confirmButtonColor: '#143028',
     cancelButtonColor: '#78716c',

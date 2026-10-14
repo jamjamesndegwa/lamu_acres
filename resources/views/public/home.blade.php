@@ -86,24 +86,47 @@
                         <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
                     </a>
                     @auth
-                        <x-account-menu :role="$accountRole ?? ''" :workspace="$currentWorkspace ?? null" :workspaces="$availableWorkspaces ?? []" />
+                        <div class="hidden xl:block"><x-account-menu :role="$accountRole ?? ''" :workspace="$currentWorkspace ?? null" :workspaces="$availableWorkspaces ?? []" /></div>
                     @else
-                        <a href="{{ route('login') }}" class="inline-flex h-9 items-center rounded-md border border-lamu-900 px-3 text-xs font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Login / Account</a>
+                        <a href="{{ route('login') }}" class="hidden h-9 items-center rounded-md border border-lamu-900 px-3 text-xs font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800 xl:inline-flex">Login / Account</a>
                     @endauth
-                    <details class="relative xl:hidden">
-                        <summary class="cursor-pointer list-none rounded-md border border-sand-200 bg-white px-3 py-1.5 text-xs font-medium text-lamu-900">Menu</summary>
-                        <nav class="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-sand-200 bg-white p-2 text-sm shadow-sm" aria-label="Mobile">
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ route('land.index') }}">Explore Land</a>
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ $findLandHref }}">Find Land for Me</a>
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="#intelligence">Investor Intelligence</a>
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ route('broker-partners') }}">Broker Partners</a>
-                            <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ route('list-property') }}">List Property</a>
+                    <button type="button" data-public-menu-open aria-controls="public-mobile-menu" aria-expanded="false" aria-label="Open navigation menu" class="inline-flex size-10 items-center justify-center rounded-md border border-sand-200 bg-white text-lamu-900 xl:hidden">
+                        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                    <dialog id="public-mobile-menu" class="public-mobile-menu" aria-labelledby="public-menu-title">
+                        <div class="flex items-center justify-between border-b border-sand-200 px-5 py-4">
+                            <h2 id="public-menu-title" class="home-serif text-lg font-semibold text-lamu-900">Lamu Acres</h2>
+                            <button type="button" data-public-menu-close class="inline-flex size-10 items-center justify-center rounded-full hover:bg-lamu-100" aria-label="Close navigation menu"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+                        </div>
+                        <div class="border-b border-sand-200 bg-lamu-100/60 px-5 py-5">
+                            @auth
+                                <p class="text-xs text-stone-500">Signed in as</p>
+                                <p class="mt-1 break-words text-base font-semibold text-lamu-900">{{ auth()->user()->name }}</p>
+                                <a href="{{ route('workspaces.index') }}" class="mt-2 inline-flex text-sm font-medium text-lamu-700 hover:underline">My account →</a>
+                            @else
+                                <a href="{{ route('login') }}" class="flex min-h-11 items-center justify-center rounded-lg bg-lamu-900 px-4 text-sm font-medium text-white">Login</a>
+                                <a href="{{ route('register') }}" class="mt-3 block text-center text-sm text-lamu-700 hover:underline">Create an account</a>
+                            @endauth
+                        </div>
+                        <nav class="public-mobile-links flex-1 overflow-y-auto px-3 py-4" aria-label="Mobile public navigation">
+                            <a href="{{ route('home') }}">Home</a>
+                            <a href="{{ route('land.index') }}">Explore Land</a>
+                            <a href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
+                            <a href="{{ $findLandHref }}">Find Land for Me</a>
+                            <a href="#intelligence">Investor Intelligence</a>
+                            <a href="{{ route('broker-partners') }}">Broker Partners</a>
+                            <a href="{{ route('list-property') }}">List Property</a>
                             @if ($deskEmail)
-                                <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="mailto:{{ $deskEmail }}">Contact</a>
+                                <a href="mailto:{{ $deskEmail }}">Contact</a>
                             @endif
                         </nav>
-                    </details>
+                        @auth
+                            <form method="POST" action="{{ route('logout') }}" data-turbo="false" class="border-t border-sand-200 p-5">
+                                @csrf
+                                <button type="submit" class="min-h-11 w-full rounded-lg border border-lamu-900 text-sm font-medium text-lamu-900 hover:bg-lamu-100">Logout</button>
+                            </form>
+                        @endauth
+                    </dialog>
                 </div>
             </div>
         </header>
@@ -331,12 +354,15 @@
                 </div>
             </div>
         </div>
-        <div id="partners" class="rounded-lg border border-gold-500/40 bg-[#f6f0e2] px-4 py-3">
+        <div id="partners" class="relative isolate overflow-hidden rounded-lg border border-gold-500/40 bg-[#f6f0e2] px-4 py-3">
+            <img src="{{ asset('images/are_you_broker_or_a_land_owner.jpg') }}" alt="" class="pointer-events-none absolute inset-0 -z-10 h-full w-full object-fill" width="2451" height="416" loading="lazy" decoding="async">
+            <div class="relative ml-auto w-[75%]">
             <h2 class="home-serif text-lg text-stone-900">Are You a Broker or Land Owner?</h2>
             <p class="mt-1 text-sm text-stone-600">Apply for broker access or start a seller listing. An account does not publish land by itself.</p>
-            <div class="mt-2 flex flex-wrap gap-2">
+            <div class="mt-2 flex flex-wrap justify-end gap-2">
                 <a href="{{ route('broker-partners') }}" class="inline-flex h-9 items-center rounded-md bg-gold-500 px-3 text-xs font-medium text-white">Broker Partners</a>
                 <a href="{{ route('list-property') }}" class="inline-flex h-9 items-center rounded-md border border-gold-500 bg-white/70 px-3 text-xs font-medium text-stone-800">List Property</a>
+            </div>
             </div>
         </div>
     </section>
