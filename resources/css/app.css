@@ -75,3 +75,32 @@
 turbo-frame#modal:empty {
     display: none;
 }
+
+.home-shell {
+    --home-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+}
+
+.home-serif {
+    font-family: var(--home-serif);
+}
+
+.home-discovery-row #locations {
+    min-height: 210px;
+}
+
+@media (width >= 64rem) {
+    .home-discovery-row > article {
+        min-height: 210px;
+    }
+}
+
+.home-card-fade {
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0) 35%,
+        rgba(255, 255, 255, 0.12) 45%,
+        rgba(255, 255, 255, 0.8) 65%,
+        rgba(255, 255, 255, 0.97) 82%,
+        #fff 100%
+    );
+}

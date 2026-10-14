@@ -172,7 +172,7 @@
             @endif
         </section>
 
-        <div class="mt-8 flex flex-wrap gap-3">
+        <div id="save-property" class="mt-8 flex flex-wrap gap-3 scroll-mt-6">
             @auth
                 @can('save', $property)
                     @if ($saved)

@@ -1,6 +1,7 @@
 @props([
     'title' => 'Lamu Acres',
     'description' => 'Lamu Acres publishes land listings and location guides for the Lamu coast. Private coordinates and landowner contacts stay off the public site.',
+    'home' => false,
 ])
 
 @php
@@ -25,8 +26,9 @@
     @stack('head')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-sand-50 text-stone-900 antialiased">
+<body @class(['min-h-screen bg-sand-50 text-stone-900 antialiased', 'home-shell' => $home])>
     <a href="#content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2">Skip to content</a>
+    @unless ($home)
     <header class="sticky top-0 z-30 border-b border-sand-200 bg-white">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <a href="{{ route('home') }}" class="text-lg font-semibold text-lamu-900">Lamu Acres</a>
@@ -59,11 +61,17 @@
             </div>
         </div>
     </header>
+    @else
+        {{ $banner ?? '' }}
+    @endunless
 
     <main id="content">
         {{ $slot }}
     </main>
 
+    @if ($home)
+        {{ $closing ?? '' }}
+    @else
     <footer class="border-t border-sand-200 bg-lamu-900 text-sand-50">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
             <div>
@@ -82,6 +90,7 @@
             </nav>
         </div>
     </footer>
+    @endif
 
     <div data-page-loading hidden class="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit rounded-full border border-sand-200 bg-white px-4 py-2 shadow">
         <x-state kind="loading" message="Working on that request." />

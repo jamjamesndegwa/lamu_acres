@@ -46,7 +46,7 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($key);
         });
 
-        View::composer(['components.workspace-layout', 'components.public-layout'], function ($view): void {
+        View::composer(['components.workspace-layout', 'components.public-layout', 'public.home'], function ($view): void {
             $user = auth()->user();
             $current = session('workspace');
             $workspace = is_string($current) ? Workspace::tryFrom($current) : null;
