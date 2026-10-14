@@ -1,6 +1,14 @@
 <x-workspace-layout heading="My Enquiries">
     <p class="mt-3 max-w-3xl text-stone-700">Questions you have sent about specific properties, and the replies that were shared with you.</p>
 
+    @if ($enquiries->isNotEmpty())
+        <x-buyer.next-step
+            label="Open the conversation"
+            :href="route('buyer.enquiries.show', $enquiries->first())"
+            detail="Read the replies, then book a visit or make an offer from an approved match."
+        />
+    @endif
+
     <div class="mt-6">
         <x-workspace.table :columns="['Property', 'Status', 'Sent']">
             @forelse ($enquiries as $enquiry)

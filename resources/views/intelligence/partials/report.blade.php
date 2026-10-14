@@ -18,7 +18,7 @@
         <h2 class="font-semibold text-lamu-900">Licensed files</h2>
         <ul class="text-sm">
             @forelse ($report->files as $file)
-                <li><a class="text-lamu-800 hover:underline" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
+                <li><a class="text-lamu-800 hover:underline" data-turbo="false" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
             @empty
                 <li>No downloadable file has been licensed for this report.</li>
             @endforelse

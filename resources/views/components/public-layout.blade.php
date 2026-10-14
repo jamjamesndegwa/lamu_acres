@@ -28,7 +28,7 @@
             <a href="{{ route('home') }}" class="text-lg font-semibold text-lamu-900">Lamu Acres</a>
             <nav class="hidden items-center gap-x-5 text-sm text-stone-600 lg:flex" aria-label="Public">
                 <a href="{{ route('land.index') }}" @class(['font-medium text-lamu-900' => request()->routeIs('land.*')])>Explore Land</a>
-                <a href="{{ route('home') }}#find-land">Find Land for Me</a>
+                <a href="{{ auth()->check() && auth()->user()->hasPermission('workspace.buyer') ? route('buyer.sourcing.create') : route('home').'#find-land' }}">Find Land for Me</a>
                 <a href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
                 <a href="{{ route('home') }}#intelligence">Investment Intelligence</a>
                 <a href="{{ route('broker-partners') }}" @class(['font-medium text-lamu-900' => $brokerPartnersNavActive])>Broker Partners</a>
@@ -45,7 +45,7 @@
                     <summary class="cursor-pointer list-none rounded-full border border-sand-200 px-3 py-2 text-sm font-medium text-lamu-900">Menu</summary>
                     <nav class="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-sand-200 bg-white p-3 text-sm shadow-lg" aria-label="Mobile">
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('land.index') }}">Explore Land</a>
-                        <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#find-land">Find Land for Me</a>
+                        <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ auth()->check() && auth()->user()->hasPermission('workspace.buyer') ? route('buyer.sourcing.create') : route('home').'#find-land' }}">Find Land for Me</a>
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
                         <a class="block rounded-lg px-3 py-2 hover:bg-sand-50" href="{{ route('home') }}#intelligence">Investment Intelligence</a>
                         <a @class(['block rounded-lg px-3 py-2 hover:bg-sand-50', 'bg-sand-50 font-medium text-lamu-900' => $brokerPartnersNavActive]) href="{{ route('broker-partners') }}">Broker Partners</a>
@@ -68,7 +68,7 @@
             </div>
             <nav class="text-sm" aria-label="Footer">
                 <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('land.index') }}">Explore Land</a>
-                <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('home') }}#find-land">Find Land for Me</a>
+                <a class="block py-1 text-sand-50 hover:text-white" href="{{ auth()->check() && auth()->user()->hasPermission('workspace.buyer') ? route('buyer.sourcing.create') : route('home').'#find-land' }}">Find Land for Me</a>
                 <a class="block py-1 text-sand-50 hover:text-white" href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
             </nav>
             <nav class="text-sm" aria-label="Footer partnerships">

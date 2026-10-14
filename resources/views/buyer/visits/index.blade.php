@@ -1,5 +1,13 @@
 <x-workspace-layout heading="Site Visits">
     <p class="mt-3 max-w-3xl text-stone-700">Visits you have requested on approved matches.</p>
+
+    @if ($visits->isNotEmpty())
+        <x-buyer.next-step
+            label="Review this visit"
+            :href="route('buyer.matches.show', $visits->first()->property_match_id)"
+            detail="Cancel a visit that has not happened, acknowledge one you attended, then submit an offer if you want to proceed."
+        />
+    @endif
     <div class="mt-6">
         <x-workspace.table :columns="['Property', 'Status', 'Requested for', '']">
             @forelse ($visits as $visit)

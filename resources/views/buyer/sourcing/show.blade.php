@@ -37,26 +37,29 @@
     @foreach (['Exact matches' => $exactMatches, 'Near matches' => $nearMatches] as $heading => $rows)
         <section class="mt-8">
             <h2 class="font-semibold text-lamu-900">{{ $heading }}</h2>
-            <div class="mt-4">
-                <x-workspace.table :columns="['Property', 'Distance', 'Notes']">
-                    @forelse ($rows as $match)
-                        <tr class="border-b border-sand-200 last:border-b-0">
-                            <td class="px-4 py-4 text-sm">
-                                <p class="font-medium text-lamu-900">{{ $match->property->title }}</p>
-                                <p class="text-xs text-stone-500">{{ $match->property->locationLabel() }}</p>
-                            </td>
-                            <td class="px-4 py-4 text-sm">{{ $match->distance_km !== null ? $match->distance_km.' km' : '—' }}</td>
-                            <td class="px-4 py-4 text-sm text-stone-600">{{ implode(' ', $match->reasons ?? []) ?: 'Meets the recorded criteria.' }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="3" class="px-4 py-8">
-                                <x-workspace.empty title="None in this group" message="Properties are grouped again whenever the search is saved." />
-                            </td>
-                        </tr>
-                    @endforelse
-                </x-workspace.table>
-            </div>
+            @if ($rows->isEmpty())
+                <div class="mt-4">
+                    <x-workspace.empty title="None in this group" message="Properties are grouped again whenever the search is saved." />
+                </div>
+            @else
+                <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    @foreach ($rows as $match)
+                        <article class="flex h-full flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white">
+                            <div class="border-b border-sand-200 bg-lamu-100 px-5 py-4">
+                                <p class="text-xs font-medium uppercase tracking-wide text-gold-500">{{ $match->band->label() }} @if ($match->distance_km !== null) · {{ $match->distance_km }} km @endif</p>
+                                <h3 class="mt-1 text-lg font-semibold text-lamu-900">
+                                    <a href="{{ $match->property->publicUrl() }}" class="hover:underline">{{ $match->property->title }}</a>
+                                </h3>
+                            </div>
+                            <div class="flex flex-1 flex-col gap-2 px-5 py-4 text-sm text-stone-700">
+                                <p>{{ $match->property->locationLabel() }}</p>
+                                <p>{{ implode(' ', $match->reasons ?? []) ?: 'Meets the recorded criteria.' }}</p>
+                                <a href="{{ $match->property->publicUrl() }}" class="mt-auto pt-3 text-sm font-medium text-lamu-800 hover:underline">Open property</a>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            @endif
         </section>
     @endforeach
 

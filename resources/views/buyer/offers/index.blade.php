@@ -1,10 +1,24 @@
 <x-workspace-layout heading="My Offers">
     <p class="mt-3 max-w-3xl text-stone-700">Offers you have sent. An accepted offer does not mark the land as sold.</p>
+
+    @if ($offers->isNotEmpty())
+        <x-buyer.next-step
+            label="Track this offer"
+            :href="$offers->first()->property_match_id ? route('buyer.matches.show', $offers->first()->property_match_id) : route('buyer.matches.index')"
+            detail="See the amount and status. Withdraw an offer that is still open, or keep browsing while the desk replies."
+        />
+    @endif
     <div class="mt-6">
         <x-workspace.table :columns="['Property', 'Amount', 'Status', '']">
             @forelse ($offers as $offer)
                 <tr class="border-b border-sand-200 last:border-b-0">
-                    <td class="px-4 py-4 text-sm">{{ $offer->property->title }}</td>
+                    <td class="px-4 py-4 text-sm">
+                        @if ($offer->property_match_id)
+                            <a href="{{ route('buyer.matches.show', $offer->property_match_id) }}" class="font-medium text-lamu-900 hover:underline">{{ $offer->property->title }}</a>
+                        @else
+                            {{ $offer->property->title }}
+                        @endif
+                    </td>
                     <td class="px-4 py-4 text-sm">KSh {{ number_format($offer->amount) }}</td>
                     <td class="px-4 py-4 text-sm">{{ $offer->status->label() }}</td>
                     <td class="px-4 py-4 text-right text-sm">

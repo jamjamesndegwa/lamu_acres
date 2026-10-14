@@ -24,11 +24,17 @@
     <nav class="subnav-scroll mt-6 border-b border-sand-200" aria-label="Sale details">
         <div class="flex w-max min-w-full gap-1">
             @foreach ($tabs as $key => $label)
-                <a href="{{ $showUrl($key) }}" @class([
-                    'whitespace-nowrap border-b-2 px-3 py-3 text-sm',
-                    'border-lamu-700 font-medium text-lamu-900' => $tab === $key,
-                    'border-transparent text-stone-600 hover:text-lamu-900' => $tab !== $key,
-                ]) @if ($tab === $key) aria-current="page" @endif>{{ $label }}</a>
+                <a
+                    href="{{ $showUrl($key) }}"
+                    @class([
+                        'whitespace-nowrap border-b-2 px-3 py-3 text-sm',
+                        'border-lamu-700 font-medium text-lamu-900' => $tab === $key,
+                        'border-transparent text-stone-600 hover:text-lamu-900' => $tab !== $key,
+                    ])
+                    @if ($tab === $key)
+                        aria-current="page"
+                    @endif
+                >{{ $label }}</a>
             @endforeach
         </div>
     </nav>

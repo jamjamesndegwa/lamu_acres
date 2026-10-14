@@ -101,13 +101,13 @@ class PartnershipController extends Controller
     public function deals(Request $request): View
     {
         return view('broker.deals.index', [
-            'deals' => $this->deals($request)->with(['property:id,title,slug', 'introduction:id,reference,buyer_name'])->latest('opened_at')->paginate(20),
+            'deals' => $this->dealQuery($request)->with(['property:id,title,slug', 'introduction:id,reference,buyer_name'])->latest('opened_at')->paginate(20),
         ]);
     }
 
     public function deal(Request $request, SalesTransaction $salesTransaction): View
     {
-        abort_unless($this->deals($request)->whereKey($salesTransaction->id)->exists(), 404);
+        abort_unless($this->dealQuery($request)->whereKey($salesTransaction->id)->exists(), 404);
 
         $salesTransaction->load([
             'property:id,title,slug,reference',
@@ -153,7 +153,7 @@ class PartnershipController extends Controller
         ]);
     }
 
-    private function deals(Request $request)
+    private function dealQuery(Request $request)
     {
         $introductions = BrokerIntroduction::query()
             ->where('broker_id', $request->user()->id)

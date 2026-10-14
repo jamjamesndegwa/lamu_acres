@@ -83,7 +83,9 @@
                     <a
                         href="{{ $module['href'] }}"
                         data-module="{{ $module['key'] }}"
-                        @if ($module['active']) aria-current="page" @endif
+                        @if ($module['active'])
+                            aria-current="page"
+                        @endif
                         @class([
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
@@ -98,7 +100,9 @@
                         type="button"
                         wire:click="select('{{ $module['key'] }}')"
                         data-module="{{ $module['key'] }}"
-                        @if ($module['active']) aria-current="page" @endif
+                        @if ($module['active'])
+                            aria-current="page"
+                        @endif
                         @class([
                             'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
@@ -142,8 +146,12 @@
                     @elseif ($item['available'])
                         <a
                             href="{{ $item['href'] }}"
-                            @if ($item['active']) aria-current="page" @endif
-                            @if ($item['frame']) data-turbo-frame="{{ $item['frame'] }}" @endif
+                            @if ($item['active'])
+                                aria-current="page"
+                            @endif
+                            @if ($item['frame'])
+                                data-turbo-frame="{{ $item['frame'] }}"
+                            @endif
                             class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200"
                         >
                             <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>

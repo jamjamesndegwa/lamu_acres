@@ -58,7 +58,86 @@ function clearModalFrame() {
 
 document.addEventListener('turbo:load', showFlash)
 document.addEventListener('turbo:frame-load', showFlash)
+document.addEventListener('livewire:navigated', showFlash)
 document.addEventListener('DOMContentLoaded', showFlash)
+
+function sameOriginPage(url) {
+    return url.origin === window.location.origin
+}
+
+function wantsNativeVisit(link, url) {
+    if (link.hasAttribute('download') || link.dataset.turbo === 'false') {
+        return true
+    }
+
+    if (link.dataset.turboFrame && link.dataset.turboFrame !== '_top') {
+        return true
+    }
+
+    if (link.target && link.target !== '' && link.target !== '_self') {
+        return true
+    }
+
+    if (! sameOriginPage(url)) {
+        return true
+    }
+
+    if (url.pathname === window.location.pathname && url.search === window.location.search) {
+        return true
+    }
+
+    return false
+}
+
+document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) {
+        return
+    }
+
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return
+    }
+
+    const link = event.target.closest('a[href]')
+
+    if (! (link instanceof HTMLAnchorElement) || ! window.Livewire?.navigate) {
+        return
+    }
+
+    const url = new URL(link.href, window.location.href)
+
+    if (wantsNativeVisit(link, url)) {
+        return
+    }
+
+    event.preventDefault()
+    window.Livewire.navigate(url.href)
+})
+
+document.addEventListener('submit', (event) => {
+    const form = event.target
+
+    if (! (form instanceof HTMLFormElement) || event.defaultPrevented || form.dataset.turbo === 'false') {
+        return
+    }
+
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get' || ! window.Livewire?.navigate) {
+        return
+    }
+
+    const action = new URL(form.action || window.location.href, window.location.href)
+    const params = new URLSearchParams()
+
+    for (const [key, value] of new FormData(form).entries()) {
+        if (typeof value === 'string') {
+            params.append(key, value)
+        }
+    }
+
+    action.search = params.toString()
+    event.preventDefault()
+    window.Livewire.navigate(action.href)
+})
 
 document.addEventListener('click', (event) => {
     const closer = event.target.closest('[data-close-modal]')

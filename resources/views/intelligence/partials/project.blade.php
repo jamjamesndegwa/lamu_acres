@@ -53,7 +53,7 @@
         <h2 class="font-semibold text-lamu-900">Evidence</h2>
         <ul class="text-sm">
             @forelse ($project->files as $file)
-                <li><a class="text-lamu-800 hover:underline" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
+                <li><a class="text-lamu-800 hover:underline" data-turbo="false" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
             @empty
                 <li>No evidence file has been attached.</li>
             @endforelse

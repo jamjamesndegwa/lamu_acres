@@ -4,6 +4,14 @@
         <a href="{{ route('buyer.sourcing.create') }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">New search</a>
     </div>
 
+    @if ($requests->isNotEmpty())
+        <x-buyer.next-step
+            label="Open the latest search"
+            :href="route('buyer.sourcing.show', $requests->first())"
+            detail="Review the criteria, exact matches, and near matches. If nothing fits, explore published land or edit the search."
+        />
+    @endif
+
     <div class="mt-6">
         <x-workspace.table :columns="['Reference', 'Location', 'Status', 'Exact', 'Near', '']">
             @forelse ($requests as $sourcingRequest)

@@ -83,6 +83,11 @@
                     @else
                         No land has been published yet.
                     @endif
+                    @auth
+                        @if (auth()->user()->hasPermission('workspace.buyer'))
+                            <a href="{{ route('buyer.sourcing.create') }}" class="mt-4 inline-block font-medium text-lamu-800 hover:underline">Find land for me</a>
+                        @endif
+                    @endauth
                 </p>
             @elseif ($filters['view'] === 'list')
                 <ul class="mt-6 divide-y divide-sand-200 overflow-hidden rounded-2xl border border-sand-200 bg-white">

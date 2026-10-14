@@ -68,8 +68,18 @@
         <div class="rounded-3xl bg-lamu-800 px-6 py-10 text-white sm:px-10">
             <p class="text-sm font-medium uppercase tracking-wide text-gold-500">Find Land for Me</p>
             <h2 class="mt-2 text-3xl font-semibold">Tell a buyer account what you are looking for</h2>
-            <p class="mt-4 max-w-2xl text-sand-50">Create a buyer account to keep a search brief. This page does not store a request.</p>
-            <a href="{{ route('register') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Create a buyer account</a>
+            @auth
+                @if (auth()->user()->hasPermission('workspace.buyer'))
+                    <p class="mt-4 max-w-2xl text-sand-50">Choose a place on the map, then record acreage, budget, use, and amenities. The search is saved and matched from that request.</p>
+                    <a href="{{ route('buyer.sourcing.create') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Start a search</a>
+                @else
+                    <p class="mt-4 max-w-2xl text-sand-50">A buyer workspace keeps the search. This page does not store a request.</p>
+                    <a href="{{ route('register') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Create a buyer account</a>
+                @endif
+            @else
+                <p class="mt-4 max-w-2xl text-sand-50">Create a buyer account to keep a search brief. This page does not store a request.</p>
+                <a href="{{ route('register') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Create a buyer account</a>
+            @endauth
         </div>
     </section>
 

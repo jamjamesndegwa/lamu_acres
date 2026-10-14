@@ -44,6 +44,14 @@
         @endif
     </section>
 
+    @unless ($match->status->value === 'shortlisted')
+        <x-buyer.next-step
+            label="Explore more land"
+            :href="route('land.index')"
+            detail="This match is {{ strtolower($match->status->label()) }}. Review any visits or offers below, or keep looking."
+        />
+    @endunless
+
     @if ($match->status->value === 'shortlisted')
         <form method="POST" action="{{ route('buyer.matches.reject', $match) }}" data-turbo-frame="_top" data-confirm="Remove this property from your shortlist?" class="mt-6 max-w-3xl">
             @csrf
