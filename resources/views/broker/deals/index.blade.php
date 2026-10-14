@@ -7,7 +7,7 @@
                     <td class="px-4 py-4"><a href="{{ route('broker.deals.show', $deal) }}" class="font-medium text-lamu-900 hover:underline">{{ $deal->reference }}</a></td>
                     <td class="px-4 py-4">{{ $deal->introduction?->reference }}</td>
                     <td class="px-4 py-4">{{ $deal->property?->title }}</td>
-                    <td class="px-4 py-4">{{ $deal->stage->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$deal->stage->label()" /></td>
                 </tr>
             @empty
                 <tr><td colspan="4" class="px-4 py-8"><x-workspace.empty title="No linked deals" message="A deal appears here after staff connect it to an accepted introduction." /></td></tr>

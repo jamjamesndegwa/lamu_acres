@@ -6,13 +6,15 @@ use App\Enums\DocumentAccessStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentAccessRequest;
 use App\Services\Buyer\InterestWorkflow;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class DocumentAccessController extends Controller
 {
-    public function index(Request $request): \Illuminate\View\View
+    public function index(Request $request): View
     {
         abort_unless($request->user()->hasPermission('staff.buyers'), 403);
 
@@ -34,6 +36,6 @@ class DocumentAccessController extends Controller
 
         $workflow->decideDocuments($documentAccessRequest, DocumentAccessStatus::from($data['status']), $request->user());
 
-        return back()->with('status', 'Document access updated.');
+        return ApprovalsReturn::back($request, 'documents', 'Document access updated.');
     }
 }

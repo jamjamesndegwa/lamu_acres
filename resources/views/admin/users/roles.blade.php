@@ -17,13 +17,17 @@
     </turbo-frame>
 @else
     <x-workspace-layout heading="Edit roles">
-        <p class="mt-3 text-sm text-stone-600">{{ $account->name }} · {{ $account->email }}</p>
-        <div class="mt-6 max-w-xl">
-            @include('admin.users.partials.roles-form', [
-                'account' => $account,
-                'roles' => $roles,
-                'breakout' => false,
-            ])
-        </div>
+        <x-slot:modal>
+            <x-modal title="Edit roles" :close="route('admin.users.index')" size="xl">
+                <p class="text-sm text-stone-600">{{ $account->name }} · {{ $account->email }}</p>
+                <div class="mt-5">
+                    @include('admin.users.partials.roles-form', [
+                        'account' => $account,
+                        'roles' => $roles,
+                        'breakout' => true,
+                    ])
+                </div>
+            </x-modal>
+        </x-slot:modal>
     </x-workspace-layout>
 @endif

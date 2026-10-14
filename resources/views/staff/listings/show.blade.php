@@ -49,6 +49,7 @@
     <h2 class="mt-8 font-semibold text-lamu-900">Ask for information</h2>
     <form method="POST" action="{{ route('staff.listings.request', $listing) }}" class="mt-3 max-w-3xl space-y-2">
         @csrf
+        @include('admin.approvals.return-field')
         <textarea name="question" rows="3" required class="w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
         <button type="submit" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Send question</button>
     </form>
@@ -65,6 +66,7 @@
     @if ($listing->status !== \App\Enums\PropertyStatus::Published)
         <form method="POST" action="{{ route('staff.listings.approve', $listing) }}" data-turbo-frame="_top" data-confirm="Approve this listing?" class="mt-4">
             @csrf
+            @include('admin.approvals.return-field')
             <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Approve and publish</button>
         </form>
     @endif

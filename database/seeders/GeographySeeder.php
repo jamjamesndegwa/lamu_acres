@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\LocalityKind;
+use App\Enums\MapLayerKind;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\LocalityAlias;
+use App\Models\MapLayer;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -52,6 +54,7 @@ class GeographySeeder extends Seeder
         $this->alias($shella, 'Shella');
         $this->alias($hindi, 'Hindi town');
         $this->alias($island, 'Amu');
+        $this->layers();
     }
 
     private function place(County $county, ?Locality $parent, string $name, string $slug, LocalityKind $kind, ?float $latitude, ?float $longitude): Locality
@@ -77,6 +80,34 @@ class GeographySeeder extends Seeder
         $locality->save();
 
         return $locality;
+    }
+
+    private function layers(): void
+    {
+        $layers = [
+            ['county-boundaries', 'County boundaries', MapLayerKind::CountyBoundaries, 'Stored geography records', 'Draws a county only when a verified boundary is already stored on that county.'],
+            ['named-places', 'Named places', MapLayerKind::LocalityPoints, 'Stored geography records', 'Draws a marker only where a locality already has a latitude and longitude. A marker is not an administrative boundary.'],
+            ['locality-boundaries', 'Locality boundaries', MapLayerKind::LocalityBoundaries, 'Stored geography records', 'Draws a ward or place only when a verified boundary is already stored.'],
+            ['infrastructure-reference', 'Infrastructure reference', MapLayerKind::Infrastructure, 'Infrastructure reference records', 'Draws a road, water point, jetty, or other reference only when coordinates or a verified line are stored.'],
+        ];
+
+        foreach ($layers as [$slug, $name, $kind, $source, $description]) {
+            $layer = MapLayer::query()->firstOrNew(['slug' => $slug]);
+
+            if ($layer->exists) {
+                continue;
+            }
+
+            $layer->fill([
+                'name' => $name,
+                'kind' => $kind,
+                'source' => $source,
+                'description' => $description,
+                'is_visible' => true,
+                'boundary_wkt' => null,
+            ]);
+            $layer->save();
+        }
     }
 
     private function alias(Locality $locality, string $name): void

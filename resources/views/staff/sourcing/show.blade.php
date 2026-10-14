@@ -87,10 +87,12 @@
                             <div class="mt-3 flex flex-wrap gap-3">
                                 <form method="POST" action="{{ route('staff.sourcing.approve', [$sourcingRequest, $match]) }}" data-turbo-frame="_top" data-confirm="Add this property to the buyer shortlist?">
                                     @csrf
+                                    @include('admin.approvals.return-field')
                                     <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Approve for buyer</button>
                                 </form>
                                 <form method="POST" action="{{ route('staff.sourcing.reject', [$sourcingRequest, $match]) }}" data-turbo-frame="_top" data-confirm="Keep this property off the buyer shortlist?">
                                     @csrf
+                                    @include('admin.approvals.return-field')
                                     <button class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-lamu-900">Reject match</button>
                                 </form>
                             </div>
@@ -114,6 +116,7 @@
                         @can('assign', $sourcingRequest)
                             <form method="POST" action="{{ route('staff.sourcing.approve', [$sourcingRequest, $match]) }}" data-turbo-frame="_top" data-confirm="Add this property to the buyer shortlist?" class="mt-3">
                                 @csrf
+                                @include('admin.approvals.return-field')
                                 <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Approve for buyer</button>
                             </form>
                         @endcan
@@ -125,10 +128,6 @@
 
     <section class="mt-8">
         <h2 class="font-semibold text-lamu-900">History</h2>
-        <ol class="mt-4 space-y-3">
-            @foreach ($sourcingRequest->activities as $activity)
-                <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">{{ $activity->summary }}</li>
-            @endforeach
-        </ol>
+        <x-activity-timeline :items="$sourcingRequest->activities->map(fn ($activity) => ['text' => $activity->summary])->all()" />
     </section>
 </x-workspace-layout>

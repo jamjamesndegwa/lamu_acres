@@ -71,7 +71,7 @@
             @auth
                 @if (auth()->user()->hasPermission('workspace.buyer'))
                     <p class="mt-4 max-w-2xl text-sand-50">Choose a place on the map, then record acreage, budget, use, and amenities. The search is saved and matched from that request.</p>
-                    <a href="{{ route('buyer.sourcing.create') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Start a search</a>
+                    <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="modal" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Start a search</a>
                 @else
                     <p class="mt-4 max-w-2xl text-sand-50">A buyer workspace keeps the search. This page does not store a request.</p>
                     <a href="{{ route('register') }}" class="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Create a buyer account</a>

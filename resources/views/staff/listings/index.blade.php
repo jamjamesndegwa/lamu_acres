@@ -13,8 +13,8 @@
                         <a href="{{ route('staff.listings.show', $listing) }}" class="font-medium text-lamu-900 hover:underline">{{ $listing->title }}</a>
                     </td>
                     <td class="px-4 py-4">{{ $listing->submitter?->name }}</td>
-                    <td class="px-4 py-4">{{ $listing->returned ? 'Returned' : 'Pending' }}</td>
-                    <td class="px-4 py-4">{{ $listing->status->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$listing->returned ? 'Returned' : 'Pending'" /></td>
+                    <td class="px-4 py-4"><x-status-badge :label="$listing->status->label()" /></td>
                 </tr>
             @empty
                 <tr><td colspan="4" class="px-4 py-8"><x-workspace.empty title="No broker submissions" message="New submissions will be listed here." /></td></tr>

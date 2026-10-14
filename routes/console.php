@@ -8,5 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('mpesa:reconcile')->everyMinute();
-Schedule::command('research:commitments')->daily();
+Schedule::command('mpesa:reconcile')->everyMinute()->description('M-Pesa reconciliation');
+Schedule::command('research:commitments')->daily()->description('Research commitments');

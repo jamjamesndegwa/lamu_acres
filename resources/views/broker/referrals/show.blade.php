@@ -34,9 +34,8 @@
     <p class="mt-2 text-sm text-stone-700">{{ $referral->status->label() }}@if ($referral->reviewed_at) · reviewed {{ $referral->reviewed_at->toFormattedDateString() }}@endif. Closing and payment stay with staff.</p>
 
     <h2 class="mt-8 font-semibold text-lamu-900">Timeline</h2>
-    <ul class="mt-3 space-y-2 text-sm text-stone-700">
-        @foreach ($referral->audits as $audit)
-            <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ $audit->action }} @if ($audit->to_status) to {{ $audit->to_status }} @endif @if ($audit->note) — {{ $audit->note }} @endif</li>
-        @endforeach
-    </ul>
+    <x-activity-timeline :items="$referral->audits->map(fn ($audit) => [
+        'when' => $audit->created_at?->toDayDateTimeString(),
+        'text' => trim($audit->action.($audit->to_status ? ' to '.$audit->to_status : '').($audit->note ? ' — '.$audit->note : '')),
+    ])->all()" />
 </x-workspace-layout>

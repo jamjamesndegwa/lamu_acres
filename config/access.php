@@ -92,15 +92,22 @@ return [
         'admin' => [
             'label' => 'Administrator',
             'workspace' => 'admin',
-            'description' => 'Opens administration. Assigning roles stays with the super administrator.',
+            'description' => 'Opens administration and the approval desks. Assigning roles and recording commission payments stay separate.',
             'permissions' => [
                 'workspace.admin',
+                'workspace.staff',
                 'admin.oversight',
                 'admin.approvals',
                 'admin.geography',
                 'admin.commercial',
                 'admin.settings',
                 'admin.reports',
+                'staff.properties',
+                'staff.brokerage',
+                'staff.verification',
+                'staff.sourcing',
+                'staff.buyers',
+                'intelligence.publish',
             ],
         ],
         'super_admin' => [

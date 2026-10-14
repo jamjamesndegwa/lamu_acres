@@ -27,7 +27,7 @@
                         {{ $application->decision_reason }}
                     @endif
                     @if ($application->status->isOpenForApplicant())
-                        <a href="{{ route('account.applications.create', ['capability' => 'broker']) }}" class="ml-1 font-medium text-white underline">Continue application</a>
+                        <a href="{{ route('account.applications.create', ['capability' => 'broker']) }}" data-turbo-frame="modal" class="ml-1 font-medium text-white underline">Continue application</a>
                     @endif
                 </p>
             @endif

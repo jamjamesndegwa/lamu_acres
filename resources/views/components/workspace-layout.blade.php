@@ -26,14 +26,7 @@
                         @endif
                     </p>
                     <div class="ml-auto flex items-center gap-4">
-                        @if ($currentWorkspace && in_array($currentWorkspace, [\App\Enums\Workspace::Buyer, \App\Enums\Workspace::Broker, \App\Enums\Workspace::Staff], true))
-                            <a href="{{ route($currentWorkspace->value.'.notifications.index') }}" class="rounded-md text-sm font-medium text-lamu-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
-                                Notifications
-                                @if (($unreadNotifications ?? 0) > 0)
-                                    ({{ $unreadNotifications }})
-                                @endif
-                            </a>
-                        @endif
+                        <x-notification-centre :workspace="$currentWorkspace" :count="$unreadNotifications ?? 0" />
                         <x-account-menu :role="$accountRole" :workspace="$currentWorkspace" :workspaces="$availableWorkspaces" />
                     </div>
                 </div>
@@ -52,6 +45,9 @@
         </div>
     </div>
 
+    <div data-page-loading hidden class="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit rounded-full border border-sand-200 bg-white px-4 py-2 shadow">
+        <x-state kind="loading" message="Working on that request." />
+    </div>
     <x-flash />
     <turbo-frame id="modal">{{ $modal ?? '' }}</turbo-frame>
 </body>

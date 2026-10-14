@@ -35,6 +35,7 @@
     </dl>
     <form method="POST" action="{{ route('staff.referrals.update', $referral) }}" class="mt-6 max-w-3xl space-y-3">
         @csrf
+        @include('admin.approvals.return-field')
         @method('PUT')
         <label class="block text-sm">
             <span class="font-medium">Decision</span>
@@ -51,9 +52,8 @@
         <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Record decision</button>
     </form>
     <h2 class="mt-8 font-semibold text-lamu-900">History</h2>
-    <ul class="mt-3 space-y-2 text-sm text-stone-700">
-        @foreach ($referral->audits as $audit)
-            <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ $audit->actor?->name }} · {{ $audit->action }} @if ($audit->note) — {{ $audit->note }} @endif</li>
-        @endforeach
-    </ul>
+    <x-activity-timeline :items="$referral->audits->map(fn ($audit) => [
+        'when' => $audit->created_at?->toDayDateTimeString(),
+        'text' => trim(($audit->actor?->name ? $audit->actor->name.' · ' : '').$audit->action.($audit->note ? ' — '.$audit->note : '')),
+    ])->all()" />
 </x-workspace-layout>

@@ -72,14 +72,19 @@
         <form method="POST" action="{{ route($routePrefix.'.subscription.store') }}" class="mt-4">@csrf <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Request Investor Pass</button></form>
     @endif
     @if ($routePrefix !== 'investor' && $plan->checkout_amount && $plan->is_active)
-        <form method="POST" action="{{ route($routePrefix.'.subscription.checkout') }}" class="mt-4 max-w-md space-y-3">
-            @csrf
-            <label class="block text-sm">M-Pesa phone
-                <input name="phone" value="{{ old('phone') }}" placeholder="2547XXXXXXXX" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-            </label>
-            <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
-            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Send payment prompt</button>
-            <p class="text-sm text-stone-600">Sending the prompt does not open premium research.</p>
-        </form>
+        <button type="button" class="mt-4 rounded-full bg-lamu-900 px-5 py-3 text-sm text-white" onclick="document.getElementById('investor-checkout').showModal()">Send payment prompt</button>
+        <dialog id="investor-checkout" class="w-full max-w-lg rounded-2xl p-6 backdrop:bg-stone-900/50">
+            <form method="dialog" class="text-right"><button class="text-sm text-stone-500">Close</button></form>
+            <h2 class="text-xl font-semibold text-lamu-900">Investor Pass checkout</h2>
+            <form method="POST" action="{{ route($routePrefix.'.subscription.checkout') }}" data-turbo-frame="_top" data-confirm="Send this payment prompt?" class="mt-4 space-y-3">
+                @csrf
+                <label class="block text-sm">M-Pesa phone
+                    <input name="phone" value="{{ old('phone') }}" placeholder="2547XXXXXXXX" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                </label>
+                <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
+                <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Send payment prompt</button>
+                <p class="text-sm text-stone-600">Sending the prompt does not open premium research.</p>
+            </form>
+        </dialog>
     @endif
 </x-workspace-layout>

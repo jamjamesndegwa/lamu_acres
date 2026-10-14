@@ -1,7 +1,7 @@
 <x-workspace-layout heading="My referrals">
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p class="max-w-3xl text-stone-700">Buyer introductions you have registered. Commission protection starts only after staff accept the referral.</p>
-        <a href="{{ route('broker.referrals.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Register buyer</a>
+        <a href="{{ route('broker.referrals.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Register buyer</a>
     </div>
     <div class="mt-6">
         <x-workspace.table :columns="['Reference', 'Buyer', 'Status', 'Commission', 'Properties']">
@@ -11,7 +11,7 @@
                         <a href="{{ route('broker.referrals.show', $referral) }}" class="font-medium text-lamu-900 hover:underline">{{ $referral->reference }}</a>
                     </td>
                     <td class="px-4 py-4">{{ $referral->buyer_name }}</td>
-                    <td class="px-4 py-4">{{ $referral->status->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$referral->status->label()" /></td>
                     <td class="px-4 py-4">{{ $referral->protectsCommission() ? 'Eligible while the acceptance is current' : 'Not eligible yet' }}</td>
                     <td class="px-4 py-4 text-stone-600">{{ $referral->properties->pluck('title')->join(', ') }}</td>
                 </tr>

@@ -11,6 +11,7 @@ use App\Models\DevelopmentProject;
 use App\Models\Locality;
 use App\Services\Intelligence\IntelligenceFiles;
 use App\Services\Intelligence\PublicationDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -99,7 +100,7 @@ class DevelopmentProjectController extends Controller
         $this->editor($request);
         $desk->publish($project, $request->user());
 
-        return back()->with('status', 'Project published. Premium detail stays behind an active Investor Pass.');
+        return ApprovalsReturn::back($request, 'intelligence', 'Project published. Premium detail stays behind an active Investor Pass.');
     }
 
     public function milestone(Request $request, DevelopmentProject $project, PublicationDesk $desk): RedirectResponse

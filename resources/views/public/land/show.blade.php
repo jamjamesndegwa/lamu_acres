@@ -24,7 +24,7 @@
             </div>
             <div>
                 <dt class="text-sm text-stone-500">Listing status</dt>
-                <dd class="font-medium text-lamu-900">{{ $listing['status'] }}</dd>
+                <dd class="mt-1"><x-status-badge :label="$listing['status']" /></dd>
             </div>
             <div>
                 <dt class="text-sm text-stone-500">Asking price</dt>
@@ -118,24 +118,10 @@
         <section class="mt-10">
             <h2 class="text-xl font-semibold text-lamu-900">Documentation checklist</h2>
             <p class="mt-2 text-sm text-stone-600">This is a status summary. Original files are not published on this page.</p>
-            @if ($listing['verification_items'] !== [])
-                <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-                    @foreach ($listing['verification_items'] as $item)
-                        <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
-                            <dt class="text-sm text-stone-500">{{ $item['category'] }}</dt>
-                            <dd class="font-medium text-lamu-900">{{ $item['outcome'] }}</dd>
-                        </div>
-                    @endforeach
-                </dl>
-            @endif
-            <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-                @foreach ($listing['documents'] as $document)
-                    <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
-                        <dt class="text-sm text-stone-500">{{ $document['name'] }}</dt>
-                        <dd class="font-medium text-lamu-900">{{ $document['state'] }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+            <x-document-checklist
+                empty="No public document status has been recorded."
+                :items="collect($listing['documents'])->map(fn ($document) => ['label' => $document['name'], 'state' => $document['state']])->all()"
+            />
         </section>
 
         <section class="mt-10 rounded-2xl border border-sand-200 bg-white p-6" aria-labelledby="verification-summary">
@@ -144,19 +130,16 @@
             @if ($passport['override'])
                 <p class="mt-1 text-sm text-stone-600">{{ $passport['override'] }}</p>
             @endif
-            @if ($passport['items'] !== [])
-                <ul class="mt-4 space-y-1 text-sm text-stone-700">
-                    @foreach ($passport['items'] as $item)
-                        <li>{{ $item['category'] }}: {{ $item['outcome'] }}</li>
-                    @endforeach
-                </ul>
-            @endif
+            <x-document-checklist
+                empty="No public verification summary has been recorded."
+                :items="collect($passport['items'])->map(fn ($item) => ['label' => $item['category'], 'state' => $item['outcome']])->all()"
+            />
         </section>
 
         <section class="mt-10">
             <h2 class="text-xl font-semibold text-lamu-900">Approximate area</h2>
             @if ($listing['map'])
-                <iframe title="Approximate area map" class="mt-4 h-72 w-full rounded-2xl border border-sand-200" src="{{ $listing['map'] }}" loading="lazy"></iframe>
+                <x-map-viewer :embed="$listing['map']" />
                 <p class="mt-2 text-sm text-stone-600">The map shows a general area. It is not a parcel boundary.</p>
             @else
                 <p class="mt-3 text-sm text-stone-600">No public map point has been recorded.</p>

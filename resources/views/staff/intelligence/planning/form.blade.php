@@ -1,5 +1,5 @@
-<x-workspace-layout heading="New planning record">
-    <form method="POST" action="{{ route('staff.planning.store') }}" enctype="multipart/form-data" class="mt-6 max-w-3xl space-y-4">
+<x-crud-page title="New planning record" :close="route('staff.planning.index')" size="xl">
+    <form method="POST" action="{{ route('staff.planning.store') }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Save this planning record?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         <label class="block text-sm">Title <input name="title" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></label>
         <label class="block text-sm">Area <input name="area" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></label>
@@ -24,4 +24,4 @@
         @if ($errors->any()) <p class="text-sm text-red-700">{{ $errors->first() }}</p> @endif
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Save draft</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

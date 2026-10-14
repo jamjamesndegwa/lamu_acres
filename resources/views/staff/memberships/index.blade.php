@@ -5,7 +5,7 @@
             @forelse ($subscriptions as $subscription)
                 <tr class="border-b border-sand-200">
                     <td class="px-4 py-3">{{ $subscription->user->name }} · {{ $subscription->user->email }}</td>
-                    <td class="px-4 py-3">{{ $subscription->status->label() }}</td>
+                    <td class="px-4 py-3"><x-status-badge :label="$subscription->status->label()" /></td>
                     <td class="px-4 py-3">{{ $subscription->starts_at?->toFormattedDateString() }} – {{ $subscription->ends_at?->toFormattedDateString() }}</td>
                     <td class="px-4 py-3">
                         @php $invoice = $subscription->invoices->sortByDesc('id')->first(); @endphp

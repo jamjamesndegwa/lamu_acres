@@ -11,7 +11,7 @@
                     <td class="px-4 py-4">{{ $requirement->min_acreage ?: '—' }} – {{ $requirement->max_acreage ?: '—' }} acres</td>
                     <td class="px-4 py-4">{{ $requirement->maximum_budget ? 'KSh '.number_format($requirement->maximum_budget) : 'Not stated' }}</td>
                     <td class="px-4 py-4">{{ $requirement->intended_use?->label() ?? 'Not stated' }}</td>
-                    <td class="px-4 py-4">{{ $requirement->status->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$requirement->status->label()" /></td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="px-4 py-8"><x-workspace.empty title="No open requirements" message="Buyer searches will appear here without the buyer’s identity." /></td></tr>

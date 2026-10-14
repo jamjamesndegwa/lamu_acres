@@ -10,6 +10,7 @@ use App\Models\Locality;
 use App\Models\PlanningRecord;
 use App\Services\Intelligence\IntelligenceFiles;
 use App\Services\Intelligence\PublicationDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -87,7 +88,7 @@ class PlanningRecordController extends Controller
         $this->editor($request);
         $desk->publish($record, $request->user());
 
-        return back()->with('status', 'Planning record published.');
+        return ApprovalsReturn::back($request, 'intelligence', 'Planning record published.');
     }
 
     /**

@@ -13,12 +13,14 @@
                         <div class="mt-4 flex flex-wrap gap-3">
                             <form method="POST" action="{{ route('staff.documents.update', $accessRequest) }}" data-turbo-frame="_top" data-confirm="Grant this document request?">
                                 @csrf
+                                @include('admin.approvals.return-field')
                                 @method('PUT')
                                 <input type="hidden" name="status" value="approved">
                                 <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Grant</button>
                             </form>
                             <form method="POST" action="{{ route('staff.documents.update', $accessRequest) }}" data-turbo-frame="_top" data-confirm="Decline this document request?">
                                 @csrf
+                                @include('admin.approvals.return-field')
                                 @method('PUT')
                                 <input type="hidden" name="status" value="declined">
                                 <button class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-lamu-900">Decline</button>

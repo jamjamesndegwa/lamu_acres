@@ -15,7 +15,7 @@
                     <td class="px-4 py-4 text-sm">
                         <a href="{{ route('buyer.matches.show', $visit->property_match_id) }}" class="font-medium text-lamu-900 hover:underline">{{ $visit->property->title }}</a>
                     </td>
-                    <td class="px-4 py-4 text-sm">{{ $visit->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$visit->status->label()" /></td>
                     <td class="px-4 py-4 text-sm">{{ $visit->requested_for->toDayDateTimeString() }}</td>
                     <td class="px-4 py-4 text-right text-sm">
                         @can('cancel', $visit)

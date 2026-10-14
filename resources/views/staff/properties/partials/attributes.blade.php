@@ -15,6 +15,17 @@
         </select>
         <label for="infrastructure_note" class="mt-4 block text-sm font-medium">Public infrastructure note</label>
         <textarea id="infrastructure_note" name="infrastructure_note" rows="3" maxlength="500" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('infrastructure_note', $property->infrastructure_note) }}</textarea>
+        @if ($property->county_id)
+            <div class="mt-4 rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                <p class="font-medium text-lamu-900">Recorded infrastructure in this county</p>
+                @forelse ($infrastructure as $feature)
+                    <p class="mt-2 text-stone-700">{{ $feature->name }} · {{ $feature->kind->label() }} · {{ $feature->hasPoint() ? 'Named point stored' : 'Named point not stored' }} · {{ $feature->hasBoundary() ? 'verified boundary stored' : 'boundary not stored' }}</p>
+                    <p class="text-xs text-stone-500">Source: {{ $feature->source }}</p>
+                @empty
+                    <p class="mt-2 text-stone-600">No infrastructure reference is recorded for this county.</p>
+                @endforelse
+            </div>
+        @endif
     </section>
     <section>
         <h2 class="text-lg font-semibold text-lamu-900">Amenities</h2>

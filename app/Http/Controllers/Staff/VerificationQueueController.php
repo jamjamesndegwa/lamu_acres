@@ -7,7 +7,10 @@ use App\Enums\VerificationQueue;
 use App\Http\Controllers\Controller;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\VerificationItem;
 use App\Services\Verification\VerificationOperations;
+use App\Support\ApprovalsReturn;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -80,7 +83,7 @@ class VerificationQueueController extends Controller
         return back()->with('status', 'Review assigned.');
     }
 
-    public function decide(Request $request, \App\Models\VerificationItem $verificationItem): RedirectResponse
+    public function decide(Request $request, VerificationItem $verificationItem): RedirectResponse
     {
         $this->authorizeDesk($request);
         $data = $request->validate([
@@ -99,10 +102,10 @@ class VerificationQueueController extends Controller
             $data['review_due_at'] ?? null,
         );
 
-        return back()->with('status', 'Decision recorded and the verification level was recalculated.');
+        return ApprovalsReturn::back($request, 'verification', 'Decision recorded and the verification level was recalculated.');
     }
 
-    private function properties(Request $request, VerificationQueue $queue, \Illuminate\Database\Eloquent\Builder $query): View
+    private function properties(Request $request, VerificationQueue $queue, Builder $query): View
     {
         $this->authorizeDesk($request);
 

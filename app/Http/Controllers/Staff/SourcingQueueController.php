@@ -12,6 +12,7 @@ use App\Models\SourcingRequest;
 use App\Models\User;
 use App\Services\Buyer\InterestWorkflow;
 use App\Services\Staff\SourcingDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -108,7 +109,7 @@ class SourcingQueueController extends Controller
 
         $workflow->approve($sourcingMatch, $request->user());
 
-        return back()->with('status', 'Match added to the buyer shortlist.');
+        return ApprovalsReturn::back($request, 'sourcing', 'Match added to the buyer shortlist.');
     }
 
     public function reject(Request $request, SourcingRequest $sourcingRequest, SourcingMatch $sourcingMatch, InterestWorkflow $workflow): RedirectResponse
@@ -118,7 +119,7 @@ class SourcingQueueController extends Controller
 
         $workflow->declineCandidate($sourcingMatch, $request->user());
 
-        return back()->with('status', 'Match kept off the buyer shortlist.');
+        return ApprovalsReturn::back($request, 'sourcing', 'Match kept off the buyer shortlist.');
     }
 
     private function radiusMap(SourcingRequest $sourcingRequest): ?string

@@ -21,6 +21,7 @@
                 <p class="mt-1 text-sm text-stone-600">{{ $item->state->label() }}</p>
                 <form method="POST" action="{{ route('staff.verification.decide', $item) }}" data-turbo-frame="_top" data-confirm="Record this reasoned decision?" class="mt-3 grid gap-2">
                     @csrf
+                    @include('admin.approvals.return-field')
                     @method('PUT')
                     <select name="state" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
                         @foreach (\App\Enums\VerificationItemState::cases() as $state)

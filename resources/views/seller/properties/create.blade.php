@@ -1,4 +1,4 @@
-<x-workspace-layout heading="Submit property">
+<x-crud-page title="Submit property" :close="route('seller.properties.index')">
     <form method="POST" action="{{ route('seller.properties.store') }}" data-turbo-frame="_top" data-confirm="Submit this property?" class="mt-6 max-w-xl space-y-4">
         @csrf
         <div>
@@ -29,4 +29,4 @@
             @endforelse
         </ul>
     </section>
-</x-workspace-layout>
+</x-crud-page>

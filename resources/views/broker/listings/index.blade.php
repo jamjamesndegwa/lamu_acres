@@ -4,7 +4,7 @@
         <div class="flex gap-2 text-sm">
             <a href="{{ route('broker.listings.index') }}" @class(['rounded-full px-3 py-1', 'bg-lamu-900 text-white' => ! $approvedOnly, 'border border-sand-200' => $approvedOnly])>All</a>
             <a href="{{ route('broker.listings.index', ['approved' => 1]) }}" @class(['rounded-full px-3 py-1', 'bg-lamu-900 text-white' => $approvedOnly, 'border border-sand-200' => ! $approvedOnly])>Approved</a>
-            <a href="{{ route('broker.listings.create') }}" class="rounded-full bg-lamu-900 px-4 py-1 font-medium text-white">Submit property</a>
+            <a href="{{ route('broker.listings.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-1 font-medium text-white">Submit property</a>
         </div>
     </div>
 
@@ -16,7 +16,7 @@
                         <a href="{{ route('broker.listings.show', $listing) }}" class="font-medium text-lamu-900 hover:underline">{{ $listing->title }}</a>
                         <p class="text-xs text-stone-500">{{ $listing->reference }}</p>
                     </td>
-                    <td class="px-4 py-4">{{ $listing->status->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$listing->status->label()" /></td>
                     <td class="px-4 py-4 text-stone-600">{{ $listing->locationLabel() }}</td>
                     <td class="px-4 py-4">{{ $listing->formattedPrice() ?? 'Not recorded' }}</td>
                     <td class="px-4 py-4">{{ $listing->verification_level?->label() ?? 'Not reviewed' }}</td>

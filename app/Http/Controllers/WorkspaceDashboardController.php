@@ -17,17 +17,19 @@ use App\Models\DevelopmentProject;
 use App\Models\Enquiry;
 use App\Models\Offer;
 use App\Models\Property;
-use App\Models\ResearchReport;
-use App\Models\SubscriberWatch;
 use App\Models\PropertyAudit;
 use App\Models\PropertyMatch;
+use App\Models\ResearchReport;
+use App\Models\Role;
 use App\Models\SalesTransaction;
 use App\Models\SavedProperty;
-use App\Models\Role;
 use App\Models\SiteVisit;
 use App\Models\SourcingRequest;
+use App\Models\SubscriberWatch;
 use App\Services\Access\NavigationBuilder;
+use App\Services\Admin\ExecutiveReport;
 use App\Services\Subscription\Memberships;
+use App\Support\Reporting\ReportingWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -39,12 +41,33 @@ class WorkspaceDashboardController extends Controller
         $workspace = Workspace::from((string) $request->session()->get('workspace'));
         $header = $navigation->header($request->user(), $workspace);
         $buyerId = $request->user()->id;
+        $executiveDenied = $workspace === Workspace::Admin && ! $request->user()->hasPermission('admin.oversight');
+        $window = null;
+        $executive = null;
+
+        if ($workspace === Workspace::Admin && $request->user()->hasPermission('admin.oversight')) {
+            $window = ReportingWindow::fromRequest($request);
+            $executive = ExecutiveReport::make($request->user(), $window);
+        }
+        $panels = $navigation->panels($request->user(), $workspace);
+
+        if ($executive) {
+            $panels = array_values(array_filter(
+                $panels,
+                fn (array $panel): bool => filled($panel['href']) && $panel['title'] !== 'Sales performance',
+            ));
+        }
 
         return view('workspaces.dashboard', [
             'workspace' => $workspace,
             'heading' => $header['heading'],
-            'intro' => $header['intro'],
-            'panels' => $navigation->panels($request->user(), $workspace),
+            'intro' => $executive
+                ? 'Published listings, sales, demand, brokers, commissions, and subscriptions from the records you are allowed to see.'
+                : $header['intro'],
+            'panels' => $panels,
+            'executive' => $executive,
+            'executiveDenied' => $executiveDenied,
+            'window' => $window,
             'activityColumns' => config("workspaces.{$workspace->value}.activity.columns", []),
             'activityEmpty' => config("workspaces.{$workspace->value}.activity.empty"),
             'activity' => match ($workspace) {

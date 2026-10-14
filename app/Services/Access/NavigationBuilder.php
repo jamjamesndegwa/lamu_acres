@@ -55,6 +55,7 @@ class NavigationBuilder
                 'key' => (string) ($group['key'] ?? Str::slug((string) ($group['label'] ?? 'module'))),
                 'label' => (string) ($group['label'] ?? $items[0]['label']),
                 'href' => $href,
+                'frame' => is_array($entry) ? ($entry['frame'] ?? null) : null,
                 'items' => $items,
             ];
         }
@@ -74,6 +75,7 @@ class NavigationBuilder
                 'key' => $module['key'],
                 'label' => $module['label'],
                 'href' => $module['href'],
+                'frame' => $module['frame'] ?? null,
                 'active' => $module['active'],
                 'items' => $module['items'],
             ], $modules),
@@ -97,6 +99,7 @@ class NavigationBuilder
                     'title' => $panel['title'],
                     'description' => $panel['description'],
                     'href' => is_string($route) && Route::has($route) ? route($route) : null,
+                    'frame' => ($panel['modal'] ?? true) === false ? null : ($this->opensInModal($route) ? 'modal' : null),
                 ];
             })
             ->values()
@@ -181,17 +184,37 @@ class NavigationBuilder
     {
         $route = $item['route'] ?? null;
         $href = is_string($route) && Route::has($route) ? route($route) : null;
-        $pattern = $item['active'] ?? $route;
+        $fragment = $item['fragment'] ?? null;
+
+        if (is_string($href) && is_string($fragment) && $fragment !== '') {
+            $href .= '#'.$fragment;
+        }
+
+        $patterns = array_values(array_filter(
+            (array) ($item['active'] ?? $route),
+            fn (mixed $pattern): bool => is_string($pattern) && $pattern !== '',
+        ));
 
         return [
             'label' => $item['label'],
             'href' => $href,
             'method' => $item['method'] ?? 'get',
-            'active' => is_string($href) && is_string($currentRoute) && is_string($pattern)
-                && Str::is($pattern, $currentRoute),
+            'active' => is_string($href) && is_string($currentRoute) && collect($patterns)->contains(
+                fn (string $pattern): bool => Str::is($pattern, $currentRoute),
+            ),
             'available' => $href !== null,
-            'frame' => $item['frame'] ?? (is_string($route) && str_ends_with($route, '.profile') ? 'modal' : null),
+            'frame' => ($item['modal'] ?? true) === false ? null : ($item['frame'] ?? ($this->opensInModal($route) ? 'modal' : null)),
         ];
+    }
+
+    private function opensInModal(mixed $route): bool
+    {
+        return is_string($route) && (
+            str_ends_with($route, '.create')
+            || str_ends_with($route, '.edit')
+            || str_ends_with($route, '.profile')
+            || str_ends_with($route, 'buying-profile')
+        );
     }
 
     private function allowed(User $user, mixed $permission): bool

@@ -8,6 +8,7 @@ use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
 use App\Models\DevelopmentProject;
 use App\Models\ResearchReport;
 use App\Services\Intelligence\PublicationDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -104,7 +105,7 @@ class ResearchReportController extends Controller
         abort_unless($report->citations()->exists(), 422);
         $desk->publish($report, $request->user());
 
-        return back()->with('status', 'Report published. The summary is the public preview.');
+        return ApprovalsReturn::back($request, 'intelligence', 'Report published. The summary is the public preview.');
     }
 
     /**

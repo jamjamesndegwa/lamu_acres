@@ -8,8 +8,10 @@ use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
 use App\Models\DevelopmentProject;
 use App\Models\ImageryComparison;
 use App\Models\ImageryScene;
+use App\Models\Locality;
 use App\Services\Intelligence\IntelligenceFiles;
 use App\Services\Intelligence\PublicationDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -96,7 +98,7 @@ class ImageryController extends Controller
         $this->editor($request);
         $desk->publish($scene, $request->user());
 
-        return back()->with('status', 'Scene published.');
+        return ApprovalsReturn::back($request, 'intelligence', 'Scene published.');
     }
 
     public function createComparison(): View
@@ -147,7 +149,7 @@ class ImageryController extends Controller
 
         $desk->publish($comparison, $request->user());
 
-        return back()->with('status', 'Comparison published.');
+        return ApprovalsReturn::back($request, 'intelligence', 'Comparison published.');
     }
 
     /**
@@ -172,7 +174,7 @@ class ImageryController extends Controller
         ]);
 
         unset($data['image']);
-        $data['county_id'] = empty($data['locality_id']) ? null : \App\Models\Locality::query()->whereKey($data['locality_id'])->value('county_id');
+        $data['county_id'] = empty($data['locality_id']) ? null : Locality::query()->whereKey($data['locality_id'])->value('county_id');
 
         return $data;
     }

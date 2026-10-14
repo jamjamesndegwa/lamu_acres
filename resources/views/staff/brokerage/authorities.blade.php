@@ -6,7 +6,7 @@
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4">{{ $authority->property->title }}</td>
                     <td class="px-4 py-4 text-sm">{{ $authority->seller->name }}</td>
-                    <td class="px-4 py-4 text-sm">{{ $authority->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$authority->status->label()" /></td>
                 </tr>
             @empty
                 <tr>

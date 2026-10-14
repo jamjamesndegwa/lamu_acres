@@ -6,6 +6,7 @@ use App\Enums\BrokerIntroductionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BrokerIntroduction;
 use App\Services\Broker\ReferralRecorder;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -59,7 +60,7 @@ class ReferralReviewController extends Controller
 
         $recorder->decide($request->user(), $referral, $status, $data['note'] ?? null);
 
-        return back()->with('status', 'Referral marked '.$status->label().'.');
+        return ApprovalsReturn::back($request, 'referrals', 'Referral marked '.$status->label().'.');
     }
 
     public function file(BrokerIntroduction $referral, string $kind): StreamedResponse

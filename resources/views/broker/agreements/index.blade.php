@@ -6,7 +6,7 @@
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4"><a href="{{ route('broker.agreements.show', $agreement) }}" class="font-medium text-lamu-900 hover:underline">{{ $agreement->reference }}</a></td>
                     <td class="px-4 py-4">{{ $agreement->property?->title }}</td>
-                    <td class="px-4 py-4">{{ $agreement->status->label() }}</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$agreement->status->label()" /></td>
                     <td class="px-4 py-4">{{ $agreement->protection_starts_at?->toFormattedDateString() ?: 'Not recorded' }} – {{ $agreement->protection_ends_at?->toFormattedDateString() ?: 'Not recorded' }}</td>
                 </tr>
             @empty

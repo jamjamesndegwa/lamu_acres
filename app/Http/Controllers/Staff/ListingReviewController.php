@@ -8,6 +8,8 @@ use App\Models\Property;
 use App\Models\PropertyMedia;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
+use App\Services\Verification\VerificationOperations;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -45,7 +47,7 @@ class ListingReviewController extends Controller
         return view('staff.listings.show', [
             'listing' => $property,
             'matches' => $duplicates->staffMatches($property),
-            'blockers' => app(\App\Services\Verification\VerificationOperations::class)->blockers($property),
+            'blockers' => app(VerificationOperations::class)->blockers($property),
         ]);
     }
 
@@ -59,7 +61,7 @@ class ListingReviewController extends Controller
 
         $submissions->requestInformation($request->user(), $property, $data['question']);
 
-        return back()->with('status', 'The broker was asked for more information.');
+        return ApprovalsReturn::back($request, 'listings', 'The broker was asked for more information.');
     }
 
     public function approve(Request $request, Property $property, PropertySubmission $submissions): RedirectResponse
@@ -69,7 +71,7 @@ class ListingReviewController extends Controller
 
         $submissions->approve($request->user(), $property);
 
-        return back()->with('status', 'The listing is published.');
+        return ApprovalsReturn::back($request, 'listings', 'The listing is published.');
     }
 
     public function media(Property $property, PropertyMedia $propertyMedia): StreamedResponse

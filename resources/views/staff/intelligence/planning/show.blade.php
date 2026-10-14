@@ -8,7 +8,7 @@
             <form method="POST" action="{{ route('staff.planning.submit', $record) }}">@csrf <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Submit</button></form>
         @endif
         @if ($record->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
-            <form method="POST" action="{{ route('staff.planning.publish', $record) }}">@csrf <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
+            <form method="POST" action="{{ route('staff.planning.publish', $record) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
         @endif
     </div>
 </x-workspace-layout>

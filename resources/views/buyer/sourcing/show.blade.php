@@ -1,5 +1,8 @@
 <x-workspace-layout :heading="$sourcingRequest->reference">
-    <p class="mt-3 text-sm text-stone-600">{{ $sourcingRequest->status->label() }} · {{ $sourcingRequest->location_label ?: 'Map centre' }}</p>
+    <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600"><x-status-badge :label="$sourcingRequest->status->label()" /> {{ $sourcingRequest->location_label ?: 'Map centre' }}</p>
+    <div class="mt-4 max-w-3xl">
+        <x-map-viewer :latitude="$sourcingRequest->centre_latitude" :longitude="$sourcingRequest->centre_longitude" empty="No map centre has been saved for this search." />
+    </div>
     <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
         <div><dt class="text-stone-500">Acreage</dt><dd>{{ $sourcingRequest->min_acreage ?: 'Any' }} – {{ $sourcingRequest->max_acreage ?: 'Any' }}</dd></div>
         <div><dt class="text-stone-500">Budget</dt><dd>{{ $sourcingRequest->maximum_budget ? 'KSh '.number_format($sourcingRequest->maximum_budget) : 'Not set' }}</dd></div>
@@ -10,7 +13,7 @@
         <p class="mt-3 max-w-3xl text-sm text-stone-700">{{ $sourcingRequest->notes }}</p>
     @endif
     @if ($sourcingRequest->status->value !== 'closed')
-        <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" class="mt-4 inline-block text-sm font-medium text-lamu-700">Edit requirements</a>
+        <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" data-turbo-frame="modal" class="mt-4 inline-block text-sm font-medium text-lamu-700">Edit requirements</a>
     @endif
     @if ($exactMatches->isEmpty() && $nearMatches->isEmpty())
         <p class="mt-4 max-w-3xl text-sm text-stone-700">No published land fits this search yet. <a href="{{ route('land.index') }}" class="font-medium text-lamu-800 hover:underline">Explore land</a> while the desk continues matching, or adjust the requirements.</p>
@@ -18,20 +21,11 @@
 
     <section class="mt-6" aria-labelledby="search-progress">
         <h2 id="search-progress" class="font-semibold text-lamu-900">Progress</h2>
-        <dl class="mt-4 grid gap-4 sm:grid-cols-3">
-            <div class="rounded-2xl border border-sand-200 bg-white p-5">
-                <dt class="text-sm text-stone-500">Status</dt>
-                <dd class="mt-2 font-semibold text-lamu-900">{{ $sourcingRequest->status->label() }}</dd>
-            </div>
-            <div class="rounded-2xl border border-sand-200 bg-white p-5">
-                <dt class="text-sm text-stone-500">Exact matches</dt>
-                <dd class="mt-2 text-2xl font-semibold text-lamu-900">{{ $exactMatches->count() }}</dd>
-            </div>
-            <div class="rounded-2xl border border-sand-200 bg-white p-5">
-                <dt class="text-sm text-stone-500">Near matches</dt>
-                <dd class="mt-2 text-2xl font-semibold text-lamu-900">{{ $nearMatches->count() }}</dd>
-            </div>
-        </dl>
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <x-kpi label="Status" :value="$sourcingRequest->status->label()" />
+            <x-kpi label="Exact matches" :value="$exactMatches->count()" />
+            <x-kpi label="Near matches" :value="$nearMatches->count()" />
+        </div>
     </section>
 
     @foreach (['Exact matches' => $exactMatches, 'Near matches' => $nearMatches] as $heading => $rows)
@@ -65,13 +59,9 @@
 
     <section class="mt-8">
         <h2 class="font-semibold text-lamu-900">History</h2>
-        <ol class="mt-4 space-y-3">
-            @foreach ($sourcingRequest->activities as $activity)
-                <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
-                    <p>{{ $activity->summary }}</p>
-                    <p class="mt-1 text-xs text-stone-500">{{ $activity->created_at->toDayDateTimeString() }}</p>
-                </li>
-            @endforeach
-        </ol>
+        <x-activity-timeline :items="$sourcingRequest->activities->map(fn ($activity) => [
+            'when' => $activity->created_at->toDayDateTimeString(),
+            'text' => $activity->summary,
+        ])->all()" />
     </section>
 </x-workspace-layout>

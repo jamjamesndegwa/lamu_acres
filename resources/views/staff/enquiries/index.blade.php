@@ -2,7 +2,7 @@
     <p class="mt-3 max-w-3xl text-stone-700">Property enquiries you are allowed to see. Buyer-desk staff see the queue. Other staff see enquiries assigned to them.</p>
     <p class="mt-2 text-sm font-medium text-lamu-900">New leads: {{ $newLeadCount }}</p>
 
-    <form method="GET" action="{{ route('staff.enquiries.index') }}" class="mt-6 flex flex-wrap items-end gap-3">
+    <x-filter-bar :action="route('staff.enquiries.index')" class="mt-6 flex flex-wrap items-end gap-3">
         <div>
             <label for="lead" class="block text-sm font-medium">Lead</label>
             <select id="lead" name="lead" class="mt-1 rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -31,7 +31,7 @@
         </div>
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Filter</button>
         <a href="{{ route('staff.enquiries.index') }}" class="text-sm font-medium text-lamu-800">Clear</a>
-    </form>
+    </x-filter-bar>
 
     <div class="mt-6">
         <x-workspace.table :columns="['Property', 'Buyer', 'Lead', 'Assigned', '']">
@@ -44,7 +44,7 @@
                         @endif
                     </td>
                     <td class="px-4 py-4 text-sm">{{ $enquiry->buyer->name }}</td>
-                    <td class="px-4 py-4 text-sm">{{ $enquiry->lead_status->label() }} · {{ $enquiry->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$enquiry->lead_status->label()" /> <x-status-badge :label="$enquiry->status->label()" /></td>
                     <td class="px-4 py-4 text-sm text-stone-600">
                         @can('assign', $enquiry)
                             <form method="POST" action="{{ route('staff.enquiries.assign', $enquiry) }}" data-turbo-frame="_top" data-confirm="Assign this enquiry?" class="flex flex-wrap items-center gap-2">

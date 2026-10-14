@@ -104,11 +104,11 @@
     </div>
 
     <h2 class="mt-8 font-semibold text-lamu-900">History</h2>
-    <ul class="mt-3 space-y-2 text-sm text-stone-700">
-        @forelse ($listing->audits as $audit)
-            <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ str_replace('_', ' ', $audit->action) }}</li>
-        @empty
-            <li>No history yet.</li>
-        @endforelse
-    </ul>
+    <x-activity-timeline
+        empty="No history yet."
+        :items="$listing->audits->map(fn ($audit) => [
+            'when' => $audit->created_at?->toDayDateTimeString(),
+            'text' => str_replace('_', ' ', $audit->action),
+        ])->all()"
+    />
 </x-workspace-layout>

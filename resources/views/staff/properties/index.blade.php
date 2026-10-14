@@ -1,6 +1,6 @@
 <x-workspace-layout heading="Property register">
     <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
-        <form method="GET" class="grid flex-1 gap-2 sm:grid-cols-4">
+        <x-filter-bar class="grid flex-1 gap-2 sm:grid-cols-4">
             <input name="q" value="{{ request('q') }}" placeholder="Title or reference" class="rounded-lg border border-sand-200 px-3 py-2">
             <select name="status" class="rounded-lg border border-sand-200 px-3 py-2">
                 <option value="">Any status</option>
@@ -15,7 +15,7 @@
                 @endforeach
             </select>
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Filter</button>
-        </form>
+        </x-filter-bar>
         <a href="{{ route('staff.properties.create') }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add property</a>
     </div>
 
@@ -28,7 +28,7 @@
                         <a href="{{ route('staff.properties.show', $property) }}" class="font-medium text-lamu-900 hover:underline">{{ $property->title }}</a>
                         <span class="mt-1 block text-xs text-stone-500">{{ $property->locationLabel() }}</span>
                     </td>
-                    <td class="px-4 py-4 text-sm">{{ $property->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$property->status->label()" /></td>
                     <td class="px-4 py-4 text-sm">{{ number_format($property->remainingAcreage(), 2) }}</td>
                     <td class="px-4 py-4 text-sm">{{ $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : '—' }}</td>
                     <td class="px-4 py-4 text-right text-sm">

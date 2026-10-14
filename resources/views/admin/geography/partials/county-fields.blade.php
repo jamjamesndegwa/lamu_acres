@@ -3,9 +3,11 @@
     @if ($county->exists) @method('PUT') @endif
     <label class="block text-sm font-medium">Name
         <input name="name" value="{{ old('name', $county->name) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+        @error('name')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
     </label>
     <label class="block text-sm font-medium">Code
         <input name="code" value="{{ old('code', $county->code) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+        @error('code')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
     </label>
     <div class="grid grid-cols-2 gap-3">
         <label class="block text-sm font-medium">Latitude

@@ -2,12 +2,12 @@
     <x-editorial-workflow :status="$project->publication_status" />
     <p class="mt-3 text-sm text-stone-600">{{ $project->reference }} · {{ $project->project_status->label() }} · {{ $project->publication_status->label() }} · {{ $project->coverage }}</p>
     <div class="mt-4 flex flex-wrap gap-2">
-        <a href="{{ route('staff.projects.edit', $project) }}" class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Edit</a>
+        <a href="{{ route('staff.projects.edit', $project) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Edit</a>
         @if (in_array($project->publication_status, [\App\Enums\PublicationStatus::Draft, \App\Enums\PublicationStatus::Withdrawn], true))
             <form method="POST" action="{{ route('staff.projects.submit', $project) }}">@csrf <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Submit for review</button></form>
         @endif
         @if ($project->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
-            <form method="POST" action="{{ route('staff.projects.publish', $project) }}">@csrf <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
+            <form method="POST" action="{{ route('staff.projects.publish', $project) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
         @endif
     </div>
     <h2 class="mt-8 font-semibold">Add a sourced milestone</h2>

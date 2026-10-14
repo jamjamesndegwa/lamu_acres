@@ -1,6 +1,6 @@
 <x-workspace-layout heading="Planning and zoning">
     <x-editorial-workflow />
-    <div class="mt-4 flex justify-end"><a href="{{ route('staff.planning.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">New record</a></div>
+    <div class="mt-4 flex justify-end"><a href="{{ route('staff.planning.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">New record</a></div>
     <div class="mt-6">
         <x-workspace.table :columns="['Record', 'Area', 'Publication']">
             @forelse ($records as $record)

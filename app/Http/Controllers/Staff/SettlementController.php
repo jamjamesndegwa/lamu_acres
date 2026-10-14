@@ -6,7 +6,9 @@ use App\Enums\CommissionStatus;
 use App\Enums\PaymentReconciliation;
 use App\Http\Controllers\Controller;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPayment;
 use App\Services\Sales\ClosingDesk;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +23,7 @@ class SettlementController extends Controller
         return view('staff.settlements.index', [
             'payable' => CommissionAgreement::query()->with(['broker', 'transaction', 'payment'])->where('status', CommissionStatus::Payable)->latest()->get(),
             'earned' => CommissionAgreement::query()->with(['broker', 'transaction'])->where('status', CommissionStatus::Earned)->latest()->get(),
-            'payments' => \App\Models\CommissionPayment::query()->with('agreement.broker')->latest()->paginate(20),
+            'payments' => CommissionPayment::query()->with('agreement.broker')->latest()->paginate(20),
         ]);
     }
 
@@ -30,7 +32,7 @@ class SettlementController extends Controller
         abort_unless($request->user()->hasPermission('commissions.approve'), 403);
         $desk->approvePayable($commissionAgreement, $request->user());
 
-        return back()->with('status', 'Commission approved as payable. It is not paid yet.');
+        return ApprovalsReturn::back($request, 'commissions', 'Commission approved as payable. It is not paid yet.');
     }
 
     public function initiate(Request $request, CommissionAgreement $commissionAgreement, ClosingDesk $desk): RedirectResponse

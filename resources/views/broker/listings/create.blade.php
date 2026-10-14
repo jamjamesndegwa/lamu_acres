@@ -1,7 +1,8 @@
-<x-workspace-layout heading="Submit property">
+<x-crud-page title="Submit property" :close="route('broker.listings.index')" size="xl">
     <p class="mt-3 max-w-3xl text-stone-700">Staff review every submission before it can be published. Seller details and marketing authority stay off the public listing.</p>
+    <x-step-list :steps="['Describe the land', 'Set price and location', 'Attach photos and authority', 'Submit for staff review']" />
 
-    <form method="POST" action="{{ route('broker.listings.store') }}" enctype="multipart/form-data" class="mt-6 max-w-3xl space-y-4">
+    <form method="POST" action="{{ route('broker.listings.store') }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Submit this property?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         <label class="block text-sm">
             <span class="font-medium">Title</span>
@@ -25,14 +26,8 @@
             </select>
         </label>
         <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block text-sm">
-                <span class="font-medium">Acreage</span>
-                <input name="acreage" value="{{ old('acreage') }}" inputmode="decimal" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-            </label>
-            <label class="block text-sm">
-                <span class="font-medium">Price (KSh)</span>
-                <input name="price_amount" value="{{ old('price_amount') }}" inputmode="numeric" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-            </label>
+            <x-measure-field name="acreage" label="Acreage" unit="acres" :value="old('acreage')" required />
+            <x-measure-field name="price_amount" label="Price" unit="KSh" :value="old('price_amount')" inputmode="numeric" required />
             <label class="block text-sm">
                 <span class="font-medium">Purpose</span>
                 <select name="purpose" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
@@ -72,17 +67,11 @@
                 <input name="seller_contact" value="{{ old('seller_contact') }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
             </label>
         </div>
-        <label class="block text-sm">
-            <span class="font-medium">Photographs</span>
-            <input name="photos[]" type="file" accept="image/*" multiple required class="mt-1 block w-full text-sm">
-        </label>
-        <label class="block text-sm">
-            <span class="font-medium">Evidence of marketing authority</span>
-            <input name="authority" type="file" accept="image/*,.pdf" required class="mt-1 block w-full text-sm">
-        </label>
+        <x-upload-manager name="photos[]" label="Photographs" accept="image/*" multiple required />
+        <x-upload-manager name="authority" label="Evidence of marketing authority" accept="image/*,.pdf" required />
         @if ($errors->any())
-            <p class="text-sm text-red-700">{{ $errors->first() }}</p>
+            <x-state kind="error" :message="$errors->first()" />
         @endif
         <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Submit for review</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

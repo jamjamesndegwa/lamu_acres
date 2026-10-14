@@ -65,12 +65,34 @@ function sameOriginPage(url) {
     return url.origin === window.location.origin
 }
 
+function openModalFrame(link, url) {
+    const id = link.dataset.turboFrame
+
+    if (!id || id === '_top') {
+        return false
+    }
+
+    const frame = document.getElementById(id)
+
+    if (!(frame instanceof HTMLElement) || frame.tagName !== 'TURBO-FRAME') {
+        return false
+    }
+
+    if (frame.getAttribute('src') === url.href && typeof frame.reload === 'function') {
+        frame.reload()
+    } else {
+        frame.src = url.href
+    }
+
+    return true
+}
+
 function wantsNativeVisit(link, url) {
     if (link.hasAttribute('download') || link.dataset.turbo === 'false') {
         return true
     }
 
-    if (link.dataset.turboFrame && link.dataset.turboFrame !== '_top') {
+    if (link.dataset.turboFrame === '_top') {
         return true
     }
 
@@ -100,13 +122,19 @@ document.addEventListener('click', (event) => {
 
     const link = event.target.closest('a[href]')
 
-    if (! (link instanceof HTMLAnchorElement) || ! window.Livewire?.navigate) {
+    if (! (link instanceof HTMLAnchorElement)) {
         return
     }
 
     const url = new URL(link.href, window.location.href)
 
-    if (wantsNativeVisit(link, url)) {
+    if (openModalFrame(link, url)) {
+        event.preventDefault()
+
+        return
+    }
+
+    if (! window.Livewire?.navigate || wantsNativeVisit(link, url)) {
         return
     }
 
@@ -188,6 +216,20 @@ document.addEventListener('click', (event) => {
         }
     })
 }, true)
+
+document.addEventListener('submit', (event) => {
+    const form = event.target
+
+    if (!(form instanceof HTMLFormElement) || event.defaultPrevented) {
+        return
+    }
+
+    if ((form.getAttribute('method') || 'get').toLowerCase() === 'get') {
+        return
+    }
+
+    document.querySelector('[data-page-loading]')?.removeAttribute('hidden')
+})
 
 document.addEventListener('submit', (event) => {
     const form = event.target

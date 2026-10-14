@@ -18,11 +18,13 @@ use App\Models\PropertyTransaction;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
 use App\Services\Seller\SellerPortal;
+use App\Services\Verification\VerificationOperations;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class SellerDeskController extends Controller
 {
@@ -68,13 +70,13 @@ class SellerDeskController extends Controller
         $data = $request->validate(['status' => ['required', Rule::in(['active', 'declined', 'withdrawn'])]]);
         $portal->decideAuthority($marketingAuthority, AuthorityStatus::from($data['status']), $request->user());
 
-        return back()->with('status', 'Marketing authority updated.');
+        return ApprovalsReturn::back($request, 'authorities', 'Marketing authority updated.');
     }
 
     public function approveListing(Request $request, Property $property): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('staff.properties'), 403);
-        app(\App\Services\Verification\VerificationOperations::class)->assertClear($property);
+        app(VerificationOperations::class)->assertClear($property);
 
         $property->status = PropertyStatus::Published;
         $property->published_at = now();

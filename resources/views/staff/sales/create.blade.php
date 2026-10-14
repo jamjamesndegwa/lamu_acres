@@ -1,4 +1,4 @@
-<x-workspace-layout heading="Create sale">
+<x-crud-page title="Create sale" :close="route('staff.sales.index')" size="xl">
     <p class="mt-3 max-w-2xl text-sm text-stone-600">Link the buyer, the property, and the enquiry or referral that opened the deal. Opening a transaction does not complete a sale.</p>
     <form method="POST" action="{{ route('staff.sales.store') }}" data-turbo-frame="_top" data-confirm="Open this sales transaction?" class="mt-6 max-w-xl space-y-3">
         @csrf
@@ -60,4 +60,4 @@
         </label>
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Open transaction</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

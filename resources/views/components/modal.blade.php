@@ -1,13 +1,14 @@
 @props([
     'title',
     'close' => null,
+    'size' => 'lg',
 ])
 
 <div class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 p-4 sm:items-center" data-modal-overlay>
     <button type="button" class="absolute inset-0 cursor-default" data-close-modal aria-label="Close dialog"></button>
 
     <div
-        {{ $attributes->merge(['class' => 'relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl']) }}
+        {{ $attributes->merge(['class' => 'relative z-10 max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-xl '.($size === 'xl' ? 'max-w-3xl' : 'max-w-lg')]) }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

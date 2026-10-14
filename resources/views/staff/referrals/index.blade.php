@@ -7,7 +7,7 @@
                     <td class="px-4 py-4"><a href="{{ route('staff.referrals.show', $referral) }}" class="font-medium text-lamu-900 hover:underline">{{ $referral->reference }}</a></td>
                     <td class="px-4 py-4">{{ $referral->broker?->name }}</td>
                     <td class="px-4 py-4">{{ $referral->buyer_name }}</td>
-                    <td class="px-4 py-4">{{ $referral->status->label() }} @if ($referral->conflicts) · conflict @endif</td>
+                    <td class="px-4 py-4"><x-status-badge :label="$referral->status->label().($referral->conflicts ? ' · conflict' : '')" /></td>
                 </tr>
             @empty
                 <tr><td colspan="4" class="px-4 py-8"><x-workspace.empty title="No referrals" message="Broker introductions will be listed here." /></td></tr>

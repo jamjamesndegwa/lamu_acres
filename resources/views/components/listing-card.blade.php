@@ -9,6 +9,9 @@
     </div>
     <div class="space-y-2 px-5 py-4 text-sm text-stone-700">
         <p>{{ $listing->locationLabel() }}</p>
+        @if ($listing->status)
+            <x-status-badge :label="$listing->status->label()" />
+        @endif
         @if ($listing->acreage)
             <p>{{ rtrim(rtrim(number_format((float) $listing->acreage, 2), '0'), '.') }} acres</p>
         @endif

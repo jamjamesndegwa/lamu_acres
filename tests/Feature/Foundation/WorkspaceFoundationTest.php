@@ -76,7 +76,18 @@ class WorkspaceFoundationTest extends FoundationTestCase
     {
         $user = User::factory()->withRoles('buyer', 'broker')->create();
 
-        $this->actingAs($user)->get('/buyer')->assertOk()->assertSee('Switch Workspace');
+        $buyerPage = $this->actingAs($user)->get('/buyer')->assertOk()->assertSee('Switch Workspace');
+        $this->assertMatchesRegularExpression('/id="switch-workspace"[^>]*data-turbo-frame="modal"/', $buyerPage->getContent());
+
+        $this->actingAs($user)
+            ->withHeader('Turbo-Frame', 'modal')
+            ->get(route('workspaces.index'))
+            ->assertOk()
+            ->assertSee('Choose a workspace')
+            ->assertSee('Buyer')
+            ->assertSee('Broker Partner')
+            ->assertSee('id="modal"', false)
+            ->assertDontSee('<!DOCTYPE html>', false);
 
         $this->actingAs($user)
             ->post(route('workspaces.switch', 'broker'))

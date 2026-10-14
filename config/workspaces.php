@@ -240,6 +240,13 @@ return [
                     ['label' => 'Statements', 'route' => 'seller.transactions.index'],
                 ],
             ],
+            [
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'items' => [
+                    ['label' => 'Notifications', 'route' => 'seller.notifications.index', 'active' => 'seller.notifications.*'],
+                ],
+            ],
         ],
         'account' => [
             ['label' => 'Partner application', 'route' => 'account.applications.index'],
@@ -323,6 +330,13 @@ return [
                 'label' => 'Subscription',
                 'items' => [
                     ['label' => 'Subscription', 'route' => 'investor.subscription.show', 'active' => 'investor.subscription.*'],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'items' => [
+                    ['label' => 'Notifications', 'route' => 'investor.notifications.index', 'active' => 'investor.notifications.*'],
                 ],
             ],
         ],
@@ -496,11 +510,11 @@ return [
                 'label' => 'Business Oversight',
                 'permission' => 'admin.oversight',
                 'items' => [
-                    ['label' => 'Sales Performance'],
-                    ['label' => 'Inventory Performance'],
-                    ['label' => 'Buyer Demand'],
-                    ['label' => 'Broker Performance'],
-                    ['label' => 'Subscription Performance'],
+                    ['label' => 'Sales', 'route' => 'admin.oversight.sales', 'active' => 'admin.oversight.sales'],
+                    ['label' => 'Inventory', 'route' => 'admin.oversight.inventory', 'active' => 'admin.oversight.inventory'],
+                    ['label' => 'Buyers', 'route' => 'admin.oversight.buyers', 'active' => 'admin.oversight.buyers'],
+                    ['label' => 'Brokers', 'route' => 'admin.oversight.brokers', 'active' => 'admin.oversight.brokers'],
+                    ['label' => 'Subscriptions', 'route' => 'admin.oversight.subscriptions', 'active' => 'admin.oversight.subscriptions'],
                 ],
             ],
             [
@@ -508,10 +522,7 @@ return [
                 'label' => 'Approvals',
                 'permission' => 'admin.approvals',
                 'items' => [
-                    ['label' => 'Listing Approvals'],
-                    ['label' => 'Commission Authorizations'],
-                    ['label' => 'Verification Exceptions'],
-                    ['label' => 'Publication Approvals'],
+                    ['label' => 'Approvals Centre', 'route' => 'admin.approvals.index', 'active' => 'admin.approvals.*'],
                 ],
             ],
             [
@@ -529,9 +540,9 @@ return [
                 'label' => 'Geography',
                 'permission' => 'admin.geography',
                 'items' => [
-                    ['label' => 'Counties & Localities', 'route' => 'admin.geography.index', 'active' => 'admin.geography.*'],
-                    ['label' => 'Map Layers'],
-                    ['label' => 'Infrastructure Reference Data'],
+                    ['label' => 'Counties & Localities', 'route' => 'admin.geography.index', 'active' => ['admin.geography.index', 'admin.geography.counties.*', 'admin.geography.localities.*', 'admin.geography.aliases.*']],
+                    ['label' => 'Map Layers', 'route' => 'admin.geography.layers.index', 'active' => 'admin.geography.layers.*'],
+                    ['label' => 'Infrastructure Reference Data', 'route' => 'admin.geography.infrastructure.index', 'active' => 'admin.geography.infrastructure.*'],
                 ],
             ],
             [
@@ -539,10 +550,10 @@ return [
                 'label' => 'Commercial Settings',
                 'permission' => 'admin.commercial',
                 'items' => [
-                    ['label' => 'Commission Rules'],
-                    ['label' => 'Agreement Templates'],
-                    ['label' => 'Subscription Plans', 'route' => 'admin.plans.edit', 'active' => 'admin.plans.*'],
-                    ['label' => 'Verification Checklists'],
+                    ['label' => 'Investor Pass Plans', 'route' => 'admin.plans.edit', 'active' => 'admin.plans.*', 'modal' => false],
+                    ['label' => 'Commission Policy', 'route' => 'admin.commercial.commissions', 'active' => 'admin.commercial.commissions', 'modal' => false],
+                    ['label' => 'Listing Rules', 'route' => 'admin.commercial.listings', 'active' => 'admin.commercial.listings', 'modal' => false],
+                    ['label' => 'Verification Standards', 'route' => 'admin.commercial.verification', 'active' => 'admin.commercial.verification', 'modal' => false],
                 ],
             ],
             [
@@ -550,8 +561,11 @@ return [
                 'label' => 'System Operations',
                 'permission' => 'admin.settings',
                 'items' => [
-                    ['label' => 'Integrations'],
-                    ['label' => 'Audit'],
+                    ['label' => 'Application Health', 'route' => 'admin.operations.index', 'active' => 'admin.operations.*', 'fragment' => 'health'],
+                    ['label' => 'Background Jobs', 'route' => 'admin.operations.index', 'active' => 'admin.operations.jobs', 'fragment' => 'jobs'],
+                    ['label' => 'Scheduled Tasks', 'route' => 'admin.operations.index', 'active' => 'admin.operations.schedules', 'fragment' => 'schedules'],
+                    ['label' => 'Integrations', 'route' => 'admin.operations.index', 'active' => 'admin.operations.integrations', 'fragment' => 'integrations'],
+                    ['label' => 'Audit', 'route' => 'admin.operations.index', 'active' => 'admin.operations.audit', 'fragment' => 'audit'],
                 ],
             ],
             [
@@ -559,10 +573,17 @@ return [
                 'label' => 'Reports',
                 'permission' => 'admin.reports',
                 'items' => [
-                    ['label' => 'Sales Reports'],
-                    ['label' => 'Commission Reports'],
-                    ['label' => 'Financial Reports'],
-                    ['label' => 'Audit Reports'],
+                    ['label' => 'Sales Reports', 'route' => 'admin.reports.sales', 'active' => 'admin.reports.sales', 'modal' => false],
+                    ['label' => 'Commission Reports', 'route' => 'admin.reports.commissions', 'active' => 'admin.reports.commissions', 'modal' => false],
+                    ['label' => 'Financial Reports', 'route' => 'admin.reports.financial', 'active' => 'admin.reports.financial', 'modal' => false],
+                    ['label' => 'Audit Reports', 'route' => 'admin.reports.audit', 'active' => 'admin.reports.audit', 'modal' => false],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'items' => [
+                    ['label' => 'Notifications', 'route' => 'admin.notifications.index', 'active' => 'admin.notifications.*'],
                 ],
             ],
         ],
@@ -570,13 +591,13 @@ return [
             ['label' => 'Logout', 'route' => 'logout', 'method' => 'post'],
         ],
         'panels' => [
-            ['title' => 'Sales performance', 'description' => 'Completed and open sales.', 'permission' => 'admin.oversight'],
-            ['title' => 'Approvals', 'description' => 'Decisions waiting for a controller.', 'permission' => 'admin.approvals'],
+            ['title' => 'Sales performance', 'description' => 'Completed and open sales.', 'permission' => 'admin.oversight', 'route' => 'admin.oversight.sales'],
+            ['title' => 'Approvals', 'description' => 'Decisions waiting for a controller.', 'permission' => 'admin.approvals', 'route' => 'admin.approvals.index'],
             ['title' => 'User access', 'description' => 'Review who can open each workspace.', 'permission' => 'admin.users', 'route' => 'admin.users.index'],
             ['title' => 'Geography', 'description' => 'Counties, localities, and map layers.', 'permission' => 'admin.geography', 'route' => 'admin.geography.index'],
-            ['title' => 'Commercial settings', 'description' => 'Commission rules and subscription plans.', 'permission' => 'admin.commercial', 'route' => 'admin.plans.edit'],
-            ['title' => 'System operations', 'description' => 'Integrations, queues, and activity.', 'permission' => 'admin.settings'],
-            ['title' => 'Reports', 'description' => 'Sales, commission, and audit reports.', 'permission' => 'admin.reports'],
+            ['title' => 'Commercial settings', 'description' => 'Investor Pass, recorded commissions, listing rules, and verification standards.', 'permission' => 'admin.commercial', 'route' => 'admin.plans.edit', 'modal' => false],
+            ['title' => 'System operations', 'description' => 'Integrations, queues, and activity.', 'permission' => 'admin.settings', 'route' => 'admin.operations.index'],
+            ['title' => 'Reports', 'description' => 'Sales, commission, financial, and audit reports.', 'permission' => 'admin.reports', 'route' => 'admin.reports.sales', 'modal' => false],
         ],
     ],
 

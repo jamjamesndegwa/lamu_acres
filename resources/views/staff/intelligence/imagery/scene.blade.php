@@ -1,5 +1,5 @@
-<x-workspace-layout :heading="$scene->exists ? 'Edit imagery scene' : 'New imagery scene'">
-    <form method="POST" action="{{ $scene->exists ? route('staff.imagery.scenes.update', $scene) : route('staff.imagery.scenes.store') }}" enctype="multipart/form-data" class="mt-6 max-w-3xl space-y-4">
+<x-crud-page :title="$scene->exists ? 'Edit imagery scene' : 'New imagery scene'" :close="route('staff.imagery.index')" size="xl">
+    <form method="POST" action="{{ $scene->exists ? route('staff.imagery.scenes.update', $scene) : route('staff.imagery.scenes.store') }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Save this imagery scene?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         @if ($scene->exists) @method('PUT') @endif
         <label class="block text-sm">Provider <input name="provider" value="{{ old('provider', $scene->provider) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></label>
@@ -37,8 +37,8 @@
                 <form method="POST" action="{{ route('staff.imagery.scenes.submit', $scene) }}">@csrf <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Submit</button></form>
             @endif
             @if ($scene->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
-                <form method="POST" action="{{ route('staff.imagery.scenes.publish', $scene) }}">@csrf <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish scene</button></form>
+                <form method="POST" action="{{ route('staff.imagery.scenes.publish', $scene) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish scene</button></form>
             @endif
         </div>
     @endif
-</x-workspace-layout>
+</x-crud-page>

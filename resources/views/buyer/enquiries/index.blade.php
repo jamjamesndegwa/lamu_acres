@@ -17,7 +17,7 @@
                         <a href="{{ route('buyer.enquiries.show', $enquiry) }}" class="font-medium text-lamu-900 hover:underline">{{ $enquiry->property->title }}</a>
                         <p class="text-xs text-stone-500">{{ $enquiry->property->reference }}</p>
                     </td>
-                    <td class="px-4 py-4 text-sm">{{ $enquiry->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$enquiry->status->label()" /></td>
                     <td class="px-4 py-4 text-sm text-stone-600">{{ $enquiry->created_at->toFormattedDateString() }}</td>
                 </tr>
             @empty

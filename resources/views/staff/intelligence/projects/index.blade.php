@@ -2,7 +2,7 @@
     <x-editorial-workflow />
     <div class="mt-4 flex justify-between gap-3">
         <p class="max-w-3xl text-stone-700">Record only what a source supports. A draft stays off the public site until an editor publishes it.</p>
-        <a href="{{ route('staff.projects.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">New project</a>
+        <a href="{{ route('staff.projects.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">New project</a>
     </div>
     <div class="mt-6">
         <x-workspace.table :columns="['Project', 'Status', 'Publication']">

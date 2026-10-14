@@ -74,10 +74,6 @@
             @foreach ($modules as $module)
                 @php
                     $icon = $moduleIcons[$module['key']] ?? 'fa-folder';
-                    $children = collect($module['items'] ?? [])->filter(
-                        fn (array $item): bool => ($item['available'] ?? false) && ($item['method'] ?? 'get') === 'get',
-                    )->values();
-                    $repeatHeading = $children->count() === 1 && ($children->first()['label'] ?? null) === $module['label'];
                 @endphp
                 @if ($module['href'])
                     <a
@@ -85,6 +81,9 @@
                         data-module="{{ $module['key'] }}"
                         @if ($module['active'])
                             aria-current="page"
+                        @endif
+                        @if ($module['frame'] ?? null)
+                            data-turbo-frame="{{ $module['frame'] }}"
                         @endif
                         @class([
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
@@ -103,6 +102,9 @@
                         @if ($module['active'])
                             aria-current="page"
                         @endif
+                        @if ($module['frame'] ?? null)
+                            data-turbo-frame="{{ $module['frame'] }}"
+                        @endif
                         @class([
                             'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
@@ -112,15 +114,6 @@
                         <i class="fa-solid {{ $icon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
                         <span>{{ $module['label'] }}</span>
                     </button>
-                @endif
-                @if ($workspace && $workspace->value === 'staff' && ! $repeatHeading && $children->isNotEmpty())
-                        <ul class="mb-2 ml-8 space-y-0.5">
-                            @foreach ($children as $item)
-                                <li>
-                                    <a href="{{ $item['href'] }}" class="block rounded-lg px-3 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white">{{ $item['label'] }}</a>
-                                </li>
-                            @endforeach
-                        </ul>
                 @endif
             @endforeach
         </nav>

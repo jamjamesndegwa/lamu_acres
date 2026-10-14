@@ -1,4 +1,4 @@
-<form method="GET" action="{{ url()->current() }}" class="mt-6 flex flex-wrap items-end gap-3">
+<x-filter-bar :action="url()->current()" class="mt-6 flex flex-wrap items-end gap-3">
     <div>
         <label for="imagery-county" class="block text-sm font-medium">County</label>
         <select id="imagery-county" name="county" class="mt-1 rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -18,7 +18,7 @@
         </select>
     </div>
     <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Filter</button>
-</form>
+</x-filter-bar>
 
 <div class="mt-6 grid gap-4">
     @forelse ($comparisons as $comparison)

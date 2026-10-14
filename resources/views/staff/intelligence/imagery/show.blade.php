@@ -37,7 +37,7 @@
             <form method="POST" action="{{ route('staff.imagery.comparisons.submit', $comparison) }}">@csrf <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Submit</button></form>
         @endif
         @if ($comparison->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
-            <form method="POST" action="{{ route('staff.imagery.comparisons.publish', $comparison) }}">@csrf <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
+            <form method="POST" action="{{ route('staff.imagery.comparisons.publish', $comparison) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
         @endif
     </div>
 </x-workspace-layout>

@@ -64,12 +64,8 @@
                 @endforeach
             </select>
         </label>
-        <label class="block text-sm font-medium">Acreage
-            <input name="acreage" value="{{ old('acreage', $property->acreage) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-        </label>
-        <label class="block text-sm font-medium">Asking price (KSh)
-            <input name="price_amount" value="{{ old('price_amount', $property->price_amount) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-        </label>
+        <x-measure-field name="acreage" label="Acreage" unit="acres" :value="old('acreage', $property->acreage)" required />
+        <x-measure-field name="price_amount" label="Asking price" unit="KSh" :value="old('price_amount', $property->price_amount)" inputmode="numeric" required />
     </div>
     <p class="text-sm text-stone-600">Price per acre: {{ $property->exists && $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : 'Calculated when acreage and price are saved.' }}</p>
     <div class="grid grid-cols-2 gap-3">

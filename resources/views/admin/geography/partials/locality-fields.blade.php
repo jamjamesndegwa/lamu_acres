@@ -3,6 +3,7 @@
     @if ($locality->exists) @method('PUT') @endif
     <label class="block text-sm font-medium">Name
         <input name="name" value="{{ old('name', $locality->name) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+        @error('name')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
     </label>
     <label class="block text-sm font-medium">Kind
         <select name="kind" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
@@ -15,9 +16,10 @@
         <select name="parent_id" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
             <option value="">None</option>
             @foreach ($parents as $parent)
-                <option value="{{ $parent->id }}" @selected((string) old('parent_id', $locality->parent_id) === (string) $parent->id)>{{ $parent->name }}</option>
+                <option value="{{ $parent->id }}" @selected((string) old('parent_id', $locality->parent_id) === (string) $parent->id)>{{ $parent->name }} ({{ $parent->kind->label() }})</option>
             @endforeach
         </select>
+        @error('parent_id')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
     </label>
     <div class="grid grid-cols-2 gap-3">
         <label class="block text-sm font-medium">Latitude
@@ -40,6 +42,7 @@
         @csrf
         <label class="block text-sm font-medium">Alias
             <input name="name" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+            @error('name')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
         </label>
         <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add alias</button>
     </form>

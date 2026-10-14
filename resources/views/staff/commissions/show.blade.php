@@ -9,6 +9,14 @@
         <p class="mt-1 text-sm">Earned KSh {{ number_format($agreement->earned_amount) }}</p>
     @endif
 
+    @if ($agreement->status === \App\Enums\CommissionStatus::Earned && auth()->user()->hasPermission('commissions.approve') && auth()->user()->hasPermission('staff.finance'))
+        <form method="POST" action="{{ route('staff.settlements.approve', $agreement) }}" data-turbo-frame="_top" data-confirm="Approve {{ $agreement->reference }} as payable. This does not record a payment." class="mt-4">
+            @csrf
+            @include('admin.approvals.return-field')
+            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Approve as payable</button>
+        </form>
+        <p class="mt-2 text-sm text-stone-600">Approving as payable does not pay the commission. Payment recording stays on the settlement desk.</p>
+    @endif
     @if ($agreement->status === \App\Enums\CommissionStatus::Proposed)
         <form method="POST" action="{{ route('staff.commissions.accept', $agreement) }}" data-turbo-frame="_top" data-confirm="Accept {{ $agreement->reference }} for {{ $agreement->broker->name }}. Rate {{ $agreement->rate_percent ?: 'fixed '.$agreement->fixed_amount }}. Resulting state: Accepted. Accepting does not earn or pay commission." class="mt-4">
             @csrf

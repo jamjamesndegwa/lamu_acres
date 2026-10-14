@@ -11,6 +11,8 @@ use App\Models\Property;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Services\Verification\VerificationDesk;
+use App\Services\Verification\VerificationOperations;
+use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,7 +29,7 @@ class VerificationController extends Controller
 
         return view('staff.verification.index', [
             'properties' => $properties,
-            'summary' => app(\App\Services\Verification\VerificationOperations::class)->summary(),
+            'summary' => app(VerificationOperations::class)->summary(),
         ]);
     }
 
@@ -60,7 +62,7 @@ class VerificationController extends Controller
 
         $desk->review($verificationItem, $request->user(), $data);
 
-        return back()->with('status', 'Checklist item updated.');
+        return ApprovalsReturn::back($request, 'verification', 'Checklist item updated.');
     }
 
     public function evidence(Request $request, VerificationItem $verificationItem, VerificationDesk $desk): RedirectResponse
@@ -102,6 +104,6 @@ class VerificationController extends Controller
 
         $desk->setOverride($property->passport, VerificationOverride::from($data['override']), $data['critical_exception'] ?? null, $request->user());
 
-        return back()->with('status', 'Verification override saved.');
+        return ApprovalsReturn::back($request, 'verification', 'Verification override saved.');
     }
 }

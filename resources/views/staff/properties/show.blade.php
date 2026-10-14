@@ -18,6 +18,9 @@
             <div><dt class="text-sm text-stone-500">Asking price</dt><dd>{{ $property->formattedPrice() ?? 'Not recorded' }}</dd></div>
             <div><dt class="text-sm text-stone-500">Price per acre</dt><dd>{{ $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : 'Not recorded' }}</dd></div>
         </dl>
+        <div class="mt-6 max-w-4xl">
+            <x-map-viewer :latitude="$property->public_latitude" :longitude="$property->public_longitude" empty="No map point has been recorded for this property." />
+        </div>
         @if ($property->description)
             <p class="mt-4 max-w-3xl text-stone-700">{{ $property->description }}</p>
         @endif
@@ -79,21 +82,22 @@
             <p class="mt-3 text-sm text-stone-700">Critical exception: {{ $property->passport->critical_exception }}</p>
         @endif
         <h2 class="mt-8 font-semibold text-lamu-900">Checklist</h2>
-        <ul class="mt-3 space-y-1 text-sm">
-            @forelse ($property->verificationItems as $item)
-                <li>{{ $item->category->label() }} · {{ $item->state->label() }} @if ($item->reviewer) · {{ $item->reviewer->name }} @endif</li>
-            @empty
-                <li class="text-stone-600">No verification checklist has been opened.</li>
-            @endforelse
-        </ul>
+        <x-document-checklist
+            empty="No verification checklist has been opened."
+            :items="$property->verificationItems->map(fn ($item) => [
+                'label' => $item->category->label(),
+                'state' => $item->state->label(),
+                'note' => $item->reviewer?->name,
+            ])->all()"
+        />
         <h2 class="mt-8 font-semibold text-lamu-900">Document checks</h2>
-        <ul class="mt-3 space-y-1 text-sm">
-            @forelse ($property->documentChecks as $check)
-                <li>{{ $check->label() }} · {{ $check->state->label() }}</li>
-            @empty
-                <li class="text-stone-600">Title search and survey plan have not been recorded. They are saved with the marketing attributes.</li>
-            @endforelse
-        </ul>
+        <x-document-checklist
+            empty="Title search and survey plan have not been recorded. They are saved with the marketing attributes."
+            :items="$property->documentChecks->map(fn ($check) => [
+                'label' => $check->label(),
+                'state' => $check->state->label(),
+            ])->all()"
+        />
         @if (auth()->user()->hasPermission('staff.verification'))
             <a href="{{ route('staff.verification.show', $property) }}" class="mt-4 inline-block text-sm font-medium text-lamu-800">Open the verification desk</a>
         @endif
@@ -117,6 +121,7 @@
                     @endif
                     <form method="POST" action="{{ route('staff.authorities.update', $authority) }}" class="mt-3 flex flex-wrap items-end gap-2">
                         @csrf
+                        @include('admin.approvals.return-field')
                         @method('PUT')
                         <select name="status" class="rounded-lg border border-sand-200 px-3 py-2">
                             @foreach (['active' => 'Active', 'declined' => 'Declined', 'withdrawn' => 'Withdrawn'] as $value => $label)
@@ -192,13 +197,13 @@
         @endif
     @else
         <h2 class="mt-6 font-semibold text-lamu-900">Changes</h2>
-        <ul class="mt-3 space-y-1 text-sm">
-            @forelse ($property->audits as $audit)
-                <li>{{ $audit->created_at?->format('j M Y H:i') }} · {{ $audit->actor?->name ?? 'System' }} · {{ $audit->action }} @if ($audit->from_status || $audit->to_status) · {{ $audit->from_status }} → {{ $audit->to_status }} @endif</li>
-            @empty
-                <li class="text-stone-600">No change has been recorded.</li>
-            @endforelse
-        </ul>
+        <x-activity-timeline
+            empty="No change has been recorded."
+            :items="$property->audits->map(fn ($audit) => [
+                'when' => $audit->created_at?->format('j M Y H:i'),
+                'text' => trim(($audit->actor?->name ?? 'System').' · '.$audit->action.(($audit->from_status || $audit->to_status) ? ' · '.$audit->from_status.' → '.$audit->to_status : '')),
+            ])->all()"
+        />
         <h2 class="mt-8 font-semibold text-lamu-900">Price record</h2>
         <ul class="mt-3 space-y-1 text-sm">
             @forelse ($property->priceChanges as $change)

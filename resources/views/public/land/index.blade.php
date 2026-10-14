@@ -85,7 +85,7 @@
                     @endif
                     @auth
                         @if (auth()->user()->hasPermission('workspace.buyer'))
-                            <a href="{{ route('buyer.sourcing.create') }}" class="mt-4 inline-block font-medium text-lamu-800 hover:underline">Find land for me</a>
+                            <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="modal" class="mt-4 inline-block font-medium text-lamu-800 hover:underline">Find land for me</a>
                         @endif
                     @endauth
                 </p>

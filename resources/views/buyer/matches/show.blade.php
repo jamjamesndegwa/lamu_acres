@@ -39,6 +39,7 @@
         <h2 class="font-semibold text-lamu-900">Directions</h2>
         @if ($directions && $directions['latitude'] !== null)
             <p class="mt-3 text-sm text-stone-700">Exact location: {{ $directions['latitude'] }}, {{ $directions['longitude'] }}</p>
+            <x-map-viewer :latitude="$directions['latitude']" :longitude="$directions['longitude']" />
         @else
             <p class="mt-3 text-sm text-stone-700">Exact directions stay hidden until a visit is confirmed.</p>
         @endif
@@ -53,47 +54,12 @@
     @endunless
 
     @if ($match->status->value === 'shortlisted')
-        <form method="POST" action="{{ route('buyer.matches.reject', $match) }}" data-turbo-frame="_top" data-confirm="Remove this property from your shortlist?" class="mt-6 max-w-3xl">
-            @csrf
-            <label for="buyer_feedback" class="block text-sm font-medium">Rejection feedback</label>
-            <textarea id="buyer_feedback" name="buyer_feedback" required minlength="5" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
-            <button class="mt-3 rounded-full border border-sand-200 px-5 py-3 text-sm font-medium">Remove from shortlist</button>
-        </form>
-
-        <form method="POST" action="{{ route('buyer.matches.visits.store', $match) }}" data-turbo-frame="_top" data-confirm="Request this site visit?" class="mt-6 max-w-3xl space-y-3">
-            @csrf
-            <h2 class="font-semibold text-lamu-900">Request a site visit</h2>
-            <div>
-                <label for="requested_for" class="block text-sm font-medium">Preferred time</label>
-                <input id="requested_for" type="datetime-local" name="requested_for" required class="mt-1 rounded-lg border border-sand-200 px-3 py-2">
-            </div>
-            <div>
-                <label for="notes" class="block text-sm font-medium">Notes</label>
-                <textarea id="notes" name="notes" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
-            </div>
-            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request visit</button>
-        </form>
-
-        <form method="POST" action="{{ route('buyer.matches.offers.store', $match) }}" data-turbo-frame="_top" data-confirm="Submit this offer?" class="mt-6 max-w-3xl space-y-3">
-            @csrf
-            <h2 class="font-semibold text-lamu-900">Make an offer</h2>
-            <div>
-                <label for="amount" class="block text-sm font-medium">Amount (KSh)</label>
-                <input id="amount" name="amount" required class="mt-1 rounded-lg border border-sand-200 px-3 py-2">
-            </div>
-            <div>
-                <label for="message" class="block text-sm font-medium">Message</label>
-                <textarea id="message" name="message" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></textarea>
-            </div>
-            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Submit offer</button>
-        </form>
-
-        <form method="POST" action="{{ route('buyer.matches.documents.store', $match) }}" data-turbo-frame="_top" data-confirm="Request access to the documents?" class="mt-6 max-w-3xl space-y-3">
-            @csrf
-            <h2 class="font-semibold text-lamu-900">Document access</h2>
-            <textarea name="note" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="What do you need to review?"></textarea>
-            <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request documents</button>
-        </form>
+        <div class="mt-6 flex flex-wrap gap-3">
+            <a href="{{ route('buyer.matches.show', [$match, 'dialog' => 'visit']) }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request a site visit</a>
+            <a href="{{ route('buyer.matches.show', [$match, 'dialog' => 'offer']) }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Make an offer</a>
+            <a href="{{ route('buyer.matches.show', [$match, 'dialog' => 'documents']) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Request documents</a>
+            <a href="{{ route('buyer.matches.show', [$match, 'dialog' => 'reject']) }}" data-turbo-frame="modal" class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium">Remove from shortlist</a>
+        </div>
     @endif
 
     @if ($match->buyer_feedback)

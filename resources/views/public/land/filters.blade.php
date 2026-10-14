@@ -1,4 +1,4 @@
-<form method="GET" action="{{ $directoryUrl }}" class="space-y-4 text-sm">
+<x-filter-bar :action="$directoryUrl" class="space-y-4 text-sm">
     <input type="hidden" name="view" value="{{ $filters['view'] }}">
 
     <label class="block">
@@ -65,4 +65,4 @@
     </label>
 
     <button type="submit" class="w-full rounded-full bg-lamu-900 px-4 py-2 font-medium text-white">Apply filters</button>
-</form>
+</x-filter-bar>

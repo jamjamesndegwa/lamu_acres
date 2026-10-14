@@ -4,17 +4,15 @@
 
     <section class="mt-6 max-w-3xl">
         <h2 class="font-semibold text-lamu-900">Verification summary</h2>
-        <ul class="mt-3 space-y-1 text-sm text-stone-700">
-            @foreach ($passport['items'] as $item)
-                <li>{{ $item['category'] }}: {{ $item['outcome'] }}</li>
-            @endforeach
-        </ul>
+        <x-document-checklist
+            empty="No verification summary has been recorded."
+            :items="collect($passport['items'])->map(fn ($item) => ['label' => $item['category'], 'state' => $item['outcome']])->all()"
+        />
     </section>
 
     <form method="POST" action="{{ route('seller.properties.documents.store', $property) }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Store this ownership document?" class="mt-6 max-w-xl space-y-3">
         @csrf
-        <h2 class="font-semibold text-lamu-900">Ownership document</h2>
-        <input type="file" name="document" required>
+        <x-upload-manager name="document" label="Ownership document" required />
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Upload privately</button>
     </form>
 

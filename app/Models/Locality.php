@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LocalityKind;
+use Database\Factories\LocalityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Locality extends Model
 {
-    /** @use HasFactory<\Database\Factories\LocalityFactory> */
+    /** @use HasFactory<LocalityFactory> */
     use HasFactory;
 
     protected function casts(): array
@@ -74,5 +75,10 @@ class Locality extends Model
     public function hasBoundary(): bool
     {
         return filled($this->boundary_wkt);
+    }
+
+    public function hasPoint(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 }

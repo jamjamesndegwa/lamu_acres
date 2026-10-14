@@ -6,6 +6,7 @@
 
 <form method="POST" action="{{ route('staff.applications.update', $application) }}" data-turbo-frame="_top" data-confirm="Record this decision?" class="mt-5 space-y-4">
     @csrf
+    @include('admin.approvals.return-field')
     @method('PUT')
     <div>
         <label for="status" class="block text-sm font-medium">Decision</label>

@@ -4,7 +4,7 @@
             @forelse ($agreements as $agreement)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4"><a class="font-medium text-lamu-900 hover:underline" href="{{ route('staff.commissions.show', $agreement) }}">{{ $agreement->reference }}</a></td>
-                    <td class="px-4 py-4 text-sm">{{ $agreement->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$agreement->status->label()" /></td>
                     <td class="px-4 py-4 text-sm">{{ $agreement->broker->name }}</td>
                     <td class="px-4 py-4 text-sm">{{ $agreement->transaction->reference }}</td>
                 </tr>

@@ -15,15 +15,8 @@
         <p><span class="font-medium text-lamu-900">Research notes.</span> {{ $project->research_notes ?: 'No research notes have been recorded.' }}</p>
         <p><span class="font-medium text-lamu-900">Uncertainty.</span> {{ $project->research_notes ? 'The research note records what is still unconfirmed.' : 'No separate uncertainty note has been recorded beyond the published status.' }}</p>
         @if ($project->latitude !== null && $project->longitude !== null)
-            @php
-                $lat = round((float) $project->latitude, 4);
-                $lng = round((float) $project->longitude, 4);
-                $span = 0.08;
-                $bbox = implode(',', [$lng - $span, $lat - $span, $lng + $span, $lat + $span]);
-                $map = 'https://www.openstreetmap.org/export/embed.html?bbox='.$bbox.'&layer=mapnik&marker='.$lat.','.$lng;
-            @endphp
             <p><span class="font-medium text-lamu-900">Coordinates.</span> {{ $project->latitude }}, {{ $project->longitude }}</p>
-            <iframe title="Published project map" class="h-72 w-full rounded-2xl border border-sand-200" src="{{ $map }}" loading="lazy"></iframe>
+            <x-map-viewer :latitude="$project->latitude" :longitude="$project->longitude" />
             <p class="text-sm text-stone-600">The marker is the published research point. It is not a parcel boundary and it is not a direction to a private holding.</p>
         @else
             <p>No coordinates have been recorded.</p>
@@ -43,13 +36,13 @@
             @endforelse
         </ul>
         <h2 class="font-semibold text-lamu-900">Change history</h2>
-        <ul class="list-disc space-y-1 pl-5 text-sm">
-            @forelse ($project->audits as $audit)
-                <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ $audit->action }} @if ($audit->actor) · {{ $audit->actor->name }} @endif</li>
-            @empty
-                <li>No changes have been recorded.</li>
-            @endforelse
-        </ul>
+        <x-activity-timeline
+            empty="No changes have been recorded."
+            :items="$project->audits->map(fn ($audit) => [
+                'when' => $audit->created_at?->toDayDateTimeString(),
+                'text' => trim($audit->action.($audit->actor ? ' · '.$audit->actor->name : '')),
+            ])->all()"
+        />
         <h2 class="font-semibold text-lamu-900">Evidence</h2>
         <ul class="text-sm">
             @forelse ($project->files as $file)

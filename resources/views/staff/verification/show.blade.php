@@ -1,12 +1,13 @@
 <x-workspace-layout :heading="$property->title">
     <p class="mt-3 text-sm text-stone-600">{{ $property->passport->level->label() }} · {{ $property->passport->override->label() }}</p>
-    <p class="mt-1 text-sm"><a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.verification.history', $property) }}">Verification history</a></p>
+    <p class="mt-1 text-sm"><a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.verification.history', ['property' => $property, 'return' => request('return')]) }}">Verification history</a></p>
     @if ($property->passport->critical_exception)
         <p class="mt-2 text-sm text-stone-700">Critical exception: {{ $property->passport->critical_exception }}</p>
     @endif
 
     <form method="POST" action="{{ route('staff.verification.override', $property) }}" data-turbo-frame="_top" data-confirm="Save this verification override?" class="mt-6 flex flex-wrap items-end gap-3">
         @csrf
+        @include('admin.approvals.return-field')
         @method('PUT')
         <select name="override" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
             @foreach ($overrides as $override)
@@ -44,6 +45,7 @@
                 @endif
                 <form method="POST" action="{{ route('staff.verification.review', $item) }}" data-turbo-frame="_top" data-confirm="Update this checklist item?" class="mt-3 grid gap-2 sm:grid-cols-2">
                     @csrf
+                    @include('admin.approvals.return-field')
                     @method('PUT')
                     <select name="state" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
                         @foreach ($states as $state)

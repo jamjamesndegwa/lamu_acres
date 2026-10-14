@@ -343,10 +343,9 @@
             </x-workspace.table>
         </div>
         <h2 class="mt-8 font-semibold text-lamu-900">Timeline</h2>
-        <ol class="mt-2 space-y-1 text-sm">
-            @foreach ($transaction->timeline as $entry)
-                <li>{{ $entry->created_at->toDayDateTimeString() }} · {{ $entry->summary }}</li>
-            @endforeach
-        </ol>
+        <x-activity-timeline :items="$transaction->timeline->map(fn ($entry) => [
+            'when' => $entry->created_at->toDayDateTimeString(),
+            'text' => $entry->summary,
+        ])->all()" />
     @endif
 </x-workspace-layout>

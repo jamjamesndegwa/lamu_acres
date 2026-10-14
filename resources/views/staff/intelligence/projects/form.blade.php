@@ -1,6 +1,6 @@
-<x-workspace-layout :heading="$project->exists ? 'Edit project' : 'New project'">
+<x-crud-page :title="$project->exists ? 'Edit project' : 'New project'" :close="$project->exists ? route('staff.projects.show', $project) : route('staff.projects.index')" size="xl">
     <p class="mt-3 max-w-3xl text-sm text-stone-600">Leave coordinates, boundaries, and milestones empty unless a named source records them.</p>
-    <form method="POST" action="{{ $project->exists ? route('staff.projects.update', $project) : route('staff.projects.store') }}" class="mt-6 max-w-3xl space-y-4">
+    <form method="POST" action="{{ $project->exists ? route('staff.projects.update', $project) : route('staff.projects.store') }}" data-turbo-frame="_top" data-confirm="Save this project?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         @if ($project->exists) @method('PUT') @endif
         <label class="block text-sm">Name <input name="name" value="{{ old('name', $project->name) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></label>
@@ -43,4 +43,4 @@
         @if ($errors->any()) <p class="text-sm text-red-700">{{ $errors->first() }}</p> @endif
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save draft</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

@@ -1,5 +1,5 @@
-<x-workspace-layout :heading="$report->exists ? 'Edit report' : 'New report'">
-    <form method="POST" action="{{ $report->exists ? route('staff.reports.update', $report) : route('staff.reports.store') }}" class="mt-6 max-w-3xl space-y-4">
+<x-crud-page :title="$report->exists ? 'Edit report' : 'New report'" :close="route('staff.reports.index')" size="xl">
+    <form method="POST" action="{{ $report->exists ? route('staff.reports.update', $report) : route('staff.reports.store') }}" data-turbo-frame="_top" data-confirm="Save this report?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         @if ($report->exists) @method('PUT') @endif
         <label class="block text-sm">Title <input name="title" value="{{ old('title', $report->title) }}" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2"></label>
@@ -23,4 +23,4 @@
         @if ($errors->any()) <p class="text-sm text-red-700">{{ $errors->first() }}</p> @endif
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Save</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

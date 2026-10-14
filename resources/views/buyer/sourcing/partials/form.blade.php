@@ -234,5 +234,6 @@
 
         points = readPolygon();
         draw();
+        setTimeout(function () { map.invalidateSize(); }, 0);
     })();
 </script>

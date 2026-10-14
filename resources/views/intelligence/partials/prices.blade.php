@@ -1,5 +1,5 @@
 <p class="mt-4 max-w-3xl text-sm text-stone-600">Figures below are asking prices from published listings. They are not achieved sale prices, and they are not a forecast. Seller identity and parcel numbers are not part of this observatory.</p>
-<form method="GET" action="{{ url()->current() }}" class="mt-6 flex flex-wrap items-end gap-3">
+<x-filter-bar :action="url()->current()" class="mt-6 flex flex-wrap items-end gap-3">
     <div>
         <label for="price-locality" class="block text-sm font-medium">Location</label>
         <select id="price-locality" name="locality" class="mt-1 rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -10,7 +10,7 @@
         </select>
     </div>
     <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Filter</button>
-</form>
+</x-filter-bar>
 <div class="mt-6 grid gap-4">
     @forelse ($rows as $row)
         <article class="rounded-2xl border border-sand-200 bg-white p-5">

@@ -36,6 +36,31 @@ class Wkt
         return preg_match('/^POLYGON\(\((-?\d+(\.\d+)? -?\d+(\.\d+)?)(, -?\d+(\.\d+)? -?\d+(\.\d+)?){3,}\)\)$/', $wkt) === 1;
     }
 
+    /**
+     * Stored polygon vertices for display. An empty result means nothing verified can be drawn.
+     *
+     * @return array<int, array{lat: float, lng: float}>
+     */
+    public static function latLngRing(string $wkt): array
+    {
+        $wkt = trim($wkt);
+
+        if (preg_match('/^(POLYGON|MULTIPOLYGON)\s*\(/i', $wkt) !== 1) {
+            return [];
+        }
+
+        preg_match_all('/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/', $wkt, $pairs, PREG_SET_ORDER);
+
+        if (count($pairs) < 4) {
+            return [];
+        }
+
+        return array_map(fn (array $pair): array => [
+            'lng' => (float) $pair[1],
+            'lat' => (float) $pair[2],
+        ], $pairs);
+    }
+
     public static function geomFromText(string $wkt): string
     {
         if (! self::isPoint($wkt) && ! self::isPolygon($wkt)) {

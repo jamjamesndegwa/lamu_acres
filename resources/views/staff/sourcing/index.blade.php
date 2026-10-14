@@ -9,7 +9,7 @@
         @endif
     </p>
 
-    <form method="GET" action="{{ url()->current() }}" class="mt-6 flex flex-wrap items-end gap-3">
+    <x-filter-bar :action="url()->current()" class="mt-6 flex flex-wrap items-end gap-3">
         <div>
             <label for="status" class="block text-sm font-medium">Progress</label>
             <select id="status" name="status" class="mt-1 rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -29,7 +29,7 @@
         </div>
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Filter</button>
         <a href="{{ url()->current() }}" class="text-sm font-medium text-lamu-800">Clear</a>
-    </form>
+    </x-filter-bar>
 
     <div class="mt-6">
         <x-workspace.table :columns="['Reference', 'Specification', 'Progress', 'Assignment']">
@@ -45,7 +45,7 @@
                         <p class="mt-1">{{ $sourcingRequest->maximum_budget ? 'KSh '.number_format($sourcingRequest->maximum_budget) : 'Budget not set' }}{{ $sourcingRequest->intended_use ? ' · '.$sourcingRequest->intended_use->label() : '' }}</p>
                     </td>
                     <td class="px-4 py-4 text-sm">
-                        {{ $sourcingRequest->status->label() }}
+                        <x-status-badge :label="$sourcingRequest->status->label()" />
                         <p class="mt-1 text-stone-600">{{ $sourcingRequest->proposed_count }} proposed of {{ $sourcingRequest->matches_count }}</p>
                     </td>
                     <td class="px-4 py-4 text-sm">

@@ -20,7 +20,7 @@
                         @endif
                     </td>
                     <td class="px-4 py-4 text-sm">KSh {{ number_format($offer->amount) }}</td>
-                    <td class="px-4 py-4 text-sm">{{ $offer->status->label() }}</td>
+                    <td class="px-4 py-4 text-sm"><x-status-badge :label="$offer->status->label()" /></td>
                     <td class="px-4 py-4 text-right text-sm">
                         @can('withdraw', $offer)
                             <form method="POST" action="{{ route('buyer.offers.withdraw', $offer) }}" data-turbo-frame="_top" data-confirm="Withdraw this offer?">

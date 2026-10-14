@@ -1,4 +1,4 @@
-<x-workspace-layout heading="Seller profile">
+<x-crud-page title="Seller profile" :close="route('seller.dashboard')">
     <form method="POST" action="{{ route('seller.holding.update') }}" data-turbo-frame="_top" data-confirm="Save this seller profile?" class="mt-6 max-w-xl space-y-4">
         @csrf
         @method('PUT')
@@ -16,4 +16,4 @@
         </div>
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save seller profile</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

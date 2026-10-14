@@ -1,6 +1,6 @@
 <x-workspace-layout heading="Research reports">
     <x-editorial-workflow />
-    <div class="mt-4 flex justify-end"><a href="{{ route('staff.reports.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">New report</a></div>
+    <div class="mt-4 flex justify-end"><a href="{{ route('staff.reports.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">New report</a></div>
     <div class="mt-6">
         <x-workspace.table :columns="['Report', 'Publication']">
             @forelse ($reports as $report)

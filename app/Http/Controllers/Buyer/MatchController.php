@@ -51,6 +51,15 @@ class MatchController extends Controller
                 ->first()
             : null;
 
+        $dialog = $request->string('dialog')->toString();
+
+        if (in_array($dialog, ['reject', 'visit', 'offer', 'documents'], true)) {
+            return view('buyer.matches.dialog', [
+                'match' => $propertyMatch,
+                'dialog' => $dialog,
+            ]);
+        }
+
         $directions = null;
 
         if ($propertyMatch->directionsReleased()) {

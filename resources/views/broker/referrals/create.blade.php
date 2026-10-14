@@ -1,6 +1,6 @@
-<x-workspace-layout heading="Register buyer">
+<x-crud-page title="Register buyer" :close="route('broker.referrals.index')" size="xl">
     <p class="mt-3 max-w-3xl text-stone-700">A referral is submitted for staff review. A matching or earlier introduction is recorded, not rejected, and it does not award commission.</p>
-    <form method="POST" action="{{ route('broker.referrals.store') }}" enctype="multipart/form-data" class="mt-6 max-w-3xl space-y-4">
+    <form method="POST" action="{{ route('broker.referrals.store') }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Register this buyer?" class="mt-6 max-w-3xl space-y-4">
         @csrf
         <label class="block text-sm">
             <span class="font-medium">Buyer name</span>
@@ -64,4 +64,4 @@
         @endif
         <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Submit referral</button>
     </form>
-</x-workspace-layout>
+</x-crud-page>

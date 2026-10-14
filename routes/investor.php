@@ -5,6 +5,7 @@ use App\Http\Controllers\Intelligence\LibraryController;
 use App\Http\Controllers\Intelligence\WatchlistController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
+use App\Http\Controllers\WorkspaceNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'private.cache', 'workspace:investor'])
@@ -26,6 +27,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:investor'])
         Route::get('/archive', [WatchlistController::class, 'archive'])->name('archive.index');
         Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
         Route::post('/subscription/cancellation', [MembershipController::class, 'cancel'])->name('subscription.cancel');
+        Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     });

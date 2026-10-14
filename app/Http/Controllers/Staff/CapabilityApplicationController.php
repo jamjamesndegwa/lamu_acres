@@ -6,6 +6,7 @@ use App\Enums\CapabilityApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CapabilityApplication;
 use App\Services\Access\CapabilityReviewer;
+use App\Support\ApprovalsReturn;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,8 +58,11 @@ class CapabilityApplicationController extends Controller
             $data['decision_reason'],
         );
 
-        return redirect()
-            ->route('staff.applications.index')
-            ->with('status', 'Application decision recorded.');
+        return ApprovalsReturn::orRedirect(
+            $request,
+            'applications',
+            'Application decision recorded.',
+            route('staff.applications.index'),
+        );
     }
 }

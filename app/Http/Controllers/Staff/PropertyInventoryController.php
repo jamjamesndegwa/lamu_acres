@@ -9,6 +9,7 @@ use App\Enums\RoadAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\PropertyInventoryRequest;
 use App\Models\County;
+use App\Models\InfrastructureFeature;
 use App\Models\Property;
 use App\Services\Inventory\PropertyInventory;
 use App\Support\Turbo;
@@ -128,6 +129,9 @@ class PropertyInventoryController extends Controller
             'amenities' => Amenity::cases(),
             'roads' => RoadAccess::cases(),
             'documentStates' => DocumentCheckState::cases(),
+            'infrastructure' => $property->county_id
+                ? InfrastructureFeature::query()->active()->where('county_id', $property->county_id)->orderBy('name')->get()
+                : collect(),
         ]);
     }
 
