@@ -59,7 +59,7 @@
     description="Published land for sale and lease on the Lamu coast, with location guides and a separate investor research library."
 >
     <x-slot:banner>
-        <header class="border-b border-sand-200 bg-sand-50">
+        <header class="home-header sticky top-0 z-30 border-b border-sand-200 bg-sand-50">
             <div class="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between gap-3 px-4 lg:w-[85%] lg:px-0">
                 <a href="{{ route('home') }}" class="min-w-0 shrink-0 leading-none">
                     <span class="home-serif block text-base font-semibold tracking-tight text-lamu-900">Lamu Acres</span>
@@ -109,7 +109,7 @@
         </header>
     </x-slot:banner>
 
-    <section class="relative isolate overflow-hidden bg-lamu-900 text-white lg:min-h-[280px]">
+    <section class="home-hero relative isolate overflow-hidden bg-lamu-900 text-white lg:min-h-[280px]">
         <img
             src="{{ asset('images/hero_section.jpg') }}"
             alt=""
@@ -176,7 +176,7 @@
                     $title = $listing?->title ?? ($place['name'] ?? $card['slot']['label']);
                 @endphp
                 <article class="overflow-hidden rounded-lg border border-sand-200 bg-white shadow-sm">
-                    <div class="relative h-28 overflow-hidden sm:h-32">
+                    <div class="home-listing-photo relative h-28 overflow-hidden sm:h-32">
                         <img src="{{ asset($card['slot']['image']) }}" alt="{{ $card['slot']['alt'] }}" class="h-full w-full object-cover" width="640" height="240" decoding="async" loading="lazy">
                         <span class="absolute top-3 left-3 max-w-[calc(100%-4.5rem)] rounded-md bg-lamu-900/95 px-3 py-1.5 text-[10px] leading-tight font-semibold tracking-wide text-white uppercase shadow-sm">{{ $card['slot']['category'] }}</span>
                         @if ($listing)
@@ -338,7 +338,7 @@
     </section>
 
     <x-slot:closing>
-        <footer class="bg-lamu-900 text-sand-50">
+        <footer class="home-footer bg-lamu-900 text-sand-50">
             <div class="mx-auto grid w-full max-w-[1440px] gap-5 px-4 py-5 text-xs sm:grid-cols-2 lg:w-[85%] lg:grid-cols-5 lg:px-0">
                 <div>
                     <p class="home-serif text-base text-white">Lamu Acres</p>

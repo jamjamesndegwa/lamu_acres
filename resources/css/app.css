@@ -94,6 +94,181 @@ turbo-frame#modal:empty {
     }
 }
 
+@media (width >= 64rem) {
+    .home-shell .home-header > div {
+        width: 90%;
+        height: 48px;
+    }
+
+    .home-shell #content > section:not(.home-hero),
+    .home-shell .home-footer > div > div {
+        width: 90%;
+        max-width: 1440px;
+    }
+
+    .home-shell .home-hero {
+        min-height: 170px;
+    }
+
+    .home-shell .home-hero > div:last-child {
+        padding-block: 14px;
+    }
+
+    .home-shell .home-hero h1 {
+        font-size: clamp(26px, 2.4vw, 36px);
+    }
+
+    .home-shell .home-hero h1 + p {
+        font-size: 12px;
+    }
+
+    .home-shell #home-search {
+        height: 38px;
+        max-width: 660px;
+        margin-top: 8px;
+    }
+
+    .home-shell #home-search input,
+    .home-shell #home-search button,
+    .home-shell #home-search a {
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .home-shell .home-hero form + div {
+        margin-top: 6px;
+        font-size: 11px;
+    }
+
+    .home-shell .home-hero form + div > a:last-child {
+        height: 30px;
+    }
+
+    .home-shell #featured {
+        padding-block: 8px;
+    }
+
+    .home-shell #featured h2,
+    .home-shell #trust h2 {
+        font-size: 17px;
+        line-height: 1.2;
+    }
+
+    .home-shell #featured > div:first-child p,
+    .home-shell #featured > div:first-child > a {
+        font-size: 11px;
+    }
+
+    .home-shell #featured > div:last-child {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 6px;
+    }
+
+    .home-shell .home-listing-photo {
+        height: clamp(80px, 7vw, 106px);
+    }
+
+    .home-shell #featured h3 {
+        font-size: 14px;
+    }
+
+    .home-shell #featured article p,
+    .home-shell #featured article a:not(h3 a) {
+        font-size: 10px;
+    }
+
+    .home-shell #featured article > div:last-child {
+        padding: 6px 8px;
+        gap: 3px;
+    }
+
+    .home-shell #featured article > div:last-child > div > a {
+        height: 26px;
+        padding-inline: 8px;
+    }
+
+    .home-shell .home-discovery-row {
+        gap: 10px;
+        padding-bottom: 8px;
+    }
+
+    .home-shell .home-discovery-row > article {
+        min-height: 185px;
+    }
+
+    .home-shell #locations,
+    .home-shell #find-land,
+    .home-shell #intelligence > div > div:first-child {
+        padding: 8px;
+    }
+
+    .home-shell #locations li a {
+        min-height: 24px;
+    }
+
+    .home-shell #intelligence ul {
+        margin-top: 6px;
+    }
+
+    .home-shell #intelligence ul li + li {
+        margin-top: 5px;
+    }
+
+    .home-shell #intelligence ul + a {
+        margin-top: 8px;
+    }
+
+    .home-shell #trust {
+        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+        padding-bottom: 8px;
+    }
+
+    .home-shell #trust > div:first-child > div {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .home-shell #trust h3,
+    .home-shell #trust p {
+        font-size: 10px;
+        line-height: 1.35;
+    }
+
+    .home-shell #partners {
+        padding: 8px;
+    }
+
+    .home-shell #partners h2 {
+        font-size: 14px;
+    }
+
+    .home-shell #partners a {
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .home-shell .home-footer > div:first-child {
+        width: 90%;
+        max-width: 1440px;
+        padding-block: 10px;
+        gap: 18px;
+        font-size: 10px;
+        line-height: 1.25;
+    }
+
+    .home-shell .home-footer nav a,
+    .home-shell .home-footer nav p {
+        margin-top: 3px;
+    }
+
+    .home-shell .home-footer > div:last-child p {
+        padding-block: 5px;
+        font-size: 9px;
+    }
+}
+
 .home-card-fade {
     background: linear-gradient(
         to bottom,
