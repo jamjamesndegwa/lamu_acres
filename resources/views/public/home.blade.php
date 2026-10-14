@@ -262,9 +262,10 @@
             <a href="{{ $buyerBriefHref }}" class="mt-1 text-center text-[10px] font-medium text-lamu-800 hover:underline">{{ $buyerBriefLabel }}</a>
         </article>
 
-        <article id="intelligence" class="overflow-hidden rounded-lg border border-sand-200 bg-sand-50">
-            <div class="grid h-full md:grid-cols-[1.65fr_0.85fr]">
-                <div class="flex flex-col p-3">
+        <article id="intelligence" class="relative isolate overflow-hidden rounded-lg border border-sand-200 bg-sand-50">
+            <img src="{{ asset('images/investor_intelligence.jpg') }}" alt="" class="investor-backdrop pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-right" width="640" height="420" loading="lazy" decoding="async">
+            <div class="investor-layout grid h-full grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+                <div class="investor-copy flex flex-col p-3">
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 class="home-serif text-base font-semibold text-stone-900">Investor Intelligence</h2>
                         <span class="rounded bg-gold-500 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">PREMIUM</span>
@@ -276,10 +277,13 @@
                         <li><a class="hover:underline" href="{{ route('intelligence.projects.index') }}">Development tracking</a></li>
                         <li><a class="hover:underline" href="{{ route('intelligence.prices') }}">Market insights & asking prices</a></li>
                     </ul>
-                    <a href="{{ route('intelligence.projects.index') }}" class="mt-3 inline-flex h-7 w-fit items-center rounded-md bg-gold-500 px-3 text-xs font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Explore Investor Pass</a>
                 </div>
-                <div class="relative min-h-28">
-                    <img src="{{ asset('images/investor_intelligence.jpg') }}" alt="" class="absolute inset-0 h-full w-full object-cover object-right" width="640" height="420" decoding="async">
+                <div class="investor-overlay flex min-w-0 flex-col items-start justify-end gap-3 p-3 pl-0">
+                    <div class="rounded-md border border-white/70 bg-sand-50/95 p-2.5 text-lamu-900 shadow-lg">
+                        <h3 class="home-serif text-sm leading-tight font-semibold">Lamu’s<br>Next Chapter</h3>
+                        <p class="mt-1 text-[10px] leading-snug text-stone-600">Data. Insights.<br>Opportunities.</p>
+                    </div>
+                    <a href="{{ route('intelligence.projects.index') }}" class="inline-flex min-h-8 w-full items-center justify-center gap-2 rounded border border-white/60 bg-gold-500 px-2 py-1.5 text-center text-[10px] leading-tight font-medium text-white shadow-sm hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Explore Investor Pass <svg viewBox="0 0 24 24" class="size-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
                 </div>
             </div>
         </article>

@@ -84,6 +84,18 @@ turbo-frame#modal:empty {
     font-family: var(--home-serif);
 }
 
+.investor-backdrop {
+    mask-image: linear-gradient(to right, transparent 25%, rgb(0 0 0 / 0.1) 40%, #000 70%);
+}
+
+.investor-copy {
+    background: linear-gradient(to right, var(--color-sand-50) 65%, transparent);
+}
+
+.investor-overlay {
+    padding-top: 64px;
+}
+
 .home-discovery-row #locations {
     min-height: 210px;
 }
