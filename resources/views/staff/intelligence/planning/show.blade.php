@@ -1,4 +1,5 @@
 <x-workspace-layout :heading="$record->title">
+    <x-editorial-workflow :status="$record->publication_status" />
     <p class="mt-3 text-sm text-stone-600">{{ $record->reference }} · {{ $record->instrument_status->label() }} · {{ $record->publication_status->label() }} · {{ $record->area }}</p>
     <p class="mt-3">Source: {{ $record->source_document }}</p>
     <p class="mt-2">Restrictions: {{ $record->restrictions }}</p>

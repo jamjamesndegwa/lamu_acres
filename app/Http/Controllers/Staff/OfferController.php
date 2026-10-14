@@ -23,7 +23,7 @@ class OfferController extends Controller
 
         $offers = Offer::query()
             ->visibleToStaff($request->user())
-            ->with(['buyer', 'property'])
+            ->with(['buyer', 'property', 'presentations'])
             ->latest()
             ->paginate(20);
 

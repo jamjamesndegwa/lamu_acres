@@ -2,6 +2,40 @@
     <p class="mt-3 text-sm text-stone-600">{{ $match->status->label() }} · {{ $match->property->locationLabel() }}</p>
 
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+        <h2 class="font-semibold text-lamu-900">How this land compares</h2>
+        @if ($match->sourcingRequest)
+            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                    <dt class="text-stone-500">Search acreage</dt>
+                    <dd>{{ $match->sourcingRequest->min_acreage ?: 'Any' }} – {{ $match->sourcingRequest->max_acreage ?: 'Any' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">This property</dt>
+                    <dd>{{ $match->property->acreage }} acres · {{ $match->property->land_use?->label() ?: 'Use not recorded' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Search budget</dt>
+                    <dd>{{ $match->sourcingRequest->maximum_budget ? 'KSh '.number_format($match->sourcingRequest->maximum_budget) : 'Not set' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Asking price</dt>
+                    <dd>{{ $match->property->price_amount ? 'KSh '.number_format($match->property->price_amount) : 'Not published' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Intended use</dt>
+                    <dd>{{ $match->sourcingRequest->intended_use?->label() ?: 'No preference' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-stone-500">Suitability</dt>
+                    <dd>{{ $fit?->band?->label() ?? 'Approved' }}{{ $fit && filled($fit->reasons) ? ' · '.implode(' ', $fit->reasons) : '' }}</dd>
+                </div>
+            </dl>
+        @else
+            <p class="mt-3 text-sm text-stone-700">This match was approved without a recorded search. You can still request a visit, send an offer, or ask for documents.</p>
+        @endif
+    </section>
+
+    <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
         <h2 class="font-semibold text-lamu-900">Directions</h2>
         @if ($directions && $directions['latitude'] !== null)
             <p class="mt-3 text-sm text-stone-700">Exact location: {{ $directions['latitude'] }}, {{ $directions['longitude'] }}</p>

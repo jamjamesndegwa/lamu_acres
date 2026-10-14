@@ -58,5 +58,15 @@
         <input type="checkbox" name="notify_by_email" value="1" @checked(old('notify_by_email', $user->notify_by_email ?? true))>
         Email me account and application updates
     </label>
+    <input type="hidden" name="notify_by_sms" value="0">
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="notify_by_sms" value="1" @checked(old('notify_by_sms', $user->notificationPreferences->firstWhere('channel', \App\Enums\MessageChannel::Sms)?->enabled))>
+        SMS updates to my phone
+    </label>
+    <input type="hidden" name="notify_by_whatsapp" value="0">
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="notify_by_whatsapp" value="1" @checked(old('notify_by_whatsapp', $user->notificationPreferences->firstWhere('channel', \App\Enums\MessageChannel::Whatsapp)?->enabled))>
+        WhatsApp click-to-chat updates
+    </label>
     <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save profile</button>
 </form>

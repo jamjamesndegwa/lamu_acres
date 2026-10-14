@@ -21,6 +21,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PropertyMediaController extends Controller
 {
+    public function library(): View
+    {
+        return view('staff.properties.library', [
+            'properties' => Property::query()->withCount('media')->latest()->paginate(20),
+        ]);
+    }
+
     public function edit(Property $property): View
     {
         $this->authorize('update', $property);

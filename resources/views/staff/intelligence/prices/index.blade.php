@@ -1,4 +1,5 @@
 <x-workspace-layout heading="Land price observatory">
+    <x-editorial-workflow />
     <p class="mt-3 max-w-3xl text-stone-700">Medians use published asking prices only. A verified sale is stored separately and is not treated as an asking price.</p>
     @forelse ($rows as $row)
         <article class="mt-4 rounded-2xl border border-sand-200 bg-white p-4">

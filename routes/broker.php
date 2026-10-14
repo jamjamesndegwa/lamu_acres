@@ -3,6 +3,7 @@
 use App\Http\Controllers\Account\MembershipController;
 use App\Http\Controllers\Broker\ListingController;
 use App\Http\Controllers\Broker\ListingMediaController;
+use App\Http\Controllers\Broker\PartnershipController;
 use App\Http\Controllers\Broker\ReferralController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
@@ -20,6 +21,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:broker'])
         Route::get('/listings/{property}', [ListingController::class, 'show'])->name('listings.show');
         Route::get('/listings/{property}/media/{propertyMedia}', [ListingController::class, 'media'])->name('listings.media');
         Route::post('/listings/{property}/photos', [ListingMediaController::class, 'store'])->name('listings.photos.store');
+        Route::put('/listings/{property}/media/order', [ListingMediaController::class, 'reorder'])->name('listings.media.order');
         Route::delete('/listings/{property}/media/{propertyMedia}', [ListingMediaController::class, 'destroy'])->name('listings.media.destroy');
         Route::post('/listings/{property}/requests/{informationRequest}', [ListingController::class, 'respond'])->name('listings.respond');
         Route::get('/referrals', [ReferralController::class, 'index'])->name('referrals.index');
@@ -29,6 +31,14 @@ Route::middleware(['auth', 'private.cache', 'workspace:broker'])
         Route::get('/referrals/{referral}/files/{kind}', [ReferralController::class, 'file'])
             ->whereIn('kind', ['consent', 'evidence'])
             ->name('referrals.file');
+        Route::get('/requirements', [PartnershipController::class, 'requirements'])->name('requirements.index');
+        Route::get('/requirements/{sourcingRequest}', [PartnershipController::class, 'requirement'])->name('requirements.show');
+        Route::post('/requirements/{sourcingRequest}/candidates', [PartnershipController::class, 'propose'])->name('requirements.propose');
+        Route::get('/deals', [PartnershipController::class, 'deals'])->name('deals.index');
+        Route::get('/deals/{salesTransaction}', [PartnershipController::class, 'deal'])->name('deals.show');
+        Route::get('/agreements', [PartnershipController::class, 'agreements'])->name('agreements.index');
+        Route::get('/agreements/{commissionAgreement}', [PartnershipController::class, 'agreement'])->name('agreements.show');
+        Route::get('/earnings', [PartnershipController::class, 'earnings'])->name('earnings.index');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');

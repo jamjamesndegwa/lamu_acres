@@ -134,11 +134,12 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($staff)
             ->get('/staff')
             ->assertOk()
-            ->assertSee('Calendar & Follow-ups')
+            ->assertSee('Calendar')
+            ->assertSee('Tasks')
             ->assertDontSee('data-module="verification"', false)
-            ->assertDontSee('Verification Queue')
+            ->assertDontSee('Review Queue')
             ->assertDontSee('data-module="finance"', false)
-            ->assertDontSee('Commission Payables');
+            ->assertDontSee('Settlements');
 
         $this->assertFalse($staff->hasPermission('staff.verification'));
         $this->assertFalse($staff->hasPermission('commissions.approve'));
@@ -147,10 +148,12 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get('/staff')
             ->assertOk()
             ->assertSee('data-module="verification"', false)
-            ->assertSee('Calendar & Follow-ups')
-            ->assertDontSee('Verification Queue')
+            ->assertSee('Calendar')
+            ->assertSee('Review Queue')
+            ->assertSee('Evidence')
+            ->assertSee('Exceptions')
             ->assertDontSee('data-module="finance"', false)
-            ->assertDontSee('Commission Payables');
+            ->assertDontSee('Settlements');
 
         $this->actingAs($verification)->get('/admin')->assertForbidden();
 
@@ -158,37 +161,88 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get('/staff')
             ->assertOk()
             ->assertSee('data-module="finance"', false)
-            ->assertDontSee('Commission Payables');
+            ->assertSee('Subscriptions')
+            ->assertSee('Commissions')
+            ->assertSee('Settlements')
+            ->assertDontSee('Review Queue');
         $this->assertTrue($finance->hasPermission('commissions.approve'));
 
+        $operations = User::factory()->withRoles('staff')->withPermissions(
+            'staff.properties',
+            'staff.buyers',
+            'staff.sourcing',
+            'staff.brokerage',
+            'staff.sales',
+            'staff.verification',
+            'staff.intelligence',
+            'staff.finance',
+            'staff.communications',
+        )->create();
+
+        $this->actingAs($operations)
+            ->get('/staff')
+            ->assertOk()
+            ->assertSee('Dashboard')
+            ->assertSee('Tasks')
+            ->assertSee('Calendar')
+            ->assertSee('Property Register')
+            ->assertSee('Listing Reviews')
+            ->assertSee('Property Media')
+            ->assertSee('Buyers & CRM')
+            ->assertSee('Enquiries')
+            ->assertSee('Viewings')
+            ->assertSee('Document Requests')
+            ->assertSee('Requirements')
+            ->assertSee('Matching')
+            ->assertSee('Approvals')
+            ->assertSee('Applications')
+            ->assertSee('Referrals')
+            ->assertSee('Seller Authority')
+            ->assertSee('Pipeline')
+            ->assertSee('Offers')
+            ->assertSee('Completion')
+            ->assertSee('Review Queue')
+            ->assertSee('Evidence')
+            ->assertSee('Exceptions')
+            ->assertSee('Projects')
+            ->assertSee('Imagery')
+            ->assertSee('Planning')
+            ->assertSee('Research')
+            ->assertSee('Subscriptions')
+            ->assertSee('Commissions')
+            ->assertSee('Settlements')
+            ->assertSee('Messages and work updates');
+
+        $this->actingAs($operations)->get(route('staff.tasks'))->assertOk()->assertSee('Tasks');
+        $this->actingAs($operations)->get(route('staff.calendar'))->assertOk()->assertSee('Calendar');
+        $this->actingAs($operations)->get(route('staff.media.index'))->assertOk()->assertSee('Property media');
+        $this->actingAs($operations)->get(route('staff.authorities.index'))->assertOk()->assertSee('Seller authority');
+        $this->actingAs($operations)->get(route('staff.sourcing.matching'))->assertOk()->assertSee('Matching');
+        $this->actingAs($operations)->get(route('staff.sourcing.approvals'))->assertOk()->assertSee('Approvals');
+
         session([
             'workspace' => 'staff',
-            'workspace_route' => 'staff.dashboard',
+            'workspace_route' => 'staff.verification.index',
         ]);
 
         Livewire::actingAs($verification)
-            ->test(WorkspaceSidebar::class)
-            ->call('select', 'verification');
-
-        Livewire::actingAs($verification)
             ->test(WorkspaceSubnav::class)
-            ->assertSee('Verification Queue')
-            ->assertSee('Document Reviews')
-            ->assertDontSee('Commission Payables');
+            ->assertSee('Review Queue')
+            ->assertSee('Evidence')
+            ->assertSee('Exceptions')
+            ->assertDontSee('Settlements');
 
         session([
             'workspace' => 'staff',
-            'workspace_route' => 'staff.dashboard',
+            'workspace_route' => 'staff.memberships.index',
         ]);
 
         Livewire::actingAs($finance)
-            ->test(WorkspaceSidebar::class)
-            ->call('select', 'finance');
-
-        Livewire::actingAs($finance)
             ->test(WorkspaceSubnav::class)
-            ->assertSee('Commission Payables')
-            ->assertDontSee('Verification Queue');
+            ->assertSee('Subscriptions')
+            ->assertSee('Commissions')
+            ->assertSee('Settlements')
+            ->assertDontSee('Review Queue');
     }
 
     public function test_financial_authority_is_separate_from_administration(): void
@@ -240,12 +294,8 @@ class WorkspaceFoundationTest extends FoundationTestCase
 
         session([
             'workspace' => 'seller',
-            'workspace_route' => 'seller.dashboard',
+            'workspace_route' => 'seller.properties.index',
         ]);
-
-        Livewire::actingAs($seller)
-            ->test(WorkspaceSidebar::class)
-            ->call('select', 'properties');
 
         Livewire::actingAs($seller)
             ->test(WorkspaceSubnav::class)
@@ -260,10 +310,14 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get(route('buyer.enquiries.index'))
             ->assertOk()
             ->assertSee('Site Visits')
-            ->assertSee('Offers')
-            ->assertSee('data-module="properties"', false)
-            ->assertDontSee('Saved Properties')
-            ->assertDontSee('Find Land for Me');
+            ->assertSee('My Offers')
+            ->assertSee('Explore Land')
+            ->assertSee('Saved Properties')
+            ->assertSee('Find Land for Me')
+            ->assertSee('My Property Matches')
+            ->assertSee('Buying Profile')
+            ->assertSee('Investor Pass')
+            ->assertSee('data-module="enquiries"', false);
 
         $broker = User::factory()->withRoles('broker')->create();
 
@@ -273,17 +327,63 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('data-module="listings"', false)
             ->assertSee('data-module="referrals"', false)
             ->assertSee('data-module="deals"', false)
-            ->assertDontSee('Submit Property');
+            ->assertSee('Submit Property')
+            ->assertSee('Buyer Requirements Board')
+            ->assertSee('Commission Agreements')
+            ->assertSee('Earnings & Payments')
+            ->assertSee('Profile');
 
         $investor = User::factory()->withRoles('buyer')->withInvestorPass()->create();
 
         $this->actingAs($investor)
             ->get('/investor')
             ->assertOk()
-            ->assertSee('data-module="intelligence"', false)
+            ->assertSee('data-module="tracker"', false)
+            ->assertSee('data-module="imagery"', false)
             ->assertSee('data-module="watchlists"', false)
             ->assertSee('data-module="subscription"', false)
+            ->assertSee('Satellite & Aerial Imagery')
             ->assertDontSee('Satellite Explorer');
+    }
+
+    public function test_investor_workspace_opens_every_intelligence_screen(): void
+    {
+        $investor = User::factory()->withRoles('buyer')->withInvestorPass()->create();
+
+        $this->actingAs($investor)
+            ->get('/investor')
+            ->assertOk()
+            ->assertSee('Intelligence Dashboard')
+            ->assertSee('Development Tracker')
+            ->assertSee('Planning & Zoning')
+            ->assertSee('Land Price Observatory')
+            ->assertSee('Research Reports')
+            ->assertSee('My Watchlists')
+            ->assertSee('Alerts & Archive')
+            ->assertSee('Subscription')
+            ->assertSee('Profile')
+            ->assertSee('Logout')
+            ->assertSee('Membership')
+            ->assertSee('Latest research')
+            ->assertSee('Watched projects');
+
+        $this->actingAs($investor)->get(route('investor.projects.index'))->assertOk()->assertSee('Development Tracker')->assertSee('Status')->assertSee('Type')->assertSee('Location');
+        $this->actingAs($investor)->get(route('investor.imagery.index'))->assertOk()->assertSee('Satellite & Aerial Imagery');
+        $this->actingAs($investor)->get(route('investor.planning.index'))->assertOk()->assertSee('Planning & Zoning');
+        $this->actingAs($investor)->get(route('investor.prices'))->assertOk()->assertSee('Land Price Observatory')->assertSee('Asking prices');
+        $this->actingAs($investor)->get(route('investor.reports.index'))->assertOk()->assertSee('Research Reports')->assertSee('No research report has been published');
+        $this->actingAs($investor)->get(route('investor.watchlists.index'))->assertOk()->assertSee('My Watchlists')->assertSee('Watched locations')->assertSee('Watched projects');
+        $this->actingAs($investor)->get(route('investor.archive.index'))->assertOk()->assertSee('Alerts & Archive')->assertSee('Published alerts');
+        $this->actingAs($investor)->get(route('investor.subscription.show'))->assertOk()->assertSee('Active entitlement')->assertSee('Renewal')->assertSee('Payment history');
+        $this->actingAs($investor)->get(route('investor.profile'))->assertOk()->assertSee('Profile & Security')->assertSee('Name')->assertSee('Email');
+
+        auth()->logout();
+
+        $this->get(route('intelligence.projects.index'))
+            ->assertOk()
+            ->assertSee('Development Tracker')
+            ->assertSee('Satellite & Aerial Imagery')
+            ->assertSee('Subscribe');
     }
 
     public function test_only_an_administrator_can_change_roles_and_cannot_remove_their_own(): void

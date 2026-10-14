@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Intelligence;
 
+use App\Models\DevelopmentProject;
 use App\Models\ImageryComparison;
 use App\Models\ImageryScene;
 use App\Models\User;
@@ -46,6 +47,8 @@ class ImageryAccessTest extends FoundationTestCase
         $this->get(route('intelligence.imagery.show', $comparison))
             ->assertOk()
             ->assertSee('Recorded road reserve')
+            ->assertSee('Jan 15, 2020')
+            ->assertSee('Jun 1, 2024')
             ->assertDontSee('cleared strip');
 
         $this->get(route('intelligence.files.show', $file))->assertForbidden();
@@ -64,6 +67,58 @@ class ImageryAccessTest extends FoundationTestCase
         $this->actingAs($subscriber)->get(route('intelligence.files.show', $file))->assertOk();
         auth()->logout();
         $this->get(route('intelligence.files.show', $file))->assertForbidden();
+    }
+
+    public function test_a_comparison_cannot_publish_until_both_scenes_are_released_and_can_name_a_project(): void
+    {
+        Storage::fake('local');
+
+        $researcher = User::factory()->withRoles('staff')->withPermissions('staff.intelligence')->create();
+        $editor = User::factory()->withRoles('staff')->withPermissions('intelligence.publish')->create();
+        $subscriber = User::factory()->withRoles('buyer')->withInvestorPass()->create();
+
+        $this->actingAs($researcher)->post(route('staff.projects.store'), [
+            'name' => 'Named port record',
+            'category' => 'port',
+            'project_status' => 'proposed',
+            'coverage' => 'Named reserve',
+            'summary' => 'A sourced port record used only as a link.',
+            'source_name' => 'County notice',
+        ])->assertRedirect();
+
+        $project = DevelopmentProject::query()->where('name', 'Named port record')->firstOrFail();
+        $before = $this->scene($researcher, '2020-01-15');
+        $after = $this->scene($researcher, '2024-06-01');
+
+        $this->actingAs($researcher)->post(route('staff.imagery.comparisons.store'), [
+            'area_label' => 'Named reserve',
+            'before_scene_id' => $before->id,
+            'after_scene_id' => $after->id,
+            'development_project_id' => $project->id,
+            'observed_change' => 'Researcher recorded a change along the named reserve.',
+            'annotation' => 'Annotation stays with the researcher note.',
+        ])->assertRedirect();
+
+        $comparison = ImageryComparison::query()->firstOrFail();
+        $this->actingAs($researcher)->post(route('staff.imagery.comparisons.submit', $comparison))->assertRedirect();
+        $this->actingAs($editor)->post(route('staff.imagery.comparisons.publish', $comparison))->assertStatus(422);
+
+        $this->actingAs($editor)->post(route('staff.imagery.scenes.publish', $before))->assertRedirect();
+        $this->actingAs($editor)->post(route('staff.imagery.scenes.publish', $after))->assertRedirect();
+        $this->actingAs($editor)->post(route('staff.imagery.comparisons.publish', $comparison))->assertRedirect();
+
+        auth()->logout();
+
+        $this->get(route('intelligence.imagery.show', $comparison))
+            ->assertOk()
+            ->assertDontSee('Named port record')
+            ->assertDontSee('Annotation stays');
+
+        $this->actingAs($subscriber)
+            ->get(route('intelligence.imagery.show', $comparison))
+            ->assertOk()
+            ->assertSee('Named port record')
+            ->assertSee('Annotation stays with the researcher note.');
     }
 
     private function scene(User $researcher, string $date): ImageryScene

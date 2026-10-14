@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Contracts\Auth\OtpSender;
+use App\Contracts\Communications\SmsSender;
+use App\Services\Communications\HttpSmsSender;
+use App\Services\Communications\UnconfiguredSmsSender;
 use App\Contracts\Payments\MpesaGateway;
 use App\Enums\Workspace;
 use App\Services\Auth\UnconfiguredOtpSender;
@@ -20,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(OtpSender::class, UnconfiguredOtpSender::class);
+        $this->app->bind(SmsSender::class, function () {
+            $sender = new HttpSmsSender;
+
+            return $sender->configured() ? $sender : new UnconfiguredSmsSender;
+        });
         $this->app->bind(MpesaGateway::class, function () {
             return config('mpesa.driver') === 'daraja'
                 ? new DarajaMpesaGateway

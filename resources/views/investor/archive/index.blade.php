@@ -1,5 +1,5 @@
-<x-workspace-layout heading="Report archive">
-    <p class="mt-3 max-w-3xl text-sm text-stone-600">Only published records that were delivered to this account are listed.</p>
+<x-workspace-layout heading="Alerts & Archive">
+    <p class="mt-3 max-w-3xl text-sm text-stone-600">Published alerts and history. Only published records that were delivered to this account are listed.</p>
     <ul class="mt-6 space-y-3">
         @forelse ($deliveries as $delivery)
             <li class="rounded-2xl border border-sand-200 bg-white p-4">

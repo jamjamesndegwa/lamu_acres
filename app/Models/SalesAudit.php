@@ -23,4 +23,9 @@ class SalesAudit extends Model
     {
         return $this->belongsTo(CommissionAgreement::class, 'commission_agreement_id');
     }
+
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_id');
+    }
 }

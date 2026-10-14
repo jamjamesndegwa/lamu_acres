@@ -79,6 +79,8 @@ class DevelopmentProjectController extends Controller
 
         if ($project->isReleased()) {
             $desk->revise($project, $request->user(), $data);
+        } else {
+            $desk->audit($project, $request->user(), 'updated', $project->publication_status, $project->publication_status);
         }
 
         return redirect()->route('staff.projects.show', $project)->with('status', 'Project updated.');

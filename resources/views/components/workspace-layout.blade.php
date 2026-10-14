@@ -6,6 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $heading }} — Lamu Acres</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-dvh overflow-hidden bg-sand-50 text-stone-900 antialiased">
@@ -25,7 +26,7 @@
                         @endif
                     </p>
                     <div class="ml-auto flex items-center gap-4">
-                        @if ($currentWorkspace && in_array($currentWorkspace, [\App\Enums\Workspace::Broker, \App\Enums\Workspace::Staff], true))
+                        @if ($currentWorkspace && in_array($currentWorkspace, [\App\Enums\Workspace::Buyer, \App\Enums\Workspace::Broker, \App\Enums\Workspace::Staff], true))
                             <a href="{{ route($currentWorkspace->value.'.notifications.index') }}" class="rounded-md text-sm font-medium text-lamu-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
                                 Notifications
                                 @if (($unreadNotifications ?? 0) > 0)

@@ -3,10 +3,12 @@
 namespace App\Services\Access;
 
 use App\Enums\CapabilityApplicationStatus;
+use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Events\ApplicationDecided;
 use App\Models\CapabilityApplication;
 use App\Models\User;
+use App\Services\Communications\MessageDesk;
 use Illuminate\Validation\ValidationException;
 
 class CapabilityReviewer
@@ -69,6 +71,15 @@ class CapabilityReviewer
 
         if ($status === CapabilityApplicationStatus::Approved) {
             $this->roles->assign($applicant, $application->capability->value);
+        }
+
+        if ($status === CapabilityApplicationStatus::Approved && $application->capability === PartnerCapability::Broker) {
+            app(MessageDesk::class)->send($applicant, MessageEvent::BrokerApproved, [
+                'name' => $applicant->name,
+                'title' => 'Broker workspace',
+                'summary' => 'Your broker application is approved.',
+                'url' => route('broker.dashboard'),
+            ], 'application:'.$application->id);
         }
 
         if (

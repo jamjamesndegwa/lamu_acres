@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Enums\AuthorityStatus;
+use App\Enums\MessageEvent;
 use App\Enums\OwnerRelationship;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
@@ -15,9 +16,11 @@ use App\Models\Property;
 use App\Models\PropertyOwner;
 use App\Models\PropertyTransaction;
 use App\Models\User;
+use App\Services\Communications\MessageDesk;
 use App\Services\Seller\SellerPortal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -49,6 +52,15 @@ class SellerDeskController extends Controller
         return back()->with('status', 'Owner linked to the existing property.');
     }
 
+    public function authorities(Request $request): View
+    {
+        abort_unless($request->user()->hasPermission('staff.brokerage'), 403);
+
+        return view('staff.brokerage.authorities', [
+            'authorities' => MarketingAuthority::query()->with(['property', 'seller'])->latest()->paginate(20),
+        ]);
+    }
+
     public function decideAuthority(Request $request, MarketingAuthority $marketingAuthority, SellerPortal $portal): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('staff.properties'), 403);
@@ -68,6 +80,16 @@ class SellerDeskController extends Controller
         $property->published_at = now();
         $property->availability = PropertyAvailability::Available;
         $property->save();
+
+        if ($property->submitter !== null) {
+            app(MessageDesk::class)->send($property->submitter, MessageEvent::PropertyApproved, [
+                'name' => $property->submitter->name,
+                'title' => $property->title,
+                'reference' => $property->reference,
+                'summary' => $property->title.' is approved for listing.',
+                'url' => route('home'),
+            ], 'property:'.$property->id);
+        }
 
         return back()->with('status', 'Listing approved.');
     }

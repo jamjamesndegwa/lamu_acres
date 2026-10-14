@@ -8,17 +8,24 @@
                 @if ($accessRequest->note)
                     <p class="mt-2 text-sm text-stone-700">{{ $accessRequest->note }}</p>
                 @endif
-                @if ($accessRequest->status->value === 'requested')
-                    <form method="POST" action="{{ route('staff.documents.update', $accessRequest) }}" data-turbo-frame="_top" data-confirm="Decide this document request?" class="mt-4 flex flex-wrap items-end gap-3">
-                        @csrf
-                        @method('PUT')
-                        <select name="status" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
-                            <option value="approved">Approved</option>
-                            <option value="declined">Declined</option>
-                        </select>
-                        <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save decision</button>
-                    </form>
-                @endif
+                @can('decide', $accessRequest)
+                    @if ($accessRequest->status->value === 'requested')
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <form method="POST" action="{{ route('staff.documents.update', $accessRequest) }}" data-turbo-frame="_top" data-confirm="Grant this document request?">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="status" value="approved">
+                                <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Grant</button>
+                            </form>
+                            <form method="POST" action="{{ route('staff.documents.update', $accessRequest) }}" data-turbo-frame="_top" data-confirm="Decline this document request?">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="status" value="declined">
+                                <button class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-lamu-900">Decline</button>
+                            </form>
+                        </div>
+                    @endif
+                @endcan
             </article>
         @empty
             <x-workspace.empty title="No document requests" message="Buyer requests will appear here." />

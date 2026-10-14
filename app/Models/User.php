@@ -78,6 +78,11 @@ class User extends Authenticatable
         return $this->hasMany(SavedProperty::class);
     }
 
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
     public function enquiries(): HasMany
     {
         return $this->hasMany(Enquiry::class, 'buyer_id');

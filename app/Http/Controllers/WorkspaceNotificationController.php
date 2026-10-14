@@ -10,7 +10,12 @@ class WorkspaceNotificationController extends Controller
 {
     public function index(Request $request): View
     {
-        $prefix = str_starts_with((string) $request->route()?->getName(), 'staff.') ? 'staff' : 'broker';
+        $name = (string) $request->route()?->getName();
+        $prefix = match (true) {
+            str_starts_with($name, 'staff.') => 'staff',
+            str_starts_with($name, 'broker.') => 'broker',
+            default => 'buyer',
+        };
 
         return view('workspace.notifications.index', [
             'notifications' => $request->user()->notifications()->latest()->paginate(20),

@@ -16,17 +16,23 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListingReviewController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('manage', Property::class);
+        $queue = $request->query('queue');
 
         return view('staff.listings.index', [
+            'queue' => in_array($queue, ['pending', 'returned'], true) ? $queue : 'all',
             'listings' => Property::query()
                 ->whereNotNull('submitted_by')
                 ->where('status', '!=', PropertyStatus::Published)
                 ->with('submitter:id,name')
+                ->withExists(['informationRequests as returned' => fn ($query) => $query->whereNull('responded_at')])
+                ->when($queue === 'pending', fn ($query) => $query->whereDoesntHave('informationRequests', fn ($inner) => $inner->whereNull('responded_at')))
+                ->when($queue === 'returned', fn ($query) => $query->whereHas('informationRequests', fn ($inner) => $inner->whereNull('responded_at')))
                 ->latest()
-                ->paginate(20),
+                ->paginate(20)
+                ->withQueryString(),
         ]);
     }
 

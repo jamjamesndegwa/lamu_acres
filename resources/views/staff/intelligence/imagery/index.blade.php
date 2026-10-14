@@ -1,4 +1,5 @@
 <x-workspace-layout heading="Satellite and aerial imagery">
+    <x-editorial-workflow />
     <p class="mt-3 max-w-3xl text-stone-700">Upload only imagery you are allowed to hold. A source URL is stored as a citation and is not downloaded. Images stay hidden when redistribution is not allowed.</p>
     <div class="mt-4 flex gap-2">
         <a href="{{ route('staff.imagery.scenes.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">New scene</a>

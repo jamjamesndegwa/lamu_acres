@@ -1,5 +1,6 @@
 <x-workspace-layout :heading="$listing->title">
-    <p class="mt-3 text-sm text-stone-600">{{ $listing->reference }} · {{ $listing->status->label() }} · submitted by {{ $listing->submitter?->name }}</p>
+    <p class="mt-3 text-sm text-stone-600">{{ $listing->reference }} · {{ $listing->status->label() }} · submitted by {{ $listing->submitter?->name }}@if ($listing->submitter?->email) · {{ $listing->submitter->email }}@endif</p>
+    <p class="mt-2 text-sm"><a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', $listing) }}">Open property workspace</a></p>
     <dl class="mt-6 grid max-w-3xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
         <div><dt class="text-sm text-stone-500">Seller</dt><dd>{{ $listing->seller_name }}</dd></div>
         <div><dt class="text-sm text-stone-500">Contact</dt><dd>{{ $listing->seller_contact }}</dd></div>

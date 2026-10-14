@@ -8,13 +8,17 @@
                     <td class="px-4 py-3">{{ $subscription->status->label() }}</td>
                     <td class="px-4 py-3">{{ $subscription->starts_at?->toFormattedDateString() }} – {{ $subscription->ends_at?->toFormattedDateString() }}</td>
                     <td class="px-4 py-3">
+                        @php $invoice = $subscription->invoices->sortByDesc('id')->first(); @endphp
+                        @if ($invoice)
+                            <p class="mb-2 text-xs text-stone-500">Provider invoice {{ $invoice->number }} · {{ $invoice->status }} · {{ $invoice->currency }} {{ number_format($invoice->amount / 100, 2) }}</p>
+                        @endif
                         @if ($subscription->status === \App\Enums\SubscriptionStatus::Pending)
-                            <form method="POST" action="{{ route('staff.memberships.activate', $subscription) }}">@csrf <button class="text-sm text-lamu-800">Activate</button></form>
+                            <form method="POST" action="{{ route('staff.memberships.activate', $subscription) }}" data-confirm="Activate {{ $subscription->plan?->name ?? 'Investor Pass' }} for {{ $subscription->user->name }} ({{ $subscription->user->email }}). Amount {{ $subscription->plan?->amountLabel() ?? 'not priced' }}. No card payment is collected. Resulting state: Active.">@csrf <button class="text-sm text-lamu-800">Activate</button></form>
                         @endif
                         @if ($subscription->status === \App\Enums\SubscriptionStatus::Active)
-                            <form method="POST" action="{{ route('staff.memberships.renew', $subscription) }}">@csrf <button class="text-sm text-lamu-800">Renew</button></form>
-                            <form method="POST" action="{{ route('staff.memberships.cancel', $subscription) }}">@csrf <button class="text-sm text-lamu-800">Cancel</button></form>
-                            <form method="POST" action="{{ route('staff.memberships.credit', $subscription) }}" class="mt-2 flex flex-wrap gap-2">
+                            <form method="POST" action="{{ route('staff.memberships.renew', $subscription) }}" data-confirm="Renew {{ $subscription->plan?->name ?? 'Investor Pass' }} for {{ $subscription->user->name }}. Amount {{ $subscription->plan?->amountLabel() ?? 'not priced' }}. Resulting state: Active for a new period. This does not collect a provider payment.">@csrf <button class="text-sm text-lamu-800">Renew</button></form>
+                            <form method="POST" action="{{ route('staff.memberships.cancel', $subscription) }}" data-confirm="Cancel membership for {{ $subscription->user->name }} ({{ $subscription->user->email }}). Resulting state: Cancelled.">@csrf <button class="text-sm text-lamu-800">Cancel</button></form>
+                            <form method="POST" action="{{ route('staff.memberships.credit', $subscription) }}" data-confirm="Authorize a service credit for {{ $subscription->user->name }}. This is not a payment. Resulting state: credit days added to the active membership." class="mt-2 flex flex-wrap gap-2">
                                 @csrf
                                 <input type="number" name="days" min="1" max="90" required placeholder="Days" class="w-20 rounded border border-sand-200 px-2 py-1 text-sm">
                                 <input name="reason" required placeholder="Reason" class="rounded border border-sand-200 px-2 py-1 text-sm">

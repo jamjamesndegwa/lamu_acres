@@ -6,6 +6,9 @@ use App\Enums\SalesOrigin;
 use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
 use App\Http\Controllers\Controller;
+use App\Models\BrokerIntroduction;
+use App\Models\Enquiry;
+use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\SalesPipeline;
@@ -23,6 +26,7 @@ class SalesPipelineController extends Controller
         return view('staff.sales.index', [
             'transactions' => $this->query($request)->latest()->paginate(20),
             'heading' => 'Sales pipeline',
+            'stageCounts' => SalesTransaction::query()->selectRaw('stage, count(*) as aggregate')->groupBy('stage')->pluck('aggregate', 'stage'),
         ]);
     }
 
@@ -43,6 +47,10 @@ class SalesPipelineController extends Controller
         return view('staff.sales.create', [
             'origins' => SalesOrigin::cases(),
             'agents' => User::permission('staff.sales')->orderBy('name')->get(['id', 'name']),
+            'properties' => Property::query()->orderBy('title')->limit(200)->get(['id', 'title']),
+            'buyers' => User::role('buyer')->orderBy('name')->limit(200)->get(['id', 'name']),
+            'enquiries' => Enquiry::query()->with('property:id,title')->latest()->limit(100)->get(),
+            'introductions' => BrokerIntroduction::query()->latest()->limit(100)->get(['id', 'reference', 'buyer_name']),
         ]);
     }
 
@@ -70,7 +78,22 @@ class SalesPipelineController extends Controller
     {
         $this->authorizeDesk($request);
         $salesTransaction->load([
-            'property', 'buyer', 'agent', 'offers', 'milestones', 'documents', 'timeline.actor', 'closingReviews.reviewer', 'evidence', 'agreements.broker', 'audits',
+            'property.owners.user',
+            'property.areaCounty',
+            'property.areaLocality',
+            'buyer',
+            'agent',
+            'enquiry.property',
+            'introduction.broker',
+            'saleInstruction.seller',
+            'offers.recorder',
+            'milestones',
+            'documents',
+            'timeline.actor',
+            'closingReviews.reviewer',
+            'evidence',
+            'agreements.broker',
+            'audits.actor',
         ]);
 
         return view('staff.sales.show', [
@@ -78,6 +101,10 @@ class SalesPipelineController extends Controller
             'stages' => $salesTransaction->stage->transitions(),
             'outcomes' => SalesOutcome::cases(),
             'agents' => User::permission('staff.sales')->orderBy('name')->get(['id', 'name']),
+            'brokers' => $request->user()->hasPermission('commissions.propose')
+                ? User::role('broker')->orderBy('name')->get(['id', 'name'])
+                : collect(),
+            'canProposeCommission' => $request->user()->hasPermission('commissions.propose'),
         ]);
     }
 

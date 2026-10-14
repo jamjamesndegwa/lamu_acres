@@ -30,7 +30,10 @@
         </div>
         <div class="sm:col-span-2"><dt class="text-sm text-stone-500">Properties</dt><dd>{{ $referral->properties->pluck('title')->join(', ') }}</dd></div>
     </dl>
-    <h2 class="mt-8 font-semibold text-lamu-900">History</h2>
+    <h2 class="mt-8 font-semibold text-lamu-900">Decision</h2>
+    <p class="mt-2 text-sm text-stone-700">{{ $referral->status->label() }}@if ($referral->reviewed_at) · reviewed {{ $referral->reviewed_at->toFormattedDateString() }}@endif. Closing and payment stay with staff.</p>
+
+    <h2 class="mt-8 font-semibold text-lamu-900">Timeline</h2>
     <ul class="mt-3 space-y-2 text-sm text-stone-700">
         @foreach ($referral->audits as $audit)
             <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ $audit->action }} @if ($audit->to_status) to {{ $audit->to_status }} @endif @if ($audit->note) — {{ $audit->note }} @endif</li>

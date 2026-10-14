@@ -30,19 +30,68 @@
         </div>
 
         <nav class="sidebar-scroll min-h-0 flex-1 space-y-1 px-3 py-5" aria-label="Workspace">
+            @php
+                $moduleIcons = [
+                    'overview' => 'fa-gauge',
+                    'tracker' => 'fa-diagram-project',
+                    'alerts' => 'fa-bell',
+                    'prices' => 'fa-chart-line',
+                    'library' => 'fa-book-open',
+                    'imagery' => 'fa-satellite',
+                    'planning' => 'fa-map',
+                    'dashboard' => 'fa-gauge',
+                    'explore' => 'fa-magnifying-glass',
+                    'saved' => 'fa-bookmark',
+                    'properties' => 'fa-map-location-dot',
+                    'matches' => 'fa-clone',
+                    'buyers' => 'fa-users',
+                    'sourcing' => 'fa-compass',
+                    'brokerage' => 'fa-handshake',
+                    'listings' => 'fa-building',
+                    'referrals' => 'fa-user-plus',
+                    'deals' => 'fa-briefcase',
+                    'sales' => 'fa-file-signature',
+                    'verification' => 'fa-shield-halved',
+                    'intelligence' => 'fa-satellite',
+                    'finance' => 'fa-coins',
+                    'notifications' => 'fa-bell',
+                    'enquiries' => 'fa-comments',
+                    'visits' => 'fa-calendar-check',
+                    'offers' => 'fa-file-contract',
+                    'profile' => 'fa-id-badge',
+                    'investor' => 'fa-chart-line',
+                    'watchlists' => 'fa-bookmark',
+                    'subscription' => 'fa-id-card',
+                    'oversight' => 'fa-chart-column',
+                    'approvals' => 'fa-circle-check',
+                    'users' => 'fa-user-gear',
+                    'geography' => 'fa-earth-africa',
+                    'commercial' => 'fa-tags',
+                    'settings' => 'fa-gear',
+                    'reports' => 'fa-chart-pie',
+                ];
+            @endphp
             @foreach ($modules as $module)
+                @php
+                    $icon = $moduleIcons[$module['key']] ?? 'fa-folder';
+                    $children = collect($module['items'] ?? [])->filter(
+                        fn (array $item): bool => ($item['available'] ?? false) && ($item['method'] ?? 'get') === 'get',
+                    )->values();
+                    $repeatHeading = $children->count() === 1 && ($children->first()['label'] ?? null) === $module['label'];
+                @endphp
                 @if ($module['href'])
                     <a
                         href="{{ $module['href'] }}"
                         data-module="{{ $module['key'] }}"
                         @if ($module['active']) aria-current="page" @endif
                         @class([
-                            'block rounded-lg px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
                             'text-white/80 hover:bg-white/10' => ! $module['active'],
                         ])
                     >
-                        {{ $module['label'] }}
+                        <i class="fa-solid {{ $icon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
+                        <span>{{ $module['label'] }}</span>
                     </a>
                 @else
                     <button
@@ -51,13 +100,23 @@
                         data-module="{{ $module['key'] }}"
                         @if ($module['active']) aria-current="page" @endif
                         @class([
-                            'block w-full rounded-lg px-3 py-2 text-left text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
+                            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
                             'text-white/80 hover:bg-white/10' => ! $module['active'],
                         ])
                     >
-                        {{ $module['label'] }}
+                        <i class="fa-solid {{ $icon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
+                        <span>{{ $module['label'] }}</span>
                     </button>
+                @endif
+                @if ($workspace && $workspace->value === 'staff' && ! $repeatHeading && $children->isNotEmpty())
+                        <ul class="mb-2 ml-8 space-y-0.5">
+                            @foreach ($children as $item)
+                                <li>
+                                    <a href="{{ $item['href'] }}" class="block rounded-lg px-3 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white">{{ $item['label'] }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
                 @endif
             @endforeach
         </nav>
@@ -65,11 +124,19 @@
         @if (count($account) > 0)
             <div class="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
                 @foreach ($account as $item)
+                    @php
+                        $accountIcon = match ($item['label']) {
+                            'Logout' => 'fa-right-from-bracket',
+                            'Profile' => 'fa-user',
+                            default => 'fa-file-lines',
+                        };
+                    @endphp
                     @if ($item['method'] === 'post' && $item['href'])
                         <form method="POST" action="{{ $item['href'] }}" data-turbo="false" data-confirm="Log out of Lamu Acres?">
                             @csrf
-                            <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
-                                {{ $item['label'] }}
+                            <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
+                                <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
+                                <span>{{ $item['label'] }}</span>
                             </button>
                         </form>
                     @elseif ($item['available'])
@@ -77,9 +144,10 @@
                             href="{{ $item['href'] }}"
                             @if ($item['active']) aria-current="page" @endif
                             @if ($item['frame']) data-turbo-frame="{{ $item['frame'] }}" @endif
-                            class="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200"
                         >
-                            {{ $item['label'] }}
+                            <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
+                            <span>{{ $item['label'] }}</span>
                         </a>
                     @endif
                 @endforeach

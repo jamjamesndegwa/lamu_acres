@@ -93,7 +93,7 @@ class CommissionAgreementController extends Controller
     {
         $user = $request->user();
         abort_unless(
-            $user->hasPermission('staff.sales') || $user->hasPermission('commissions.propose') || $user->hasPermission('staff.brokerage'),
+            $user->hasPermission('staff.sales') || $user->hasPermission('staff.finance') || $user->hasPermission('commissions.propose') || $user->hasPermission('staff.brokerage'),
             403,
         );
     }

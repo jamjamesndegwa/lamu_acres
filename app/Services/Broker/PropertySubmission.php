@@ -2,6 +2,7 @@
 
 namespace App\Services\Broker;
 
+use App\Enums\MessageEvent;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Models\Locality;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
+use App\Services\Communications\MessageDesk;
 use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -150,6 +152,16 @@ class PropertySubmission
         ]);
 
         $property->submitter?->notify(new PropertyApprovedNotification($property));
+
+        if ($property->submitter !== null) {
+            app(MessageDesk::class)->send($property->submitter, MessageEvent::PropertyApproved, [
+                'name' => $property->submitter->name,
+                'title' => $property->title,
+                'reference' => $property->reference,
+                'summary' => $property->title.' is approved for listing.',
+                'url' => route('broker.listings.show', $property),
+            ], 'property:'.$property->id);
+        }
 
         return $property;
     }

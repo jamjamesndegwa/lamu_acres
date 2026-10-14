@@ -109,6 +109,11 @@ class MarketIntelligenceTest extends FoundationTestCase
         $this->get(route('intelligence.reports.show', $report))
             ->assertOk()
             ->assertSee('A short public summary.')
+            ->assertSee('Research date')
+            ->assertSee('Last review')
+            ->assertSee('Project status')
+            ->assertSee('Uncertainty')
+            ->assertSee('A source is on file')
             ->assertDontSee('port dredging note')
             ->assertDontSee('LAPSSET authority notice');
 

@@ -1,7 +1,19 @@
 <x-workspace-layout :heading="$sourcingRequest->reference">
     <p class="mt-3 text-sm text-stone-600">{{ $sourcingRequest->status->label() }} · {{ $sourcingRequest->location_label ?: 'Map centre' }}</p>
+    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div><dt class="text-stone-500">Acreage</dt><dd>{{ $sourcingRequest->min_acreage ?: 'Any' }} – {{ $sourcingRequest->max_acreage ?: 'Any' }}</dd></div>
+        <div><dt class="text-stone-500">Budget</dt><dd>{{ $sourcingRequest->maximum_budget ? 'KSh '.number_format($sourcingRequest->maximum_budget) : 'Not set' }}</dd></div>
+        <div><dt class="text-stone-500">Intended use</dt><dd>{{ $sourcingRequest->intended_use?->label() ?: 'No preference' }}</dd></div>
+        <div><dt class="text-stone-500">Amenities</dt><dd>{{ $sourcingRequest->amenities->map(fn ($amenity) => $amenity->amenity->label().($amenity->required ? ' (required)' : ' (preferred)'))->implode(', ') ?: 'None recorded' }}</dd></div>
+    </dl>
+    @if ($sourcingRequest->notes)
+        <p class="mt-3 max-w-3xl text-sm text-stone-700">{{ $sourcingRequest->notes }}</p>
+    @endif
     @if ($sourcingRequest->status->value !== 'closed')
-        <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" class="mt-4 inline-block text-sm font-medium text-lamu-700">Edit search</a>
+        <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" class="mt-4 inline-block text-sm font-medium text-lamu-700">Edit requirements</a>
+    @endif
+    @if ($exactMatches->isEmpty() && $nearMatches->isEmpty())
+        <p class="mt-4 max-w-3xl text-sm text-stone-700">No published land fits this search yet. <a href="{{ route('land.index') }}" class="font-medium text-lamu-800 hover:underline">Explore land</a> while the desk continues matching, or adjust the requirements.</p>
     @endif
 
     <section class="mt-6" aria-labelledby="search-progress">

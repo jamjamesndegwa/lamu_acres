@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Models\BuyerTimelineEntry;
 use App\Models\Enquiry;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -29,6 +30,15 @@ class EnquiryController extends Controller
 
         $enquiry->load(['property', 'responses' => fn ($query) => $query->where('visible_to_buyer', true)->with('author')]);
 
-        return view('buyer.enquiries.show', ['enquiry' => $enquiry]);
+        $activity = BuyerTimelineEntry::query()
+            ->where('buyer_id', $request->user()->id)
+            ->where('property_id', $enquiry->property_id)
+            ->latest('occurred_at')
+            ->get();
+
+        return view('buyer.enquiries.show', [
+            'enquiry' => $enquiry,
+            'activity' => $activity,
+        ]);
     }
 }

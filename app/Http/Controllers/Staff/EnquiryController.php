@@ -21,20 +21,37 @@ class EnquiryController extends Controller
     {
         $this->authorize('viewAny', Enquiry::class);
 
+        $lead = LeadStatus::tryFrom((string) $request->query('lead', ''));
+        $status = EnquiryStatus::tryFrom((string) $request->query('status', ''));
+        $assigned = (string) $request->query('assigned', '');
+
         $enquiries = Enquiry::query()
             ->visibleToStaff($request->user())
             ->with(['buyer', 'property', 'assignee'])
+            ->when($lead, fn ($query) => $query->where('lead_status', $lead))
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->when($assigned === 'unassigned', fn ($query) => $query->whereNull('assigned_to'))
+            ->when($assigned === 'mine', fn ($query) => $query->where('assigned_to', $request->user()->id))
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('staff.enquiries.index', ['enquiries' => $enquiries]);
+        return view('staff.enquiries.index', [
+            'enquiries' => $enquiries,
+            'newLeadCount' => Enquiry::query()->visibleToStaff($request->user())->where('lead_status', LeadStatus::New)->count(),
+            'assignees' => $request->user()->hasPermission('staff.buyers')
+                ? User::permission('workspace.staff')->orderBy('name')->get()
+                : collect(),
+            'leadStatuses' => LeadStatus::cases(),
+            'statuses' => EnquiryStatus::cases(),
+        ]);
     }
 
     public function show(Enquiry $enquiry): View
     {
         $this->authorize('view', $enquiry);
 
-        $enquiry->load(['buyer', 'property', 'assignee', 'brokerIntroduction', 'responses.author']);
+        $enquiry->load(['buyer.buyerProfile', 'property', 'assignee', 'brokerIntroduction', 'responses.author']);
 
         return view('staff.enquiries.show', [
             'enquiry' => $enquiry,

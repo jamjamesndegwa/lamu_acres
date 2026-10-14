@@ -3,11 +3,13 @@
 namespace App\Services\Broker;
 
 use App\Enums\BrokerIntroductionStatus;
+use App\Enums\MessageEvent;
 use App\Models\BrokerIntroduction;
 use App\Models\BrokerIntroductionAudit;
 use App\Models\Property;
 use App\Models\User;
 use App\Notifications\ReferralDecidedNotification;
+use App\Services\Communications\MessageDesk;
 use App\Notifications\ReferralSubmittedNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -75,6 +77,15 @@ class ReferralRecorder
         $this->audit($introduction, $staff, 'reviewed', $from, $status, $note);
 
         $introduction->broker?->notify(new ReferralDecidedNotification($introduction));
+
+        if ($status === BrokerIntroductionStatus::Accepted && $introduction->broker !== null) {
+            app(MessageDesk::class)->send($introduction->broker, MessageEvent::ReferralAccepted, [
+                'name' => $introduction->broker->name,
+                'title' => 'Referral accepted',
+                'summary' => 'Your referral was accepted.',
+                'url' => route('broker.dashboard'),
+            ], 'referral:'.$introduction->id);
+        }
 
         return $introduction;
     }

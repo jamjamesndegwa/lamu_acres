@@ -21,7 +21,7 @@
             @empty
                 <tr>
                     <td colspan="3" class="px-4 py-8">
-                        <x-workspace.empty title="No saved properties" message="Save a published property from its page. It will be listed here." />
+                        <x-workspace.empty title="No saved properties" message="Save a published property from its page. It will be listed here." action="Explore land" :href="route('land.index')" />
                     </td>
                 </tr>
             @endforelse

@@ -1,7 +1,7 @@
-<x-workspace-layout heading="Site visits">
+<x-workspace-layout heading="Site Visits">
     <p class="mt-3 max-w-3xl text-stone-700">Visits you have requested on approved matches.</p>
     <div class="mt-6">
-        <x-workspace.table :columns="['Property', 'Status', 'Requested for']">
+        <x-workspace.table :columns="['Property', 'Status', 'Requested for', '']">
             @forelse ($visits as $visit)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4 text-sm">
@@ -9,10 +9,24 @@
                     </td>
                     <td class="px-4 py-4 text-sm">{{ $visit->status->label() }}</td>
                     <td class="px-4 py-4 text-sm">{{ $visit->requested_for->toDayDateTimeString() }}</td>
+                    <td class="px-4 py-4 text-right text-sm">
+                        @can('cancel', $visit)
+                            <form method="POST" action="{{ route('buyer.visits.cancel', $visit) }}" data-turbo-frame="_top" data-confirm="Cancel this visit?">
+                                @csrf
+                                <button class="font-medium text-lamu-800">Cancel</button>
+                            </form>
+                        @endcan
+                        @can('acknowledge', $visit)
+                            <form method="POST" action="{{ route('buyer.visits.acknowledge', $visit) }}" data-turbo-frame="_top" data-confirm="Confirm that you attended this viewing?" class="mt-2">
+                                @csrf
+                                <button class="font-medium text-lamu-800">Acknowledge viewing</button>
+                            </form>
+                        @endcan
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="3" class="px-4 py-8"><x-workspace.empty title="No visits" message="Request a visit from an approved match." /></td>
+                    <td colspan="4" class="px-4 py-8"><x-workspace.empty title="No visits" message="Request a visit from an approved match." action="View matches" :href="route('buyer.matches.index')" /></td>
                 </tr>
             @endforelse
         </x-workspace.table>

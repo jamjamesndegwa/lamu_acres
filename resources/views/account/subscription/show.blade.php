@@ -1,14 +1,36 @@
-<x-workspace-layout heading="Investor Pass">
+<x-workspace-layout :heading="$routePrefix === 'investor' ? 'Subscription' : 'Investor Pass'">
     <p class="mt-3 max-w-3xl text-stone-700">{{ $plan->name }} · list price {{ $plan->amountLabel() }}</p>
     <p class="mt-3 max-w-3xl text-sm text-stone-600">{{ $plan->terms }}</p>
+    <p class="mt-3 max-w-3xl text-sm text-stone-700">An active entitlement opens premium research. It does not unlock seller identity, parcel numbers, or exact directions to a private holding.</p>
     @if ($plan->checkout_amount)
         <p class="mt-3 max-w-3xl text-sm text-stone-700">M-Pesa collects KES {{ number_format($plan->checkout_amount) }}. That figure is recorded separately from the list price. This application does not convert currencies.</p>
         <p class="mt-2 max-w-3xl text-sm text-stone-600">{{ $plan->checkout_policy }}</p>
     @else
         <p class="mt-3 max-w-3xl text-sm text-stone-600">No payable KES amount has been set, so a payment prompt cannot be sent.</p>
     @endif
+    <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+        <h2 class="font-semibold text-lamu-900">Active entitlement</h2>
+        @if ($subscription && $subscription->status === \App\Enums\SubscriptionStatus::Active)
+            <p class="mt-2 text-sm text-stone-700">Status: {{ $subscription->status->label() }}. Premium research is open. Seller identity, parcel numbers, and exact directions stay closed.</p>
+        @elseif (auth()->user()->hasActiveInvestorPass())
+            <p class="mt-2 text-sm text-stone-700">An Investor Pass entitlement is active. Premium research is open. Seller identity, parcel numbers, and exact directions stay closed.</p>
+        @elseif ($subscription)
+            <p class="mt-2 text-sm text-stone-700">Status: {{ $subscription->status->label() }}. Premium research stays closed until a verified payment is on file.</p>
+        @else
+            <p class="mt-2 text-sm text-stone-700">No membership is active. Premium research stays closed.</p>
+        @endif
+    </section>
+    <section class="mt-4 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+        <h2 class="font-semibold text-lamu-900">Renewal</h2>
+        @if ($subscription?->ends_at)
+            <p class="mt-2 text-sm text-stone-700">Renewal date {{ $subscription->ends_at->toFormattedDateString() }}.</p>
+        @elseif (auth()->user()->hasActiveInvestorPass())
+            <p class="mt-2 text-sm text-stone-700">No renewal date is recorded. Access stays open until the pass is cancelled or an end date is set.</p>
+        @else
+            <p class="mt-2 text-sm text-stone-700">No renewal is scheduled.</p>
+        @endif
+    </section>
     @if ($subscription)
-        <p class="mt-4">Status: {{ $subscription->status->label() }} @if ($subscription->ends_at) · until {{ $subscription->ends_at->toFormattedDateString() }} @endif</p>
         <h2 class="mt-6 font-semibold">Purchase history</h2>
         <ul class="mt-2 text-sm">
             @foreach ($subscription->events as $event)
@@ -18,13 +40,16 @@
         @if ($subscription->status === \App\Enums\SubscriptionStatus::Active && $routePrefix !== 'staff')
             <form method="POST" action="{{ route($routePrefix.'.subscription.cancel') }}" class="mt-4">@csrf <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Cancel pass</button></form>
         @endif
+        <h2 class="mt-6 font-semibold">Payment history</h2>
         @if ($subscription->payments->isNotEmpty())
-            <h2 class="mt-6 font-semibold">Payments</h2>
+            <h3 class="mt-3 text-sm font-medium text-lamu-900">Payments</h3>
             <ul class="mt-2 text-sm">
                 @foreach ($subscription->payments as $payment)
                     <li>{{ $payment->created_at?->toDayDateTimeString() }} · {{ $payment->currency }} {{ number_format($payment->amount) }} · {{ $payment->status->label() }}</li>
                 @endforeach
             </ul>
+        @else
+            <p class="mt-2 text-sm text-stone-600">No payment has been recorded.</p>
         @endif
         @if ($subscription->invoices->isNotEmpty())
             <h2 class="mt-6 font-semibold">Invoices and receipts</h2>
@@ -39,10 +64,9 @@
                 @endforeach
             </ul>
         @endif
-    @elseif (auth()->user()->hasActiveInvestorPass())
-        <p class="mt-4">An Investor Pass entitlement is active on this account.</p>
     @else
-        <p class="mt-4">No membership is active. Premium research stays closed.</p>
+        <h2 class="mt-6 font-semibold">Payment history</h2>
+        <p class="mt-2 text-sm text-stone-600">No payment has been recorded.</p>
     @endif
     @if ($routePrefix !== 'investor' && $plan->is_active && (! $subscription || ! in_array($subscription->status, [\App\Enums\SubscriptionStatus::Pending, \App\Enums\SubscriptionStatus::Active], true)))
         <form method="POST" action="{{ route($routePrefix.'.subscription.store') }}" class="mt-4">@csrf <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Request Investor Pass</button></form>

@@ -52,6 +52,21 @@ class SalesTransaction extends Model
         return $this->belongsTo(Property::class);
     }
 
+    public function introduction(): BelongsTo
+    {
+        return $this->belongsTo(BrokerIntroduction::class, 'broker_introduction_id');
+    }
+
+    public function enquiry(): BelongsTo
+    {
+        return $this->belongsTo(Enquiry::class);
+    }
+
+    public function saleInstruction(): BelongsTo
+    {
+        return $this->belongsTo(SaleInstruction::class);
+    }
+
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');

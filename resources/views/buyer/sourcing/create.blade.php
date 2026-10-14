@@ -1,5 +1,5 @@
 <x-workspace-layout heading="New search">
-    <p class="mt-3 max-w-3xl text-stone-700">Use a place name, a map centre, or both. A drawn polygon is optional.</p>
+    <p class="mt-3 max-w-3xl text-stone-700">Choose a place on the map, then record the size, budget, use, and what the land must have. Matching uses this request.</p>
     @include('buyer.sourcing.partials.form', [
         'action' => route('buyer.sourcing.store'),
         'method' => 'POST',

@@ -44,6 +44,16 @@ class ImageryScene extends Model
         ];
     }
 
+    public function county(): BelongsTo
+    {
+        return $this->belongsTo(County::class);
+    }
+
+    public function locality(): BelongsTo
+    {
+        return $this->belongsTo(Locality::class);
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(DevelopmentProject::class, 'development_project_id');

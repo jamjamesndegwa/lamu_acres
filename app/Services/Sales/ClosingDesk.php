@@ -3,6 +3,7 @@
 namespace App\Services\Sales;
 
 use App\Enums\ClosingEvidenceState;
+use App\Enums\MessageEvent;
 use App\Enums\CommissionStatus;
 use App\Enums\PaymentReconciliation;
 use App\Enums\SalesStage;
@@ -11,6 +12,7 @@ use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Notifications\CommissionSettlementNotification;
 use App\Notifications\SaleCompletedNotification;
+use App\Services\Communications\MessageDesk;
 use App\Services\Inventory\PropertyInventory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -130,6 +132,7 @@ class ClosingDesk
 
             $this->earn($locked, $actor);
             $this->notifyParties($locked, new SaleCompletedNotification($locked));
+            $this->announce($locked, MessageEvent::ClosingCompleted, 'The sale is completed.', 'sale:'.$locked->id);
 
             return $locked->refresh();
         });
@@ -146,6 +149,7 @@ class ClosingDesk
         $this->pipeline->audit($agreement->transaction, $actor, 'commission_payable', [
             'amount' => $agreement->earned_amount,
         ], $agreement->id);
+        $this->announceBroker($agreement, MessageEvent::CommissionPayable, 'Commission is payable.');
 
         return $agreement;
     }
@@ -218,6 +222,7 @@ class ClosingDesk
                 'reconciliation' => $reconciliation->value,
             ], $locked->id);
             $this->notifyParties($locked->transaction, new CommissionSettlementNotification($locked));
+            $this->announceBroker($locked, MessageEvent::CommissionPaid, 'Commission has been paid.');
 
             return $locked;
         });
@@ -242,6 +247,43 @@ class ClosingDesk
                 'agreed_price' => $transaction->agreed_price,
             ], $agreement->id);
         }
+    }
+
+    private function announce(SalesTransaction $transaction, MessageEvent $event, string $summary, string $key): void
+    {
+        $transaction->loadMissing(['property.owners.user', 'agreements.broker', 'buyer']);
+        $recipients = collect([$transaction->buyer])
+            ->merge($transaction->property->owners->map(fn ($owner) => $owner->user))
+            ->merge($transaction->agreements->map(fn ($agreement) => $agreement->broker))
+            ->filter()
+            ->unique('id');
+
+        foreach ($recipients as $user) {
+            app(MessageDesk::class)->send($user, $event, [
+                'name' => $user->name,
+                'title' => $transaction->property->title,
+                'reference' => $transaction->reference,
+                'summary' => $summary,
+                'url' => route('home'),
+            ], $key);
+        }
+    }
+
+    private function announceBroker(CommissionAgreement $agreement, MessageEvent $event, string $summary): void
+    {
+        $agreement->loadMissing('broker', 'transaction.property');
+
+        if ($agreement->broker === null) {
+            return;
+        }
+
+        app(MessageDesk::class)->send($agreement->broker, $event, [
+            'name' => $agreement->broker->name,
+            'title' => $agreement->transaction->property->title,
+            'reference' => $agreement->reference,
+            'summary' => $summary,
+            'url' => route('home'),
+        ], 'commission:'.$agreement->id.':'.$event->value);
     }
 
     private function notifyParties(SalesTransaction $transaction, object $notification): void

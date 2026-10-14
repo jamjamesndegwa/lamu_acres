@@ -1,5 +1,15 @@
 <x-workspace-layout :heading="$heading">
-    <a href="{{ route('staff.sales.create') }}" class="mt-4 inline-block rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Open transaction</a>
+    @if (! empty($stageCounts ?? null))
+        <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach (\App\Enums\SalesStage::cases() as $stage)
+                <article class="rounded-2xl border border-sand-200 bg-white p-4">
+                    <p class="text-sm text-stone-500">{{ $stage->label() }}</p>
+                    <p class="mt-1 text-2xl font-semibold text-lamu-900">{{ $stageCounts[$stage->value] ?? 0 }}</p>
+                </article>
+            @endforeach
+        </div>
+    @endif
+    <a href="{{ route('staff.sales.create') }}" class="mt-4 inline-block rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Create sale</a>
     <div class="mt-6">
         <x-workspace.table :columns="['Reference', 'Property', 'Stage', 'Buyer']">
             @forelse ($transactions as $transaction)

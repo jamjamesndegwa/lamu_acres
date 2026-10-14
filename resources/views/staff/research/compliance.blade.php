@@ -1,4 +1,5 @@
 <x-workspace-layout heading="Publication calendar">
+    <x-editorial-workflow />
     <p class="mt-3 max-w-3xl text-sm text-stone-600">A period with no usable published imagery stays empty. The calendar does not invent a comparison or a development.</p>
     <dl class="mt-6 grid gap-3 sm:grid-cols-4">
         <div class="rounded-2xl border border-sand-200 bg-white p-4"><dt class="text-sm text-stone-500">Due</dt><dd class="text-2xl font-semibold text-lamu-900">{{ $counts['due'] }}</dd></div>

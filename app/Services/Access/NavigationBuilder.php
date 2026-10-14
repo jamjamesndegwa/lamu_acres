@@ -40,7 +40,7 @@ class NavigationBuilder
                 continue;
             }
 
-            $items = $this->present($group['items'] ?? [], $currentRoute);
+            $items = $this->present($group['items'] ?? [], $currentRoute, $user);
 
             if ($items === []) {
                 continue;
@@ -75,10 +75,11 @@ class NavigationBuilder
                 'label' => $module['label'],
                 'href' => $module['href'],
                 'active' => $module['active'],
+                'items' => $module['items'],
             ], $modules),
             'moduleLabel' => is_array($active) ? $active['label'] : '',
             'subnav' => is_array($active) ? $active['items'] : [],
-            'account' => $this->present(config("workspaces.{$workspace->value}.account", []), $currentRoute),
+            'account' => $this->present(config("workspaces.{$workspace->value}.account", []), $currentRoute, $user),
         ];
     }
 
@@ -163,10 +164,12 @@ class NavigationBuilder
      * @param  array<int, array<string, mixed>>  $items
      * @return array<int, array{label: string, href: ?string, method: string, active: bool, available: bool, frame: ?string}>
      */
-    private function present(array $items, mixed $currentRoute): array
+    private function present(array $items, mixed $currentRoute, ?User $user = null): array
     {
         return collect($items)
+            ->filter(fn (array $item): bool => $user === null || $this->allowed($user, $item['permission'] ?? null))
             ->map(fn (array $item): array => $this->item($item, $currentRoute))
+            ->values()
             ->all();
     }
 

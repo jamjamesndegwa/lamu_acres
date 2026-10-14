@@ -1,4 +1,4 @@
-<x-workspace-layout heading="Enquiries">
+<x-workspace-layout heading="My Enquiries">
     <p class="mt-3 max-w-3xl text-stone-700">Questions you have sent about specific properties, and the replies that were shared with you.</p>
 
     <div class="mt-6">
@@ -15,7 +15,7 @@
             @empty
                 <tr>
                     <td colspan="3" class="px-4 py-8">
-                        <x-workspace.empty title="No enquiries yet" message="An enquiry is created when you send a question from a property page." />
+                        <x-workspace.empty title="No enquiries yet" message="An enquiry is created when you send a question from a property page." action="Explore land" :href="route('land.index')" />
                     </td>
                 </tr>
             @endforelse

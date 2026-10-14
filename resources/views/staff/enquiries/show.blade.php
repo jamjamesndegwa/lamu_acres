@@ -1,10 +1,36 @@
 <x-workspace-layout :heading="$enquiry->property->title">
     <p class="mt-3 text-sm text-stone-600">
-        {{ $enquiry->buyer->name }} · {{ $enquiry->status->label() }} · {{ $enquiry->lead_status->label() }}
+        {{ $enquiry->status->label() }} · {{ $enquiry->lead_status->label() }}
         @if ($enquiry->brokerIntroduction)
             · Broker introduction {{ $enquiry->brokerIntroduction->reference }}
         @endif
     </p>
+
+    <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+        <h2 class="font-semibold text-lamu-900">Buyer</h2>
+        <dl class="mt-3 grid gap-2 text-sm text-stone-700 sm:grid-cols-2">
+            <div>
+                <dt class="font-medium text-lamu-900">Name</dt>
+                <dd>{{ $enquiry->buyer->name }}</dd>
+            </div>
+            <div>
+                <dt class="font-medium text-lamu-900">Email</dt>
+                <dd>{{ $enquiry->buyer->email }}</dd>
+            </div>
+            <div>
+                <dt class="font-medium text-lamu-900">Phone</dt>
+                <dd>{{ $enquiry->buyer->phone ?: 'No phone recorded' }}</dd>
+            </div>
+            <div>
+                <dt class="font-medium text-lamu-900">Looking for</dt>
+                <dd>{{ $enquiry->buyer->buyerProfile?->looking_for ?: 'No profile note' }}</dd>
+            </div>
+            <div class="sm:col-span-2">
+                <dt class="font-medium text-lamu-900">Preferred locality</dt>
+                <dd>{{ $enquiry->buyer->buyerProfile?->preferred_locality ?: 'Not recorded' }}</dd>
+            </div>
+        </dl>
+    </section>
 
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
         <h2 class="font-semibold text-lamu-900">Enquiry</h2>
@@ -70,7 +96,7 @@
     <section class="mt-6 max-w-3xl">
         <h2 class="font-semibold text-lamu-900">History</h2>
         <div class="mt-4 space-y-3">
-            @foreach ($enquiry->responses as $response)
+            @forelse ($enquiry->responses as $response)
                 <article class="rounded-2xl border border-sand-200 bg-white p-5">
                     <p class="text-sm font-medium text-lamu-900">{{ $response->author->name }}</p>
                     <p class="mt-2 whitespace-pre-line text-sm text-stone-700">{{ $response->body }}</p>
@@ -79,7 +105,9 @@
                         · {{ $response->visible_to_buyer ? 'Visible to buyer' : 'Internal note' }}
                     </p>
                 </article>
-            @endforeach
+            @empty
+                <p class="text-sm text-stone-600">No replies yet.</p>
+            @endforelse
         </div>
     </section>
 

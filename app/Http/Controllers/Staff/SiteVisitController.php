@@ -24,14 +24,18 @@ class SiteVisitController extends Controller
             403,
         );
 
-        $visits = SiteVisit::query()
+        $calendar = $request->query('view') === 'calendar';
+        $query = SiteVisit::query()
             ->visibleToStaff($request->user())
-            ->with(['buyer', 'property', 'assignee'])
-            ->latest()
-            ->paginate(20);
+            ->with(['buyer', 'property', 'assignee']);
+
+        $visits = $calendar
+            ? $query->orderByRaw('coalesce(confirmed_for, requested_for) asc')->limit(80)->get()
+            : $query->latest()->paginate(20)->withQueryString();
 
         return view('staff.visits.index', [
             'visits' => $visits,
+            'calendar' => $calendar,
             'agents' => User::permission('workspace.staff')->orderBy('name')->get(),
         ]);
     }

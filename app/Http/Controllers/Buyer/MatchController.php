@@ -8,6 +8,7 @@ use App\Http\Requests\Buyer\StoreDocumentAccessRequest;
 use App\Http\Requests\Buyer\StoreOfferRequest;
 use App\Http\Requests\Buyer\StoreSiteVisitRequest;
 use App\Models\PropertyMatch;
+use App\Models\SourcingMatch;
 use App\Services\Buyer\InterestWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class MatchController extends Controller
 
         $matches = PropertyMatch::query()
             ->where('buyer_id', $request->user()->id)
-            ->with('property')
+            ->with(['property', 'sourcingRequest.matches'])
             ->latest('approved_at')
             ->paginate(12);
 
@@ -36,11 +37,19 @@ class MatchController extends Controller
 
         $propertyMatch->load([
             'property',
+            'sourcingRequest.amenities',
             'visits.assignee',
             'offers',
             'documentRequests',
             'timeline',
         ]);
+
+        $fit = $propertyMatch->sourcing_request_id
+            ? SourcingMatch::query()
+                ->where('sourcing_request_id', $propertyMatch->sourcing_request_id)
+                ->where('property_id', $propertyMatch->property_id)
+                ->first()
+            : null;
 
         $directions = null;
 
@@ -54,6 +63,7 @@ class MatchController extends Controller
         return view('buyer.matches.show', [
             'match' => $propertyMatch,
             'directions' => $directions,
+            'fit' => $fit,
         ]);
     }
 

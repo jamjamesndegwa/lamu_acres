@@ -13,6 +13,7 @@ use App\Http\Controllers\Staff\VerificationQueueController;
 use App\Http\Controllers\Staff\SalesPipelineController;
 use App\Http\Controllers\Staff\CommissionAgreementController;
 use App\Http\Controllers\Staff\ClosingController;
+use App\Http\Controllers\Staff\CommunicationsController;
 use App\Http\Controllers\Staff\SettlementController;
 use App\Http\Controllers\Staff\DevelopmentProjectController;
 use App\Http\Controllers\Staff\ImageryController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\Staff\VerifiedSaleController;
 use App\Http\Controllers\Staff\PropertyInventoryController;
 use App\Http\Controllers\Staff\PropertyMediaController;
 use App\Http\Controllers\Staff\ReferralReviewController;
+use App\Http\Controllers\Staff\OverviewController;
 use App\Http\Controllers\WorkspaceDashboardController;
 use App\Http\Controllers\WorkspaceNotificationController;
 use Illuminate\Support\Facades\Route;
@@ -34,16 +36,21 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
     ->name('staff.')
     ->group(function () {
         Route::get('/', WorkspaceDashboardController::class)->name('dashboard');
+        Route::get('/tasks', [OverviewController::class, 'tasks'])->name('tasks');
+        Route::get('/calendar', [OverviewController::class, 'calendar'])->name('calendar');
         Route::get('/enquiries', [EnquiryController::class, 'index'])->name('enquiries.index');
         Route::get('/enquiries/{enquiry}', [EnquiryController::class, 'show'])->name('enquiries.show');
         Route::put('/enquiries/{enquiry}/assignment', [EnquiryController::class, 'assign'])->name('enquiries.assign');
         Route::put('/enquiries/{enquiry}/status', [EnquiryController::class, 'update'])->name('enquiries.update');
         Route::post('/enquiries/{enquiry}/responses', [EnquiryController::class, 'respond'])->name('enquiries.respond');
         Route::get('/sourcing', [SourcingQueueController::class, 'index'])->name('sourcing.index');
+        Route::get('/sourcing/matching', [SourcingQueueController::class, 'index'])->name('sourcing.matching')->defaults('queue', 'matching');
+        Route::get('/sourcing/approvals', [SourcingQueueController::class, 'index'])->name('sourcing.approvals')->defaults('queue', 'approvals');
         Route::get('/sourcing/{sourcingRequest}', [SourcingQueueController::class, 'show'])->name('sourcing.show');
         Route::put('/sourcing/{sourcingRequest}/assignment', [SourcingQueueController::class, 'assign'])->name('sourcing.assign');
         Route::put('/sourcing/{sourcingRequest}/status', [SourcingQueueController::class, 'update'])->name('sourcing.update');
         Route::post('/sourcing/{sourcingRequest}/matches/{sourcingMatch}/approve', [SourcingQueueController::class, 'approve'])->name('sourcing.approve');
+        Route::post('/sourcing/{sourcingRequest}/matches/{sourcingMatch}/reject', [SourcingQueueController::class, 'reject'])->name('sourcing.reject');
         Route::get('/visits', [SiteVisitController::class, 'index'])->name('visits.index');
         Route::put('/visits/{siteVisit}/assignment', [SiteVisitController::class, 'assign'])->name('visits.assign');
         Route::put('/visits/{siteVisit}', [SiteVisitController::class, 'update'])->name('visits.update');
@@ -79,11 +86,13 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         Route::post('/properties/{property}/transactions', [SellerDeskController::class, 'transaction'])->name('properties.transactions.store');
 
         Route::middleware('permission:staff.properties')->group(function () {
+            Route::get('/media', [PropertyMediaController::class, 'library'])->name('media.index');
             Route::get('/properties', [PropertyInventoryController::class, 'index'])->name('properties.index');
             Route::get('/properties/create', [PropertyInventoryController::class, 'create'])->name('properties.create');
             Route::post('/properties', [PropertyInventoryController::class, 'store'])->name('properties.store');
             Route::get('/properties/{property}/edit', [PropertyInventoryController::class, 'edit'])->name('properties.edit');
             Route::put('/properties/{property}', [PropertyInventoryController::class, 'update'])->name('properties.update');
+            Route::get('/properties/{property}', [PropertyInventoryController::class, 'show'])->name('properties.show');
             Route::put('/properties/{property}/status', [PropertyInventoryController::class, 'transition'])->name('properties.transition');
             Route::post('/properties/{property}/sell-portion', [PropertyInventoryController::class, 'sellPortion'])->name('properties.sell-portion');
             Route::get('/properties/{property}/media', [PropertyMediaController::class, 'edit'])->name('properties.media');
@@ -106,6 +115,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         });
 
         Route::middleware('permission:staff.brokerage')->group(function () {
+            Route::get('/authorities', [SellerDeskController::class, 'authorities'])->name('authorities.index');
             Route::get('/applications', [CapabilityApplicationController::class, 'index'])->name('applications.index');
             Route::get('/applications/{application}', [CapabilityApplicationController::class, 'edit'])->name('applications.edit');
             Route::put('/applications/{application}', [CapabilityApplicationController::class, 'update'])->name('applications.update');
@@ -203,6 +213,12 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/memberships/{subscription}/renewal', [MembershipController::class, 'renew'])->name('memberships.renew');
             Route::post('/memberships/{subscription}/cancellation', [MembershipController::class, 'cancel'])->name('memberships.cancel');
             Route::post('/memberships/{subscription}/credit', [MembershipController::class, 'credit'])->name('memberships.credit');
+        });
+
+        Route::middleware('permission:staff.communications')->group(function () {
+            Route::get('/messages/templates', [CommunicationsController::class, 'templates'])->name('messages.templates');
+            Route::put('/messages/templates/{messageTemplate}', [CommunicationsController::class, 'updateTemplate'])->name('messages.templates.update');
+            Route::get('/messages/deliveries', [CommunicationsController::class, 'deliveries'])->name('messages.deliveries');
         });
 
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');

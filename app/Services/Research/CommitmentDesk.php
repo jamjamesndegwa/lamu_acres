@@ -3,6 +3,7 @@
 namespace App\Services\Research;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\MessageEvent;
 use App\Enums\ResearchCommitment;
 use App\Models\DevelopmentProject;
 use App\Models\ImageryComparison;
@@ -12,6 +13,7 @@ use App\Models\ResearchReport;
 use App\Models\SubscriberWatch;
 use App\Models\User;
 use App\Notifications\DevelopmentAlertNotification;
+use App\Services\Communications\MessageDesk;
 use App\Notifications\ResearchPublishedNotification;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -135,6 +137,16 @@ class CommitmentDesk
 
             $this->deliver($user, $subject, $assignment, 'assignment:'.$assignment->id.':user:'.$user->id);
             $user->notify(new ResearchPublishedNotification($assignment, $subject));
+
+            if ($subject instanceof ResearchReport) {
+                app(MessageDesk::class)->send($user, MessageEvent::ReportPublished, [
+                    'name' => $user->name,
+                    'title' => $subject->title,
+                    'reference' => $subject->reference,
+                    'summary' => $subject->title.' is now available.',
+                    'url' => route('intelligence.reports.show', $subject),
+                ], 'report:'.$subject->id);
+            }
         });
     }
 

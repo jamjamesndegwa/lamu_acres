@@ -2,6 +2,7 @@
 
 namespace App\Services\Subscription;
 
+use App\Enums\MessageEvent;
 use App\Enums\SubscriptionStatus;
 use App\Models\Entitlement;
 use App\Models\Subscription;
@@ -9,6 +10,7 @@ use App\Models\SubscriptionEvent;
 use App\Models\ServiceCredit;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\Communications\MessageDesk;
 use Illuminate\Validation\ValidationException;
 
 class Memberships
@@ -75,7 +77,10 @@ class Memberships
     {
         abort_unless($subscription->status === SubscriptionStatus::Active, 422);
 
-        return $this->extend($subscription, $actor, 'renewed', self::UNPAID_NOTE);
+        $subscription = $this->extend($subscription, $actor, 'renewed', self::UNPAID_NOTE);
+        $this->announce($subscription, MessageEvent::SubscriptionRenewed, 'Your subscription is renewed.');
+
+        return $subscription;
     }
 
     public function cancel(User $actor, Subscription $subscription): Subscription
@@ -103,6 +108,7 @@ class Memberships
         $subscription->update(['status' => SubscriptionStatus::Expired]);
         $this->entitlement($subscription->user, 'expired', $subscription->starts_at, $subscription->ends_at);
         $this->event($subscription, $subscription->user, 'expired', $subscription->plan, 'The membership period ended.');
+        $this->announce($subscription, MessageEvent::SubscriptionExpired, 'Your subscription has expired.');
     }
 
     public function find(User $member, ?SubscriptionPlan $plan = null): ?Subscription
@@ -153,6 +159,25 @@ class Memberships
         $this->event($subscription, $actor, $action, $plan, $note, $amountCents, $currency);
 
         return $subscription;
+    }
+
+    private function announce(Subscription $subscription, MessageEvent $event, string $summary): void
+    {
+        $member = $subscription->user;
+
+        if ($member === null) {
+            return;
+        }
+
+        $subscription->loadMissing('plan');
+        $stamp = $subscription->ends_at?->timestamp ?? $subscription->id;
+
+        app(MessageDesk::class)->send($member, $event, [
+            'name' => $member->name,
+            'title' => $subscription->plan->name ?? 'Investor Pass',
+            'summary' => $summary,
+            'url' => route('home'),
+        ], 'subscription:'.$subscription->id.':'.$event->value.':'.$stamp);
     }
 
     private function event(Subscription $subscription, User $actor, string $action, SubscriptionPlan $plan, string $note, ?int $amountCents = null, ?string $currency = null): void

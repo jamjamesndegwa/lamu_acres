@@ -6,6 +6,7 @@ use App\Enums\Workspace;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Account\AccountAvatar;
+use App\Services\Communications\MessageDesk;
 use App\Services\Auth\OtpLogin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,12 +62,26 @@ class ProfileController extends Controller
             $user->notify_by_email = $request->boolean('notify_by_email');
         }
 
+        $channels = [];
+
+        if ($request->exists('notify_by_sms')) {
+            $channels['sms'] = $request->boolean('notify_by_sms');
+        }
+
+        if ($request->exists('notify_by_whatsapp')) {
+            $channels['whatsapp'] = $request->boolean('notify_by_whatsapp');
+        }
+
         if ($request->filled('password')) {
             Auth::logoutOtherDevices($request->string('current_password')->value());
             $user->password = $request->string('password')->value();
         }
 
         $user->save();
+
+        if ($channels !== []) {
+            app(MessageDesk::class)->savePreferences($user, $channels);
+        }
 
         if ($emailChanged) {
             $user->notify(new AccountEmailChanged);

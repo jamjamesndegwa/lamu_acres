@@ -31,8 +31,17 @@
             <p><span class="font-medium text-lamu-900">Researcher annotation.</span> {{ $comparison->annotation }}</p>
         @endif
         @if ($comparison->project)
-            <p><span class="font-medium text-lamu-900">Linked project.</span> {{ $comparison->project->name }}</p>
+            <p><span class="font-medium text-lamu-900">Linked project.</span> {{ $comparison->project->name }} · {{ $comparison->project->project_status->label() }}</p>
+            <p class="text-sm text-stone-700">{{ $comparison->project->project_status->statement() }}</p>
         @endif
+        <h2 class="font-semibold text-lamu-900">Evidence</h2>
+        <ul class="text-sm">
+            @forelse (collect($before?->files)->merge($after?->files ?? []) as $file)
+                <li><a class="text-lamu-800 hover:underline" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
+            @empty
+                <li>No evidence file has been attached.</li>
+            @endforelse
+        </ul>
     </div>
 @else
     <p class="mt-6 max-w-3xl text-stone-700">The observed change and any authorised images are part of an active Investor Pass.</p>

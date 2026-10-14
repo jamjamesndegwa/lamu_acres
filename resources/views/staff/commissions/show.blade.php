@@ -10,7 +10,7 @@
     @endif
 
     @if ($agreement->status === \App\Enums\CommissionStatus::Proposed)
-        <form method="POST" action="{{ route('staff.commissions.accept', $agreement) }}" data-turbo-frame="_top" data-confirm="Accept this agreement without earning commission?" class="mt-4">
+        <form method="POST" action="{{ route('staff.commissions.accept', $agreement) }}" data-turbo-frame="_top" data-confirm="Accept {{ $agreement->reference }} for {{ $agreement->broker->name }}. Rate {{ $agreement->rate_percent ?: 'fixed '.$agreement->fixed_amount }}. Resulting state: Accepted. Accepting does not earn or pay commission." class="mt-4">
             @csrf
             <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Accept agreement</button>
         </form>

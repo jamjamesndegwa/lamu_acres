@@ -47,6 +47,11 @@ class PlanningRecord extends Model
         return 'slug';
     }
 
+    public function county(): BelongsTo
+    {
+        return $this->belongsTo(County::class);
+    }
+
     public function locality(): BelongsTo
     {
         return $this->belongsTo(Locality::class);

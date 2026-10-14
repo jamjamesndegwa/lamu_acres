@@ -12,7 +12,7 @@
             <x-workspace.table :columns="['Property', 'Check', 'Review date']">
                 @forelse ($rows as $item)
                     <tr class="border-b border-sand-200 last:border-b-0">
-                        <td class="px-4 py-4"><a class="font-medium text-lamu-900 hover:underline" href="{{ route('staff.verification.history', $item->property) }}">{{ $item->property->title }}</a></td>
+                        <td class="px-4 py-4"><a class="font-medium text-lamu-900 hover:underline" href="{{ route('staff.verification.show', $item->property) }}">{{ $item->property->title }}</a></td>
                         <td class="px-4 py-4 text-sm">{{ $item->category->label() }}</td>
                         <td class="px-4 py-4 text-sm">{{ $item->review_due_at?->toFormattedDateString() ?? $item->expires_at?->toFormattedDateString() }}</td>
                     </tr>
@@ -24,7 +24,10 @@
             <x-workspace.table :columns="['Property', 'Level', 'Deadline']">
                 @forelse ($rows as $property)
                     <tr class="border-b border-sand-200 last:border-b-0">
-                        <td class="px-4 py-4"><a class="font-medium text-lamu-900 hover:underline" href="{{ route('staff.verification.history', $property) }}">{{ $property->title }}</a></td>
+                        <td class="px-4 py-4">
+                            <a class="font-medium text-lamu-900 hover:underline" href="{{ route('staff.verification.show', $property) }}">{{ $property->title }}</a>
+                            <a class="ml-2 text-sm text-lamu-800 hover:underline" href="{{ route('staff.verification.history', $property) }}">History</a>
+                        </td>
                         <td class="px-4 py-4 text-sm">{{ $property->passport?->level->label() ?? 'Level 0 — Advertised' }}</td>
                         <td class="px-4 py-4 text-sm">{{ $property->passport?->deadline_at?->toFormattedDateString() ?? 'No deadline' }}</td>
                     </tr>

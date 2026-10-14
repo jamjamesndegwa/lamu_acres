@@ -2,9 +2,13 @@
 
 namespace App\Services\Intelligence;
 
+use App\Enums\MessageEvent;
 use App\Enums\PublicationStatus;
+use App\Models\Entitlement;
 use App\Models\IntelligenceAudit;
+use App\Models\ResearchReport;
 use App\Models\User;
+use App\Services\Communications\MessageDesk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -65,7 +69,35 @@ class PublicationDesk
             'reviewed_by' => $actor->id,
         ]);
         $this->audit($subject, $actor, 'published', $from, PublicationStatus::Published);
+
+        if ($subject instanceof ResearchReport) {
+            $this->announceReport($subject);
+        }
+
         app(\App\Services\Research\CommitmentDesk::class)->afterPublication($subject->refresh());
+    }
+
+    private function announceReport(ResearchReport $report): void
+    {
+        User::query()->whereHas('entitlements', function ($query): void {
+            $query->where('code', Entitlement::INVESTOR_PASS)
+                ->where('status', Entitlement::STATUS_ACTIVE)
+                ->where(function ($query): void {
+                    $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
+                });
+        })->each(function (User $user) use ($report): void {
+            if (! $user->hasActiveInvestorPass()) {
+                return;
+            }
+
+            app(MessageDesk::class)->send($user, MessageEvent::ReportPublished, [
+                'name' => $user->name,
+                'title' => $report->title,
+                'reference' => $report->reference,
+                'summary' => $report->title.' is now available.',
+                'url' => route('intelligence.reports.show', $report),
+            ], 'report:'.$report->id);
+        });
     }
 
     public function revise(Model $subject, User $actor, array $changes): void

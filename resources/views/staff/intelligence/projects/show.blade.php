@@ -1,4 +1,5 @@
 <x-workspace-layout :heading="$project->name">
+    <x-editorial-workflow :status="$project->publication_status" />
     <p class="mt-3 text-sm text-stone-600">{{ $project->reference }} · {{ $project->project_status->label() }} · {{ $project->publication_status->label() }} · {{ $project->coverage }}</p>
     <div class="mt-4 flex flex-wrap gap-2">
         <a href="{{ route('staff.projects.edit', $project) }}" class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Edit</a>

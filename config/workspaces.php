@@ -5,71 +5,111 @@ return [
     'buyer' => [
         'eyebrow' => 'Buyer',
         'heading' => 'Dashboard',
-        'intro' => 'Enquiries, site visits, and offers will appear here once you start a search.',
+        'intro' => 'Start with a search or a published property. Each step shows what to do next.',
         'activity' => [
             'columns' => ['Activity', 'Detail'],
-            'empty' => 'Saved properties, enquiries, visits, and offers will be listed here when those modules are switched on.',
+            'empty' => 'Your searches, saved land, enquiries, visits, and offers will be listed here.',
         ],
         'groups' => [
             [
                 'key' => 'dashboard',
                 'label' => 'Dashboard',
                 'items' => [
-                    ['label' => 'Dashboard', 'route' => 'buyer.dashboard'],
+                    ['label' => 'Dashboard', 'route' => 'buyer.dashboard', 'active' => 'buyer.dashboard'],
                 ],
             ],
             [
-                'key' => 'properties',
-                'label' => 'Properties',
+                'key' => 'explore',
+                'label' => 'Explore Land',
+                'items' => [
+                    ['label' => 'Explore Land', 'route' => 'land.index', 'active' => 'land.*'],
+                ],
+            ],
+            [
+                'key' => 'saved',
+                'label' => 'Saved Properties',
                 'items' => [
                     ['label' => 'Saved Properties', 'route' => 'buyer.saved.index', 'active' => 'buyer.saved.*'],
+                ],
+            ],
+            [
+                'key' => 'sourcing',
+                'label' => 'Find Land for Me',
+                'items' => [
                     ['label' => 'Find Land for Me', 'route' => 'buyer.sourcing.index', 'active' => 'buyer.sourcing.*'],
-                    ['label' => 'Matches', 'route' => 'buyer.matches.index', 'active' => 'buyer.matches.*'],
+                ],
+            ],
+            [
+                'key' => 'matches',
+                'label' => 'My Property Matches',
+                'items' => [
+                    ['label' => 'My Property Matches', 'route' => 'buyer.matches.index', 'active' => 'buyer.matches.*'],
                 ],
             ],
             [
                 'key' => 'enquiries',
-                'label' => 'Enquiries',
+                'label' => 'My Enquiries',
                 'items' => [
-                    ['label' => 'Enquiries', 'route' => 'buyer.enquiries.index', 'active' => 'buyer.enquiries.*'],
-                    ['label' => 'Site Visits', 'route' => 'buyer.visits.index', 'active' => 'buyer.visits.*'],
-                    ['label' => 'Offers', 'route' => 'buyer.offers.index', 'active' => 'buyer.offers.*'],
+                    ['label' => 'My Enquiries', 'route' => 'buyer.enquiries.index', 'active' => 'buyer.enquiries.*'],
                 ],
             ],
             [
-                'key' => 'records',
-                'label' => 'Records',
+                'key' => 'visits',
+                'label' => 'Site Visits',
                 'items' => [
-                    ['label' => 'Buying profile', 'route' => 'buyer.buying-profile', 'frame' => 'modal'],
-                    ['label' => 'Documents'],
+                    ['label' => 'Site Visits', 'route' => 'buyer.visits.index', 'active' => 'buyer.visits.*'],
+                ],
+            ],
+            [
+                'key' => 'offers',
+                'label' => 'My Offers',
+                'items' => [
+                    ['label' => 'My Offers', 'route' => 'buyer.offers.index', 'active' => 'buyer.offers.*'],
+                ],
+            ],
+            [
+                'key' => 'profile',
+                'label' => 'Buying Profile',
+                'items' => [
+                    ['label' => 'Buying Profile', 'route' => 'buyer.buying-profile', 'active' => 'buyer.buying-profile'],
+                ],
+            ],
+            [
+                'key' => 'investor',
+                'label' => 'Investor Pass',
+                'items' => [
                     ['label' => 'Investor Pass', 'route' => 'buyer.subscription.show', 'active' => 'buyer.subscription.*'],
-                    ['label' => 'Notifications'],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'items' => [
+                    ['label' => 'Notifications', 'route' => 'buyer.notifications.index', 'active' => 'buyer.notifications.*'],
                 ],
             ],
         ],
         'account' => [
-            ['label' => 'Profile', 'route' => 'buyer.profile'],
-            ['label' => 'Partner application', 'route' => 'account.applications.index'],
+            ['label' => 'Account', 'route' => 'buyer.profile', 'active' => 'buyer.profile'],
             ['label' => 'Logout', 'route' => 'logout', 'method' => 'post'],
         ],
         'panels' => [
-            ['title' => 'My Active Searches', 'description' => 'Searches you are running.', 'route' => 'buyer.sourcing.index'],
-            ['title' => 'Recommended Properties', 'description' => 'Land suggested from a saved search.'],
-            ['title' => 'Saved Properties', 'description' => 'Land you have kept to review.', 'route' => 'buyer.saved.index'],
-            ['title' => 'My Enquiries', 'description' => 'Questions you have sent.', 'route' => 'buyer.enquiries.index'],
-            ['title' => 'Upcoming Site Visits', 'description' => 'Visits that have been arranged.', 'route' => 'buyer.visits.index'],
-            ['title' => 'Offers in Progress', 'description' => 'Offers that are still open.', 'route' => 'buyer.offers.index'],
-            ['title' => 'Action Required', 'description' => 'Steps waiting on you.'],
+            ['title' => 'Explore land', 'description' => 'Published properties you can open.', 'route' => 'land.index'],
+            ['title' => 'Find land for me', 'description' => 'Tell us the area, size, and budget you want.', 'route' => 'buyer.sourcing.create'],
+            ['title' => 'Saved properties', 'description' => 'Land you have kept to review.', 'route' => 'buyer.saved.index'],
+            ['title' => 'My enquiries', 'description' => 'Questions you have sent.', 'route' => 'buyer.enquiries.index'],
+            ['title' => 'Site visits', 'description' => 'Visits that have been arranged.', 'route' => 'buyer.visits.index'],
+            ['title' => 'My offers', 'description' => 'Offers that are still open.', 'route' => 'buyer.offers.index'],
         ],
     ],
 
     'broker' => [
         'eyebrow' => 'Broker Partner',
         'heading' => 'Dashboard',
-        'intro' => 'Listings, referrals, and commission agreements will appear here as they are opened.',
+        'intro' => 'Submit land, register buyers, and follow the deals and commission records staff have opened for you.',
         'activity' => [
             'columns' => ['Activity', 'Detail'],
-            'empty' => 'Listings, referrals, deals, and agreements will be listed here when those modules are switched on.',
+            'empty' => 'Listing and referral activity will be listed here after you submit one.',
         ],
         'groups' => [
             [
@@ -80,43 +120,86 @@ return [
                 ],
             ],
             [
+                'key' => 'submit',
+                'label' => 'Submit Property',
+                'items' => [
+                    ['label' => 'Submit Property', 'route' => 'broker.listings.create', 'active' => 'broker.listings.create'],
+                ],
+            ],
+            [
                 'key' => 'listings',
-                'label' => 'Listings',
+                'label' => 'My Listings',
                 'items' => [
                     ['label' => 'My Listings', 'route' => 'broker.listings.index', 'active' => 'broker.listings.*'],
-                    ['label' => 'Submit Property', 'route' => 'broker.listings.create'],
+                ],
+            ],
+            [
+                'key' => 'register',
+                'label' => 'Register a Buyer',
+                'items' => [
+                    ['label' => 'Register a Buyer', 'route' => 'broker.referrals.create', 'active' => 'broker.referrals.create'],
                 ],
             ],
             [
                 'key' => 'referrals',
-                'label' => 'Referrals',
+                'label' => 'My Referrals',
                 'items' => [
-                    ['label' => 'Register Buyer', 'route' => 'broker.referrals.create'],
-                    ['label' => 'Referrals', 'route' => 'broker.referrals.index', 'active' => 'broker.referrals.*'],
-                    ['label' => 'Buyer Requirements'],
+                    ['label' => 'My Referrals', 'route' => 'broker.referrals.index', 'active' => 'broker.referrals.*'],
+                ],
+            ],
+            [
+                'key' => 'requirements',
+                'label' => 'Buyer Requirements Board',
+                'items' => [
+                    ['label' => 'Buyer Requirements Board', 'route' => 'broker.requirements.index', 'active' => 'broker.requirements.*'],
                 ],
             ],
             [
                 'key' => 'deals',
-                'label' => 'Deals',
+                'label' => 'My Deals',
                 'items' => [
-                    ['label' => 'Deals'],
-                    ['label' => 'Agreements'],
-                    ['label' => 'Earnings'],
+                    ['label' => 'My Deals', 'route' => 'broker.deals.index', 'active' => 'broker.deals.*'],
+                ],
+            ],
+            [
+                'key' => 'agreements',
+                'label' => 'Commission Agreements',
+                'items' => [
+                    ['label' => 'Commission Agreements', 'route' => 'broker.agreements.index', 'active' => 'broker.agreements.*'],
+                ],
+            ],
+            [
+                'key' => 'earnings',
+                'label' => 'Earnings & Payments',
+                'items' => [
+                    ['label' => 'Earnings & Payments', 'route' => 'broker.earnings.index', 'active' => 'broker.earnings.*'],
+                ],
+            ],
+            [
+                'key' => 'subscription',
+                'label' => 'Investor Pass',
+                'items' => [
                     ['label' => 'Investor Pass', 'route' => 'broker.subscription.show', 'active' => 'broker.subscription.*'],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'items' => [
                     ['label' => 'Notifications', 'route' => 'broker.notifications.index', 'active' => 'broker.notifications.*'],
                 ],
             ],
         ],
         'account' => [
+            ['label' => 'Profile', 'route' => 'broker.profile', 'active' => 'broker.profile'],
             ['label' => 'Partner application', 'route' => 'account.applications.index'],
             ['label' => 'Logout', 'route' => 'logout', 'method' => 'post'],
         ],
         'panels' => [
             ['title' => 'My Property Listings', 'description' => 'Land you have submitted.', 'route' => 'broker.listings.index'],
             ['title' => 'Buyer Referrals', 'description' => 'Buyers you have introduced.', 'route' => 'broker.referrals.index'],
-            ['title' => 'Deals in Progress', 'description' => 'Introductions that are still open.'],
-            ['title' => 'Commission Agreements', 'description' => 'Agreements tied to your introductions.'],
+            ['title' => 'Deals in Progress', 'description' => 'Sales linked to an accepted introduction.', 'route' => 'broker.deals.index'],
+            ['title' => 'Commission Agreements', 'description' => 'Terms staff have accepted for you.', 'route' => 'broker.agreements.index'],
         ],
     ],
 
@@ -181,28 +264,58 @@ return [
         'groups' => [
             [
                 'key' => 'dashboard',
-                'label' => 'Dashboard',
+                'label' => 'Intelligence Dashboard',
                 'items' => [
-                    ['label' => 'Intelligence Dashboard', 'route' => 'investor.dashboard'],
+                    ['label' => 'Intelligence Dashboard', 'route' => 'investor.dashboard', 'active' => 'investor.dashboard'],
                 ],
             ],
             [
-                'key' => 'intelligence',
-                'label' => 'Intelligence',
+                'key' => 'tracker',
+                'label' => 'Development Tracker',
                 'items' => [
                     ['label' => 'Development Tracker', 'route' => 'investor.projects.index', 'active' => 'investor.projects.*'],
-                    ['label' => 'Satellite Explorer', 'route' => 'investor.imagery.index', 'active' => 'investor.imagery.*'],
-                    ['label' => 'Planning', 'route' => 'investor.planning.index', 'active' => 'investor.planning.*'],
-                    ['label' => 'Land Prices', 'route' => 'investor.prices', 'active' => 'investor.prices'],
-                    ['label' => 'Research', 'route' => 'investor.reports.index', 'active' => 'investor.reports.*'],
+                ],
+            ],
+            [
+                'key' => 'imagery',
+                'label' => 'Satellite & Aerial Imagery',
+                'items' => [
+                    ['label' => 'Satellite & Aerial Imagery', 'route' => 'investor.imagery.index', 'active' => 'investor.imagery.*'],
+                ],
+            ],
+            [
+                'key' => 'planning',
+                'label' => 'Planning & Zoning',
+                'items' => [
+                    ['label' => 'Planning & Zoning', 'route' => 'investor.planning.index', 'active' => 'investor.planning.*'],
+                ],
+            ],
+            [
+                'key' => 'prices',
+                'label' => 'Land Price Observatory',
+                'items' => [
+                    ['label' => 'Land Price Observatory', 'route' => 'investor.prices', 'active' => 'investor.prices'],
+                ],
+            ],
+            [
+                'key' => 'library',
+                'label' => 'Research Reports',
+                'items' => [
+                    ['label' => 'Research Reports', 'route' => 'investor.reports.index', 'active' => 'investor.reports.*'],
                 ],
             ],
             [
                 'key' => 'watchlists',
-                'label' => 'Watchlists',
+                'label' => 'My Watchlists',
                 'items' => [
-                    ['label' => 'Watchlists', 'route' => 'investor.watchlists.index', 'active' => 'investor.watchlists.*'],
-                    ['label' => 'Alerts', 'route' => 'investor.archive.index', 'active' => 'investor.archive.*'],
+                    ['label' => 'My Watchlists', 'route' => 'investor.watchlists.index', 'active' => 'investor.watchlists.*'],
+                ],
+            ],
+            [
+                'key' => 'alerts',
+                'label' => 'Alerts & Archive',
+                'items' => [
+                    ['label' => 'Alerts & Archive', 'route' => 'investor.archive.index', 'active' => 'investor.archive.*'],
                 ],
             ],
             [
@@ -214,6 +327,7 @@ return [
             ],
         ],
         'account' => [
+            ['label' => 'Profile', 'route' => 'investor.profile', 'active' => 'investor.profile'],
             ['label' => 'Logout', 'route' => 'logout', 'method' => 'post'],
         ],
         'panels' => [
@@ -221,9 +335,9 @@ return [
             ['title' => 'Satellite Comparison', 'description' => 'Published imagery comparisons.', 'route' => 'investor.imagery.index'],
             ['title' => 'Land Market Trends', 'description' => 'Asking prices from published listings.', 'route' => 'investor.prices'],
             ['title' => 'Research', 'description' => 'Published report summaries.', 'route' => 'investor.reports.index'],
-            ['title' => 'Watched Locations', 'description' => 'Places you have asked to follow.'],
-            ['title' => 'Report Publication Calendar', 'description' => 'Reports scheduled for release.'],
-            ['title' => 'Subscription Status', 'description' => 'Whether a verified payment is on file.'],
+            ['title' => 'Watched Locations', 'description' => 'Places you have asked to follow.', 'route' => 'investor.watchlists.index'],
+            ['title' => 'Alerts and archive', 'description' => 'Published alerts delivered to this account.', 'route' => 'investor.archive.index'],
+            ['title' => 'Subscription Status', 'description' => 'Whether a verified payment is on file.', 'route' => 'investor.subscription.show'],
         ],
     ],
 
@@ -241,9 +355,9 @@ return [
                 'label' => 'Overview',
                 'permission' => 'staff.overview',
                 'items' => [
-                    ['label' => 'Dashboard', 'route' => 'staff.dashboard'],
-                    ['label' => 'Tasks'],
-                    ['label' => 'Calendar & Follow-ups'],
+                    ['label' => 'Dashboard', 'route' => 'staff.dashboard', 'active' => 'staff.dashboard'],
+                    ['label' => 'Tasks', 'route' => 'staff.tasks', 'active' => 'staff.tasks'],
+                    ['label' => 'Calendar', 'route' => 'staff.calendar', 'active' => 'staff.calendar'],
                 ],
             ],
             [
@@ -252,19 +366,18 @@ return [
                 'permission' => 'staff.properties',
                 'items' => [
                     ['label' => 'Property Register', 'route' => 'staff.properties.index', 'active' => 'staff.properties.*'],
-                    ['label' => 'Pending Listings', 'route' => 'staff.listings.index', 'active' => 'staff.listings.*'],
-                    ['label' => 'Availability & Locations'],
+                    ['label' => 'Listing Reviews', 'route' => 'staff.listings.index', 'active' => 'staff.listings.*'],
+                    ['label' => 'Property Media', 'route' => 'staff.media.index', 'active' => 'staff.media.*'],
                 ],
             ],
             [
                 'key' => 'buyers',
-                'label' => 'Buyers',
+                'label' => 'Buyers & CRM',
                 'permission' => 'staff.buyers',
                 'items' => [
-                    ['label' => 'Buyer Directory'],
-                    ['label' => 'Enquiries & Leads', 'route' => 'staff.enquiries.index', 'active' => 'staff.enquiries.*'],
-                    ['label' => 'Site Visit Calendar', 'route' => 'staff.visits.index', 'active' => 'staff.visits.*'],
-                    ['label' => 'Document access', 'route' => 'staff.documents.index', 'active' => 'staff.documents.*'],
+                    ['label' => 'Enquiries', 'route' => 'staff.enquiries.index', 'active' => 'staff.enquiries.*'],
+                    ['label' => 'Viewings', 'route' => 'staff.visits.index', 'active' => 'staff.visits.*'],
+                    ['label' => 'Document Requests', 'route' => 'staff.documents.index', 'active' => 'staff.documents.*'],
                 ],
             ],
             [
@@ -272,9 +385,9 @@ return [
                 'label' => 'Sourcing',
                 'permission' => 'staff.sourcing',
                 'items' => [
-                    ['label' => 'Buyer Requirements', 'route' => 'staff.sourcing.index', 'active' => 'staff.sourcing.*'],
-                    ['label' => 'Matching Desk', 'route' => 'staff.sourcing.index', 'active' => 'staff.sourcing.*'],
-                    ['label' => 'Broker Sourcing'],
+                    ['label' => 'Requirements', 'route' => 'staff.sourcing.index', 'active' => 'staff.sourcing.index'],
+                    ['label' => 'Matching', 'route' => 'staff.sourcing.matching', 'active' => 'staff.sourcing.matching'],
+                    ['label' => 'Approvals', 'route' => 'staff.sourcing.approvals', 'active' => 'staff.sourcing.approvals'],
                 ],
             ],
             [
@@ -282,11 +395,9 @@ return [
                 'label' => 'Brokers & Sellers',
                 'permission' => 'staff.brokerage',
                 'items' => [
-                    ['label' => 'Partner applications', 'route' => 'staff.applications.index', 'active' => 'staff.applications.*'],
-                    ['label' => 'Brokers'],
-                    ['label' => 'Sellers'],
-                    ['label' => 'Buyer Referrals', 'route' => 'staff.referrals.index', 'active' => 'staff.referrals.*'],
-                    ['label' => 'Commission Agreements', 'route' => 'staff.commissions.index', 'active' => 'staff.commissions.*'],
+                    ['label' => 'Applications', 'route' => 'staff.applications.index', 'active' => 'staff.applications.*'],
+                    ['label' => 'Referrals', 'route' => 'staff.referrals.index', 'active' => 'staff.referrals.*'],
+                    ['label' => 'Seller Authority', 'route' => 'staff.authorities.index', 'active' => 'staff.authorities.*'],
                 ],
             ],
             [
@@ -294,9 +405,10 @@ return [
                 'label' => 'Sales',
                 'permission' => 'staff.sales',
                 'items' => [
-                    ['label' => 'Sales Pipeline', 'route' => 'staff.sales.index', 'active' => 'staff.sales.index'],
-                    ['label' => 'Offers & Negotiations', 'route' => 'staff.offers.index', 'active' => 'staff.offers.*'],
-                    ['label' => 'Completion Queue', 'route' => 'staff.sales.completion', 'active' => 'staff.sales.completion'],
+                    ['label' => 'Pipeline', 'route' => 'staff.sales.index', 'active' => 'staff.sales.index'],
+                    ['label' => 'Create Sale', 'route' => 'staff.sales.create', 'active' => 'staff.sales.create'],
+                    ['label' => 'Offers', 'route' => 'staff.offers.index', 'active' => 'staff.offers.*'],
+                    ['label' => 'Completion', 'route' => 'staff.sales.completion', 'active' => 'staff.sales.completion'],
                 ],
             ],
             [
@@ -304,10 +416,10 @@ return [
                 'label' => 'Verification',
                 'permission' => 'staff.verification',
                 'items' => [
-                    ['label' => 'Verification Queue', 'route' => 'staff.verification.index', 'active' => 'staff.verification.index'],
+                    ['label' => 'Review Queue', 'route' => 'staff.verification.index', 'active' => 'staff.verification.index'],
                     ['label' => 'New Reviews', 'route' => 'staff.verification.new', 'active' => 'staff.verification.new'],
-                    ['label' => 'Document Reviews', 'route' => 'staff.verification.missing', 'active' => 'staff.verification.missing'],
-                    ['label' => 'Exceptions & Rechecks', 'route' => 'staff.verification.exceptions', 'active' => 'staff.verification.exceptions'],
+                    ['label' => 'Evidence', 'route' => 'staff.verification.missing', 'active' => 'staff.verification.missing'],
+                    ['label' => 'Exceptions', 'route' => 'staff.verification.exceptions', 'active' => 'staff.verification.exceptions'],
                     ['label' => 'Expiring Checks', 'route' => 'staff.verification.expiring', 'active' => 'staff.verification.expiring'],
                     ['label' => 'Completed Reviews', 'route' => 'staff.verification.completed', 'active' => 'staff.verification.completed'],
                 ],
@@ -317,12 +429,12 @@ return [
                 'label' => 'Intelligence',
                 'permission' => 'staff.intelligence',
                 'items' => [
-                    ['label' => 'Development Tracker', 'route' => 'staff.projects.index', 'active' => 'staff.projects.*'],
-                    ['label' => 'Research Desk', 'route' => 'staff.reports.index', 'active' => 'staff.reports.*'],
-                    ['label' => 'Publication calendar', 'route' => 'staff.commitments.index', 'active' => 'staff.commitments.*'],
-                    ['label' => 'Satellite Updates', 'route' => 'staff.imagery.index', 'active' => 'staff.imagery.*'],
+                    ['label' => 'Projects', 'route' => 'staff.projects.index', 'active' => 'staff.projects.*'],
+                    ['label' => 'Imagery', 'route' => 'staff.imagery.index', 'active' => 'staff.imagery.*'],
                     ['label' => 'Planning', 'route' => 'staff.planning.index', 'active' => 'staff.planning.*'],
-                    ['label' => 'Price Observatory', 'route' => 'staff.prices.index', 'active' => 'staff.prices.*'],
+                    ['label' => 'Prices', 'route' => 'staff.prices.index', 'active' => 'staff.prices.*'],
+                    ['label' => 'Research', 'route' => 'staff.reports.index', 'active' => 'staff.reports.*'],
+                    ['label' => 'Compliance', 'route' => 'staff.commitments.index', 'active' => 'staff.commitments.*'],
                 ],
             ],
             [
@@ -331,18 +443,18 @@ return [
                 'permission' => 'staff.finance',
                 'items' => [
                     ['label' => 'Subscriptions', 'route' => 'staff.memberships.index', 'active' => 'staff.memberships.*'],
-                    ['label' => 'Commission Payables', 'route' => 'staff.settlements.index', 'active' => 'staff.settlements.*'],
-                    ['label' => 'Payments & Reconciliation', 'route' => 'staff.settlements.index', 'active' => 'staff.settlements.*'],
+                    ['label' => 'Commissions', 'route' => 'staff.commissions.index', 'active' => 'staff.commissions.*'],
+                    ['label' => 'Settlements', 'route' => 'staff.settlements.index', 'active' => 'staff.settlements.*'],
                 ],
             ],
             [
-                'key' => 'communications',
-                'label' => 'Communications',
-                'permission' => 'staff.communications',
+                'key' => 'notifications',
+                'label' => 'Notifications',
+                'permission' => 'staff.overview',
                 'items' => [
-                    ['label' => 'Notifications', 'route' => 'staff.notifications.index', 'active' => 'staff.notifications.*'],
-                    ['label' => 'Templates'],
-                    ['label' => 'Delivery History'],
+                    ['label' => 'Messages and work updates', 'route' => 'staff.notifications.index', 'active' => 'staff.notifications.*'],
+                    ['label' => 'Templates', 'route' => 'staff.messages.templates', 'active' => 'staff.messages.templates', 'permission' => 'staff.communications'],
+                    ['label' => 'Delivery History', 'route' => 'staff.messages.deliveries', 'active' => 'staff.messages.deliveries', 'permission' => 'staff.communications'],
                 ],
             ],
         ],
@@ -359,7 +471,7 @@ return [
             ['title' => 'Verification queue', 'description' => 'Documents and rechecks.', 'permission' => 'staff.verification', 'route' => 'staff.verification.index'],
             ['title' => 'Research desk', 'description' => 'Drafts and the publication calendar.', 'permission' => 'staff.intelligence'],
             ['title' => 'Finance queue', 'description' => 'Subscriptions and commission settlements.', 'permission' => 'staff.finance', 'route' => 'staff.memberships.index'],
-            ['title' => 'Communications', 'description' => 'Messages waiting to be sent.', 'permission' => 'staff.communications'],
+            ['title' => 'Communications', 'description' => 'Messages waiting to be sent.', 'permission' => 'staff.communications', 'route' => 'staff.messages.deliveries'],
         ],
     ],
 

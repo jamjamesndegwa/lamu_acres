@@ -91,24 +91,3 @@
     @endif
     <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save property</button>
 </form>
-
-@if ($property->exists)
-    <div class="mt-6 space-y-3 border-t border-sand-200 pt-4">
-        @foreach ($property->status->transitions() as $next)
-            <form method="POST" action="{{ route('staff.properties.transition', $property) }}" data-turbo-frame="_top" data-confirm="Change status to {{ $next->label() }}?">
-                @csrf
-                @method('PUT')
-                <input type="hidden" name="status" value="{{ $next->value }}">
-                <button class="text-sm font-medium text-lamu-800">Move to {{ $next->label() }}</button>
-            </form>
-        @endforeach
-        @if ($property->parent_id === null)
-            <a href="{{ route('staff.properties.create', ['parent' => $property->id]) }}" data-turbo-frame="modal" class="block text-sm font-medium text-lamu-800">Add a portion</a>
-        @elseif ($property->status !== \App\Enums\PropertyStatus::Sold)
-            <form method="POST" action="{{ route('staff.properties.sell-portion', $property) }}" data-turbo-frame="_top" data-confirm="Mark only this portion sold?">
-                @csrf
-                <button class="text-sm font-medium text-lamu-800">Sell this portion</button>
-            </form>
-        @endif
-    </div>
-@endif

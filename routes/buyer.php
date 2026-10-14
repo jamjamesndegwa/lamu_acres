@@ -10,6 +10,7 @@ use App\Http\Controllers\Buyer\SiteVisitController;
 use App\Http\Controllers\Buyer\SourcingRequestController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
+use App\Http\Controllers\WorkspaceNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
@@ -45,6 +46,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
         Route::post('/subscription/cancellation', [MembershipController::class, 'cancel'])->name('subscription.cancel');
         Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');
         Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
+        Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     });

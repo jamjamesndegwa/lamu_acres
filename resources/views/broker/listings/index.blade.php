@@ -9,7 +9,7 @@
     </div>
 
     <div class="mt-6">
-        <x-workspace.table :columns="['Property', 'Status', 'Location']">
+        <x-workspace.table :columns="['Property', 'Status', 'Location', 'Price', 'Verification']">
             @forelse ($listings as $listing)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4">
@@ -18,10 +18,12 @@
                     </td>
                     <td class="px-4 py-4">{{ $listing->status->label() }}</td>
                     <td class="px-4 py-4 text-stone-600">{{ $listing->locationLabel() }}</td>
+                    <td class="px-4 py-4">{{ $listing->formattedPrice() ?? 'Not recorded' }}</td>
+                    <td class="px-4 py-4">{{ $listing->verification_level?->label() ?? 'Not reviewed' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="3" class="px-4 py-8">
+                    <td colspan="5" class="px-4 py-8">
                         <x-workspace.empty title="No submissions yet" message="Submit land when you have authority to market it. Nothing is published automatically." />
                     </td>
                 </tr>

@@ -3,6 +3,7 @@
 namespace App\Services\Buyer;
 
 use App\Enums\DocumentAccessStatus;
+use App\Enums\MessageEvent;
 use App\Enums\OfferStatus;
 use App\Enums\PropertyMatchStatus;
 use App\Enums\SiteVisitStatus;
@@ -15,6 +16,7 @@ use App\Models\SiteVisit;
 use App\Models\SourcingMatch;
 use App\Models\User;
 use App\Notifications\DocumentAccessDecidedNotification;
+use App\Services\Communications\MessageDesk;
 use App\Notifications\MatchApprovedNotification;
 use App\Notifications\OfferStatusNotification;
 use App\Notifications\OfferSubmittedNotification;
@@ -54,8 +56,36 @@ class InterestWorkflow
         $summary = $match->property->title.' added to the shortlist.';
         $this->timeline($buyer, $summary, $propertyMatch, $staff);
         $buyer->notify(new MatchApprovedNotification($propertyMatch));
+        app(MessageDesk::class)->send($buyer, MessageEvent::SourcingMatch, [
+            'name' => $buyer->name,
+            'title' => $match->property->title,
+            'summary' => $match->property->title.' matches your search.',
+            'url' => route('buyer.matches.show', $propertyMatch),
+        ], 'match:'.$propertyMatch->id);
+
+        $match->forceFill(['dismissed_at' => null, 'dismissed_by' => null])->save();
 
         return $propertyMatch;
+    }
+
+    public function declineCandidate(SourcingMatch $match, User $staff): void
+    {
+        $match->loadMissing('sourcingRequest', 'property');
+
+        if ($match->dismissed_at !== null) {
+            return;
+        }
+
+        $match->forceFill([
+            'dismissed_at' => now(),
+            'dismissed_by' => $staff->id,
+        ])->save();
+
+        $match->sourcingRequest->activities()->create([
+            'actor_id' => $staff->id,
+            'summary' => $match->property->title.' was not added to the shortlist.',
+            'visible_to_buyer' => false,
+        ]);
     }
 
     public function reject(PropertyMatch $match, User $buyer, string $feedback): PropertyMatch
@@ -125,6 +155,16 @@ class InterestWorkflow
             $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
         } else {
             $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
+        }
+
+        if ($status === SiteVisitStatus::Confirmed) {
+            app(MessageDesk::class)->send($visit->buyer, MessageEvent::SiteVisitConfirmed, [
+                'name' => $visit->buyer->name,
+                'title' => $visit->property->title,
+                'status' => $status->label(),
+                'summary' => 'Your site visit for '.$visit->property->title.' is confirmed.',
+                'url' => route('buyer.visits.index'),
+            ], 'visit:'.$visit->id);
         }
 
         return $visit;
@@ -198,6 +238,13 @@ class InterestWorkflow
             $this->notifyDesk(new OfferStatusNotification($offer));
         } else {
             $offer->buyer->notify(new OfferStatusNotification($offer));
+            app(MessageDesk::class)->send($offer->buyer, MessageEvent::OfferStatus, [
+                'name' => $offer->buyer->name,
+                'title' => $offer->property->title,
+                'status' => $status->label(),
+                'summary' => 'Your offer for '.$offer->property->title.' is now '.$status->label().'.',
+                'url' => route('buyer.offers.index'),
+            ], 'offer:'.$offer->id.':'.$status->value);
         }
 
         return $offer;

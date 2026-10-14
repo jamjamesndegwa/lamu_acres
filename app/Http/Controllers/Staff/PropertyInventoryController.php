@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\Amenity;
+use App\Enums\DocumentCheckState;
 use App\Enums\PropertyStatus;
+use App\Enums\RoadAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\PropertyInventoryRequest;
 use App\Models\County;
@@ -77,7 +80,55 @@ class PropertyInventoryController extends Controller
         $this->authorize('update', $property);
         $inventory->update($request->user(), $property, $request->validated());
 
-        return redirect()->route('staff.properties.index')->with('status', 'Property updated.');
+        return redirect()->route('staff.properties.show', $property)->with('status', 'Property updated.');
+    }
+
+    public function show(Request $request, Property $property): View
+    {
+        $this->authorize('update', $property);
+        $property->load([
+            'areaCounty:id,name',
+            'areaLocality:id,name',
+            'parent:id,slug,reference,title,acreage',
+            'portions',
+            'submitter:id,name,email',
+            'representative:id,name',
+            'owners.user:id,name,email',
+            'authorities.seller:id,name',
+            'enquiries.buyer:id,name',
+            'transactions',
+            'salesTransactions',
+            'audits.actor:id,name',
+            'priceChanges',
+            'availabilityEvents',
+            'documentChecks',
+            'highlights',
+            'amenityStates',
+            'passport',
+            'verificationItems.reviewer:id,name',
+            'media',
+        ]);
+        $property->loadSum(['portions as sold_portion_acreage' => fn ($query) => $query->where('status', PropertyStatus::Sold)], 'acreage');
+
+        if (Turbo::wantsModal($request)) {
+            $dialog = $request->query('dialog') === 'portion' ? 'portion' : 'status';
+
+            return view('staff.properties.dialogs.'.$dialog, ['property' => $property]);
+        }
+
+        $tab = (string) $request->query('tab', 'overview');
+
+        if (! in_array($tab, ['overview', 'owners', 'verification', 'marketing', 'enquiries', 'transactions', 'history'], true)) {
+            $tab = 'overview';
+        }
+
+        return view('staff.properties.show', [
+            'property' => $property,
+            'tab' => $tab,
+            'amenities' => Amenity::cases(),
+            'roads' => RoadAccess::cases(),
+            'documentStates' => DocumentCheckState::cases(),
+        ]);
     }
 
     public function transition(Request $request, Property $property, PropertyInventory $inventory): RedirectResponse

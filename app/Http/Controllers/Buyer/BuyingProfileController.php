@@ -28,6 +28,9 @@ class BuyingProfileController extends Controller
         $data = $request->validate([
             'looking_for' => ['required', 'string', 'max:255'],
             'preferred_locality' => ['nullable', 'string', 'max:120'],
+            'budget_amount' => ['nullable', 'integer', 'min:1'],
+            'min_acreage' => ['nullable', 'numeric', 'min:0'],
+            'max_acreage' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $profile = $request->user()->buyerProfile()->updateOrCreate(

@@ -1,5 +1,8 @@
 <p class="mt-4 max-w-3xl text-stone-700">{{ $report->summary }}</p>
-<p class="mt-2 text-sm text-stone-500">Publication date: {{ $report->published_at?->toFormattedDateString() ?: 'Not published' }} @if ($report->report_date) · report date {{ $report->report_date->toFormattedDateString() }} @endif</p>
+<div class="mt-4 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
+    <p class="text-sm text-stone-500">Publication status: {{ $report->publication_status->label() }}</p>
+    @include('intelligence.partials.report-facts', ['report' => $report, 'premium' => $premium])
+</div>
 @if ($premium)
     <div class="mt-6 max-w-3xl space-y-4">
         <div class="whitespace-pre-wrap">{{ $report->body }}</div>
@@ -12,6 +15,14 @@
         @if ($report->projects->isNotEmpty())
             <p>Projects: {{ $report->projects->pluck('name')->join(', ') }}</p>
         @endif
+        <h2 class="font-semibold text-lamu-900">Licensed files</h2>
+        <ul class="text-sm">
+            @forelse ($report->files as $file)
+                <li><a class="text-lamu-800 hover:underline" href="{{ route('intelligence.files.show', $file) }}">{{ $file->original_name }}</a></li>
+            @empty
+                <li>No downloadable file has been licensed for this report.</li>
+            @endforelse
+        </ul>
         <h2 class="font-semibold text-lamu-900">Revisions</h2>
         <ul class="text-sm text-stone-600">
             @foreach ($report->audits->whereIn('action', ['published', 'revised']) as $audit)

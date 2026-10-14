@@ -5,7 +5,7 @@
     </div>
 
     <div class="mt-6">
-        <x-workspace.table :columns="['Reference', 'Location', 'Status', 'Exact', 'Near']">
+        <x-workspace.table :columns="['Reference', 'Location', 'Status', 'Exact', 'Near', '']">
             @forelse ($requests as $sourcingRequest)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4">
@@ -15,11 +15,16 @@
                     <td class="px-4 py-4 text-sm">{{ $sourcingRequest->status->label() }}</td>
                     <td class="px-4 py-4 text-sm">{{ $sourcingRequest->exact_matches_count }}</td>
                     <td class="px-4 py-4 text-sm">{{ $sourcingRequest->near_matches_count }}</td>
+                    <td class="px-4 py-4 text-right text-sm">
+                        @if ($sourcingRequest->status->value !== 'closed')
+                            <a href="{{ route('buyer.sourcing.edit', $sourcingRequest) }}" class="font-medium text-lamu-800">Edit</a>
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-8">
-                        <x-workspace.empty title="No searches yet" message="A search starts when you tell us the land you want." />
+                    <td colspan="6" class="px-4 py-8">
+                        <x-workspace.empty title="No searches yet" message="No matching land can be found until you record what you want." action="Start a search" :href="route('buyer.sourcing.create')" />
                     </td>
                 </tr>
             @endforelse

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['sourcing_request_id', 'property_id', 'band', 'distance_km', 'reasons'])]
+#[Fillable(['sourcing_request_id', 'property_id', 'band', 'distance_km', 'reasons', 'dismissed_at', 'dismissed_by'])]
 class SourcingMatch extends Model
 {
     protected function casts(): array
@@ -16,6 +16,7 @@ class SourcingMatch extends Model
             'band' => MatchBand::class,
             'distance_km' => 'decimal:3',
             'reasons' => 'array',
+            'dismissed_at' => 'datetime',
         ];
     }
 

@@ -25,15 +25,16 @@
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4 text-sm">{{ $property->reference }}</td>
                     <td class="px-4 py-4">
-                        <span class="font-medium text-lamu-900">{{ $property->title }}</span>
+                        <a href="{{ route('staff.properties.show', $property) }}" class="font-medium text-lamu-900 hover:underline">{{ $property->title }}</a>
                         <span class="mt-1 block text-xs text-stone-500">{{ $property->locationLabel() }}</span>
                     </td>
                     <td class="px-4 py-4 text-sm">{{ $property->status->label() }}</td>
                     <td class="px-4 py-4 text-sm">{{ number_format($property->remainingAcreage(), 2) }}</td>
                     <td class="px-4 py-4 text-sm">{{ $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : '—' }}</td>
-                    <td class="px-4 py-4 text-right">
-                        <a href="{{ route('staff.properties.media', $property) }}" class="text-sm font-medium text-lamu-800">Photos</a>
-                        <a href="{{ route('staff.properties.edit', $property) }}" data-turbo-frame="modal" class="ml-3 text-sm font-medium text-lamu-800">Edit</a>
+                    <td class="px-4 py-4 text-right text-sm">
+                        <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'status']) }}" data-turbo-frame="modal" class="font-medium text-lamu-800">Status</a>
+                        <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'portion']) }}" data-turbo-frame="modal" class="ml-3 font-medium text-lamu-800">Portion</a>
+                        <a href="{{ route('staff.properties.edit', $property) }}" data-turbo-frame="modal" class="ml-3 font-medium text-lamu-800">Edit</a>
                     </td>
                 </tr>
             @empty

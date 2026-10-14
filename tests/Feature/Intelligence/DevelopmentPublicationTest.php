@@ -46,6 +46,7 @@ class DevelopmentPublicationTest extends FoundationTestCase
             'research_notes' => 'Unconfirmed spur note',
             'latitude' => -2.2694,
             'longitude' => 40.9012,
+            'boundary_wkt' => 'POLYGON ((40.90 -2.27, 40.91 -2.27, 40.91 -2.26, 40.90 -2.27))',
         ])->assertRedirect();
 
         $this->actingAs($researcher)->post(route('staff.projects.submit', $project))->assertRedirect();
@@ -63,8 +64,11 @@ class DevelopmentPublicationTest extends FoundationTestCase
             ->assertSee('Recorded port works')
             ->assertSee('Lamu County coastline')
             ->assertSee('Proposed')
+            ->assertSee('Published')
             ->assertDontSee('Unconfirmed spur note')
-            ->assertDontSee('-2.2694');
+            ->assertDontSee('-2.2694')
+            ->assertDontSee('POLYGON')
+            ->assertDontSee('Change history');
 
         $this->actingAs($buyer)
             ->get(route('intelligence.projects.show', $project))
@@ -76,6 +80,9 @@ class DevelopmentPublicationTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('Unconfirmed spur note')
             ->assertSee('-2.2694')
+            ->assertSee('POLYGON ((40.90 -2.27, 40.91 -2.27, 40.91 -2.26, 40.90 -2.27))')
+            ->assertSee('Change history')
+            ->assertSee('published')
             ->assertSee('No milestones have been recorded.');
     }
 }
