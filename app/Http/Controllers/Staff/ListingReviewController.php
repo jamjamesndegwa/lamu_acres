@@ -15,7 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ListingReviewController extends Controller
 {
@@ -84,14 +84,19 @@ class ListingReviewController extends Controller
         return ApprovalsReturn::back($request, 'listings', 'The listing is published.');
     }
 
-    public function media(Property $property, PropertyMedia $propertyMedia): StreamedResponse
+    public function media(Property $property, PropertyMedia $propertyMedia): Response
     {
         $this->authorize('reviewSubmission', $property);
         abort_unless($propertyMedia->property_id === $property->id, 404);
         abort_unless(str_starts_with($propertyMedia->path, 'broker-listings/'.$property->id.'/'), 404);
 
         $name = basename(str_replace('\\', '/', $propertyMedia->original_name));
+        $disk = $propertyMedia->disk ?: 'local';
 
-        return Storage::disk($propertyMedia->disk)->download($propertyMedia->path, $name === '' ? 'file' : $name);
+        if ($disk !== 'local') {
+            return redirect()->away(Storage::disk($disk)->temporaryUrl($propertyMedia->path, now()->addMinutes(15)));
+        }
+
+        return Storage::disk($disk)->download($propertyMedia->path, $name === '' ? 'file' : $name);
     }
 }

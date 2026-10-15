@@ -6,8 +6,8 @@ use App\Enums\Workspace;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Account\AccountAvatar;
-use App\Services\Communications\MessageDesk;
 use App\Services\Auth\OtpLogin;
+use App\Services\Communications\MessageDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -102,10 +102,11 @@ class ProfileController extends Controller
     public function showAvatar(Request $request): StreamedResponse
     {
         $path = $request->user()->avatar_path;
+        $disk = (config('filesystems.disks.r2.bucket') && Storage::disk('r2')->exists($path)) ? 'r2' : 'local';
 
-        abort_unless(is_string($path) && $path !== '' && Storage::disk('local')->exists($path), 404);
+        abort_unless(is_string($path) && $path !== '' && Storage::disk($disk)->exists($path), 404);
 
-        return Storage::disk('local')->response($path, null, ['Content-Type' => 'image/jpeg']);
+        return Storage::disk($disk)->response($path, null, ['Content-Type' => 'image/jpeg']);
     }
 
     public function storeAvatar(Request $request, AccountAvatar $avatars): RedirectResponse

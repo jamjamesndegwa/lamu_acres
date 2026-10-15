@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PropertyController extends Controller
@@ -150,7 +151,7 @@ class PropertyController extends Controller
         return back()->with('status', 'Document stored privately. Staff will review it.');
     }
 
-    public function downloadDocument(Request $request, OwnershipDocument $ownershipDocument, SellerPortal $portal): StreamedResponse
+    public function downloadDocument(Request $request, OwnershipDocument $ownershipDocument, SellerPortal $portal): Response
     {
         $property = $ownershipDocument->property;
         $allowed = $request->user()->hasPermission('staff.verification')
@@ -158,6 +159,10 @@ class PropertyController extends Controller
 
         abort_unless($allowed, 403);
         abort_unless($ownershipDocument->hasFile(), 404);
+
+        if ($ownershipDocument->disk !== 'local') {
+            return redirect()->away(Storage::disk($ownershipDocument->disk)->temporaryUrl($ownershipDocument->path, now()->addMinutes(15)));
+        }
 
         return Storage::disk($ownershipDocument->disk)->download($ownershipDocument->path, $ownershipDocument->original_name);
     }
@@ -256,7 +261,9 @@ class PropertyController extends Controller
         abort_unless($propertyMedia->property_id === $property->id, 404);
         abort_unless(PropertyMediaLibrary::isPublicDerivative($property, $propertyMedia), 404);
 
-        return Storage::disk('local')->response($propertyMedia->public_path, null, [
+        $disk = $propertyMedia->public_disk ?: 'local';
+
+        return Storage::disk($disk)->response($propertyMedia->public_path, null, [
             'Content-Type' => 'image/jpeg',
             'Cache-Control' => 'private, no-store',
         ]);

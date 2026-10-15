@@ -15,11 +15,12 @@ use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
 use App\Notifications\ReverificationDueNotification;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class VerificationDesk
 {
@@ -42,16 +43,31 @@ class VerificationDesk
 
     public function storeEvidence(VerificationItem $item, User $uploader, UploadedFile $file, EvidenceSensitivity $sensitivity): EvidenceFile
     {
-        $path = $file->store('evidence/'.$item->property_id, 'local');
+        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        $path = $file->store('evidence/'.$item->property_id, $disk);
 
-        $evidence = $item->files()->create([
-            'property_id' => $item->property_id,
-            'uploaded_by' => $uploader->id,
-            'sensitivity' => $sensitivity,
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'disk' => 'local',
-        ]);
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'file' => 'The evidence file could not be stored.',
+            ]);
+        }
+
+        try {
+            $evidence = $item->files()->create([
+                'property_id' => $item->property_id,
+                'uploaded_by' => $uploader->id,
+                'sensitivity' => $sensitivity,
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'disk' => $disk,
+                'mime' => $file->getClientMimeType(),
+                'size_bytes' => $file->getSize(),
+            ]);
+        } catch (\Throwable $throwable) {
+            Storage::disk($disk)->delete($path);
+
+            throw $throwable;
+        }
 
         if ($item->state === VerificationItemState::NotSupplied) {
             $item->state = VerificationItemState::Received;
@@ -186,7 +202,7 @@ class VerificationDesk
         ]);
     }
 
-    public function download(EvidenceFile $file, User $user): StreamedResponse
+    public function download(EvidenceFile $file, User $user): Response
     {
         $allowed = $user->hasPermission('staff.verification') || $this->activeGrant($file, $user) !== null;
 
@@ -197,6 +213,10 @@ class VerificationDesk
         ]);
 
         abort_unless($allowed, 403);
+
+        if ($file->disk !== 'local') {
+            return redirect()->away(Storage::disk($file->disk)->temporaryUrl($file->path, now()->addMinutes(15)));
+        }
 
         return Storage::disk($file->disk)->download($file->path, $file->original_name);
     }
@@ -274,8 +294,8 @@ class VerificationDesk
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, VerificationItem>  $items
-     * @return \Illuminate\Support\Collection<string, VerificationItem>
+     * @param  Collection<string, VerificationItem>  $items
+     * @return Collection<string, VerificationItem>
      */
     private function critical($items)
     {

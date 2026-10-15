@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReferralReviewController extends Controller
 {
@@ -63,13 +63,19 @@ class ReferralReviewController extends Controller
         return ApprovalsReturn::back($request, 'referrals', 'Referral marked '.$status->label().'.');
     }
 
-    public function file(BrokerIntroduction $referral, string $kind): StreamedResponse
+    public function file(BrokerIntroduction $referral, string $kind): Response
     {
         $this->authorize('review', $referral);
 
         $path = $referral->privateFile($kind);
         abort_unless($path !== null, 404);
 
-        return Storage::disk('local')->download($path, basename($path));
+        $disk = $referral->privateFileDisk($kind);
+
+        if ($disk !== 'local') {
+            return redirect()->away(Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(15)));
+        }
+
+        return Storage::disk($disk)->download($path, basename($path));
     }
 }

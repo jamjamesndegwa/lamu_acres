@@ -5,24 +5,49 @@ namespace App\Services\Account;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AccountAvatar
 {
+    public static function disk(): string
+    {
+        return config('filesystems.disks.r2.bucket') ? 'r2' : 'local';
+    }
+
     public function store(User $user, UploadedFile $file): void
     {
         $jpeg = $this->jpeg($file);
-        $path = 'avatars/'.$user->id.'.jpg';
+        $disk = self::disk();
+        $path = 'avatars/'.$user->id.'-'.Str::random(8).'.jpg';
 
-        Storage::disk('local')->put($path, $jpeg);
+        $oldPath = $user->avatar_path;
+        Storage::disk($disk)->put($path, $jpeg);
 
-        $user->forceFill(['avatar_path' => $path])->touch();
+        try {
+            $user->forceFill(['avatar_path' => $path])->touch();
+            if (is_string($oldPath) && $oldPath !== '' && $oldPath !== $path) {
+                Storage::disk($disk)->delete($oldPath);
+                if ($disk !== 'local') {
+                    Storage::disk('local')->delete($oldPath);
+                }
+            }
+        } catch (\Throwable $throwable) {
+            Storage::disk($disk)->delete($path);
+
+            throw $throwable;
+        }
     }
 
     public function delete(User $user): void
     {
+        $disk = self::disk();
+
         if (is_string($user->avatar_path) && $user->avatar_path !== '') {
-            Storage::disk('local')->delete($user->avatar_path);
+            Storage::disk($disk)->delete($user->avatar_path);
+            if ($disk !== 'local') {
+                Storage::disk('local')->delete($user->avatar_path);
+            }
         }
 
         $user->forceFill(['avatar_path' => null])->save();

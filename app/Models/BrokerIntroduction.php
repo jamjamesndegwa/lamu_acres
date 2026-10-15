@@ -25,7 +25,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'expires_at',
     'consent_note',
     'consent_path',
+    'consent_disk',
     'evidence_path',
+    'evidence_disk',
     'source',
     'commission_terms',
     'notes',
@@ -79,6 +81,15 @@ class BrokerIntroduction extends Model
         }
 
         return $path;
+    }
+
+    public function privateFileDisk(string $kind): string
+    {
+        return match ($kind) {
+            'consent' => $this->consent_disk ?: 'local',
+            'evidence' => $this->evidence_disk ?: 'local',
+            default => 'local',
+        };
     }
 
     public function protectsCommission(): bool

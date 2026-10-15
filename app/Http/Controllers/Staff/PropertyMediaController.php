@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PropertyMediaController extends Controller
@@ -86,15 +87,20 @@ class PropertyMediaController extends Controller
         return back()->with('status', 'Photo order saved.');
     }
 
-    public function original(Property $property, PropertyMedia $propertyMedia): StreamedResponse
+    public function original(Property $property, PropertyMedia $propertyMedia): Response
     {
         abort_unless($propertyMedia->property_id === $property->id, 404);
         $this->authorize('viewOriginal', $propertyMedia);
         abort_unless($this->privatePath($property, $propertyMedia), 404);
 
         $name = basename(str_replace('\\', '/', (string) $propertyMedia->original_name));
+        $disk = $propertyMedia->disk ?: 'local';
 
-        return Storage::disk($propertyMedia->disk ?: 'local')->download($propertyMedia->path, $name === '' ? 'file' : $name);
+        if ($disk !== 'local') {
+            return redirect()->away(Storage::disk($disk)->temporaryUrl($propertyMedia->path, now()->addMinutes(15)));
+        }
+
+        return Storage::disk($disk)->download($propertyMedia->path, $name === '' ? 'file' : $name);
     }
 
     public function preview(Property $property, PropertyMedia $propertyMedia): StreamedResponse
@@ -103,7 +109,9 @@ class PropertyMediaController extends Controller
         abort_unless($propertyMedia->property_id === $property->id, 404);
         abort_unless(PropertyMediaLibrary::isPublicDerivative($property, $propertyMedia), 404);
 
-        return Storage::disk('local')->response($propertyMedia->public_path, null, [
+        $disk = $propertyMedia->public_disk ?: 'local';
+
+        return Storage::disk($disk)->response($propertyMedia->public_path, null, [
             'Content-Type' => 'image/jpeg',
             'Cache-Control' => 'private, no-store',
         ]);

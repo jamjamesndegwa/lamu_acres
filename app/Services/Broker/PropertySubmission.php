@@ -19,6 +19,7 @@ use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PropertySubmission
@@ -171,16 +172,24 @@ class PropertySubmission
             return app(PropertyMediaLibrary::class)->storePhoto($broker, $property, $file, 'broker-listings');
         }
 
-        $path = $file->store('broker-listings/'.$property->id, 'local');
+        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        $path = $file->store('broker-listings/'.$property->id, $disk);
 
-        return $property->media()->create([
-            'uploaded_by' => $broker->id,
-            'kind' => $kind,
-            'disk' => 'local',
-            'path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime' => $file->getClientMimeType(),
-        ]);
+        try {
+            return $property->media()->create([
+                'uploaded_by' => $broker->id,
+                'kind' => $kind,
+                'disk' => $disk,
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => $file->getClientMimeType(),
+                'size_bytes' => $file->getSize(),
+            ]);
+        } catch (\Throwable $throwable) {
+            Storage::disk($disk)->delete($path);
+
+            throw $throwable;
+        }
     }
 
     private function reference(): string

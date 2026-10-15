@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class SellerDeskController extends Controller
 {
@@ -138,7 +138,7 @@ class SellerDeskController extends Controller
         return back()->with('status', 'Document recorded as not applicable.');
     }
 
-    public function downloadDocument(Request $request, OwnershipDocument $ownershipDocument): StreamedResponse
+    public function downloadDocument(Request $request, OwnershipDocument $ownershipDocument): Response
     {
         abort_unless($ownershipDocument->hasFile(), 404);
 
@@ -148,6 +148,10 @@ class SellerDeskController extends Controller
             'action' => 'ownership_document_opened',
             'changes' => ['document' => $ownershipDocument->id, 'type' => $ownershipDocument->document_type?->value],
         ]);
+
+        if ($ownershipDocument->disk !== 'local') {
+            return redirect()->away(Storage::disk($ownershipDocument->disk)->temporaryUrl($ownershipDocument->path, now()->addMinutes(15)));
+        }
 
         return Storage::disk($ownershipDocument->disk)->download($ownershipDocument->path, $ownershipDocument->original_name);
     }

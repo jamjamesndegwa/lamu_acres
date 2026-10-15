@@ -12,25 +12,40 @@ use App\Models\VerifiedSale;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class IntelligenceFiles
 {
     public function store(Model $subject, User $actor, UploadedFile $upload, string $kind): IntelligenceFile
     {
-        $path = $upload->store('intelligence/'.$subject->getTable().'/'.$subject->getKey(), 'local');
+        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        $path = $upload->store('intelligence/'.$subject->getTable().'/'.$subject->getKey(), $disk);
 
-        return $subject->files()->create([
-            'kind' => $kind,
-            'disk' => 'local',
-            'path' => $path,
-            'original_name' => basename(str_replace('\\', '/', $upload->getClientOriginalName())) ?: 'file',
-            'mime' => $upload->getClientMimeType(),
-            'uploaded_by' => $actor->id,
-        ]);
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'file' => 'The intelligence file could not be stored.',
+            ]);
+        }
+
+        try {
+            return $subject->files()->create([
+                'kind' => $kind,
+                'disk' => $disk,
+                'path' => $path,
+                'original_name' => basename(str_replace('\\', '/', $upload->getClientOriginalName())) ?: 'file',
+                'mime' => $upload->getClientMimeType(),
+                'size_bytes' => $upload->getSize(),
+                'uploaded_by' => $actor->id,
+            ]);
+        } catch (\Throwable $throwable) {
+            Storage::disk($disk)->delete($path);
+
+            throw $throwable;
+        }
     }
 
-    public function response(User|null $user, IntelligenceFile $file): StreamedResponse
+    public function response(?User $user, IntelligenceFile $file): Response
     {
         $file->loadMissing('subject');
         $subject = $file->subject;
@@ -53,6 +68,10 @@ class IntelligenceFiles
             || $subject instanceof PlanningRecord
             || $subject instanceof VerifiedSale
             || $subject instanceof ResearchReport, 404);
+
+        if ($file->disk !== 'local') {
+            return redirect()->away(Storage::disk($file->disk)->temporaryUrl($file->path, now()->addMinutes(15)));
+        }
 
         return Storage::disk($file->disk)->response($file->path, $file->original_name);
     }

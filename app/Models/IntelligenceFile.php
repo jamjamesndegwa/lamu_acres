@@ -16,6 +16,7 @@ class IntelligenceFile extends Model
         'path',
         'original_name',
         'mime',
+        'size_bytes',
         'uploaded_by',
     ];
 

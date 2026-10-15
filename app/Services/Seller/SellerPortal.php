@@ -40,6 +40,7 @@ use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -362,16 +363,31 @@ class SellerPortal
      */
     public function storeDocument(Property $property, User $seller, UploadedFile $file, OwnershipDocumentType $type = OwnershipDocumentType::Other): OwnershipDocument
     {
-        $path = $file->store('ownership/'.$property->id, 'local');
+        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        $path = $file->store('ownership/'.$property->id, $disk);
 
-        $document = $property->ownershipDocuments()->create([
-            'user_id' => $seller->id,
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'disk' => 'local',
-            'document_type' => $type,
-            'state' => VerificationItemState::Received,
-        ]);
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'document' => 'The document could not be stored.',
+            ]);
+        }
+
+        try {
+            $document = $property->ownershipDocuments()->create([
+                'user_id' => $seller->id,
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'disk' => $disk,
+                'mime' => $file->getClientMimeType(),
+                'size_bytes' => $file->getSize(),
+                'document_type' => $type,
+                'state' => VerificationItemState::Received,
+            ]);
+        } catch (\Throwable $throwable) {
+            Storage::disk($disk)->delete($path);
+
+            throw $throwable;
+        }
 
         $category = $type->category();
 

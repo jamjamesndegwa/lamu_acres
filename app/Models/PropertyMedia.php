@@ -21,6 +21,7 @@ class PropertyMedia extends Model
         'public_disk',
         'public_path',
         'video_url',
+        'size_bytes',
     ];
 
     protected function casts(): array

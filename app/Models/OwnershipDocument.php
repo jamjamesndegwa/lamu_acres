@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'original_name',
     'path',
     'disk',
+    'mime',
+    'size_bytes',
     'document_type',
     'state',
     'reviewed_by',

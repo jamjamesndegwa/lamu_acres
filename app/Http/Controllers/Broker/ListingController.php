@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Broker;
 use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\MarketingRole;
+use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Http\Controllers\Controller;
 use App\Models\Locality;
@@ -18,7 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ListingController extends Controller
 {
@@ -28,7 +29,7 @@ class ListingController extends Controller
 
         $listings = Property::query()
             ->where('submitted_by', $request->user()->id)
-            ->when($request->query('approved') === '1', fn ($query) => $query->where('status', \App\Enums\PropertyStatus::Published))
+            ->when($request->query('approved') === '1', fn ($query) => $query->where('status', PropertyStatus::Published))
             ->latest()
             ->paginate(12)
             ->withQueryString();
@@ -114,13 +115,19 @@ class ListingController extends Controller
         return back()->with('status', 'Your reply was sent to staff.');
     }
 
-    public function media(Request $request, Property $property, PropertyMedia $propertyMedia): StreamedResponse
+    public function media(Request $request, Property $property, PropertyMedia $propertyMedia): Response
     {
         abort_unless($property->submitted_by === $request->user()->id, 404);
         abort_unless($propertyMedia->property_id === $property->id, 404);
         abort_unless(str_starts_with($propertyMedia->path, 'broker-listings/'.$property->id.'/'), 404);
 
-        return Storage::disk($propertyMedia->disk)->download($propertyMedia->path, $this->downloadName($propertyMedia->original_name));
+        $disk = $propertyMedia->disk ?: 'local';
+
+        if ($disk !== 'local') {
+            return redirect()->away(Storage::disk($disk)->temporaryUrl($propertyMedia->path, now()->addMinutes(15)));
+        }
+
+        return Storage::disk($disk)->download($propertyMedia->path, $this->downloadName($propertyMedia->original_name));
     }
 
     private function downloadName(string $name): string

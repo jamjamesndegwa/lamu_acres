@@ -60,6 +60,34 @@ return [
             'report' => false,
         ],
 
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret' => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('CLOUDFLARE_R2_BUCKET_NAME'),
+            'url' => env('CLOUDFLARE_R2_PUBLIC_URL'),
+            'endpoint' => env('CLOUDFLARE_R2_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => false,
+        ],
+
+        'r2_private' => [
+            'driver' => 's3',
+            'key' => env('CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID', env('CLOUDFLARE_R2_ACCESS_KEY_ID')),
+            'secret' => env('CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY', env('CLOUDFLARE_R2_SECRET_ACCESS_KEY')),
+            'region' => 'auto',
+            'bucket' => env('CLOUDFLARE_R2_PRIVATE_BUCKET_NAME', env('CLOUDFLARE_R2_BUCKET_NAME')),
+            'url' => null,
+            'endpoint' => env('CLOUDFLARE_R2_PRIVATE_ENDPOINT', env('CLOUDFLARE_R2_ENDPOINT')),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

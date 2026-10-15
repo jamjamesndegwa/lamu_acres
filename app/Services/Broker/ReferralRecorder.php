@@ -9,10 +9,11 @@ use App\Models\BrokerIntroductionAudit;
 use App\Models\Property;
 use App\Models\User;
 use App\Notifications\ReferralDecidedNotification;
-use App\Services\Communications\MessageDesk;
 use App\Notifications\ReferralSubmittedNotification;
+use App\Services\Communications\MessageDesk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ReferralRecorder
@@ -30,25 +31,42 @@ class ReferralRecorder
         $flags = $this->conflicts->detect($broker, $propertyIds, $email, $data['buyer_phone'] ?? null);
         $properties = Property::query()->publiclyListed()->whereIn('id', $propertyIds)->get();
 
-        $introduction = BrokerIntroduction::query()->create([
-            'reference' => $this->reference(),
-            'broker_id' => $broker->id,
-            'buyer_id' => $buyer?->id,
-            'buyer_name' => trim((string) $data['buyer_name']),
-            'buyer_email' => $email,
-            'buyer_phone' => $data['buyer_phone'] ?? null,
-            'property_id' => $properties->first()?->id,
-            'status' => BrokerIntroductionStatus::Submitted,
-            'introduced_at' => $data['introduced_at'],
-            'submitted_at' => now(),
-            'consent_note' => $data['consent_note'],
-            'consent_path' => $consent->store('broker-referrals/consent', 'local'),
-            'evidence_path' => $evidence?->store('broker-referrals/evidence', 'local'),
-            'source' => $data['source'],
-            'commission_terms' => $data['commission_terms'],
-            'notes' => $data['notes'] ?? null,
-            'conflicts' => $flags,
-        ]);
+        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        $consentPath = $consent->store('broker-referrals/consent', $disk);
+        $evidencePath = $evidence?->store('broker-referrals/evidence', $disk);
+
+        try {
+            $introduction = BrokerIntroduction::query()->create([
+                'reference' => $this->reference(),
+                'broker_id' => $broker->id,
+                'buyer_id' => $buyer?->id,
+                'buyer_name' => trim((string) $data['buyer_name']),
+                'buyer_email' => $email,
+                'buyer_phone' => $data['buyer_phone'] ?? null,
+                'property_id' => $properties->first()?->id,
+                'status' => BrokerIntroductionStatus::Submitted,
+                'introduced_at' => $data['introduced_at'],
+                'submitted_at' => now(),
+                'consent_note' => $data['consent_note'],
+                'consent_path' => $consentPath,
+                'consent_disk' => $disk,
+                'evidence_path' => $evidencePath,
+                'evidence_disk' => $evidence !== null ? $disk : 'local',
+                'source' => $data['source'],
+                'commission_terms' => $data['commission_terms'],
+                'notes' => $data['notes'] ?? null,
+                'conflicts' => $flags,
+            ]);
+        } catch (\Throwable $throwable) {
+            if ($consentPath) {
+                Storage::disk($disk)->delete($consentPath);
+            }
+            if ($evidencePath) {
+                Storage::disk($disk)->delete($evidencePath);
+            }
+
+            throw $throwable;
+        }
 
         $introduction->properties()->sync($properties->modelKeys());
 

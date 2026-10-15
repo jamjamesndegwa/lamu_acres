@@ -14,11 +14,24 @@ class PropertyMediaLibrary
 {
     public const MAX_KILOBYTES = 5120;
 
+    public static function defaultOriginalDisk(): string
+    {
+        return config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+    }
+
+    public static function defaultPublicDisk(): string
+    {
+        return config('filesystems.disks.r2.bucket') ? 'r2' : 'local';
+    }
+
     public function storePhoto(User $actor, Property $property, UploadedFile $file, string $directory = 'property-originals'): PropertyMedia
     {
         $this->assertImage($file);
 
-        $original = $file->store($directory.'/'.$property->id, 'local');
+        $originalDisk = self::defaultOriginalDisk();
+        $publicDisk = self::defaultPublicDisk();
+
+        $original = $file->store($directory.'/'.$property->id, $originalDisk);
 
         if ($original === false) {
             throw ValidationException::withMessages([
@@ -27,9 +40,9 @@ class PropertyMediaLibrary
         }
 
         try {
-            $derivative = $this->derivative($file, $property);
+            $derivative = $this->derivative($file, $property, $publicDisk);
         } catch (ValidationException $exception) {
-            Storage::disk('local')->delete($original);
+            Storage::disk($originalDisk)->delete($original);
 
             throw $exception;
         }
@@ -37,18 +50,26 @@ class PropertyMediaLibrary
         $position = ((int) $property->media()->where('kind', 'photo')->max('position')) + 1;
         $cover = ! $property->media()->where('kind', 'photo')->where('is_cover', true)->exists();
 
-        return $property->media()->create([
-            'uploaded_by' => $actor->id,
-            'kind' => 'photo',
-            'disk' => 'local',
-            'path' => $original,
-            'public_disk' => 'local',
-            'public_path' => $derivative,
-            'original_name' => $file->getClientOriginalName(),
-            'mime' => 'image/jpeg',
-            'position' => $position,
-            'is_cover' => $cover,
-        ]);
+        try {
+            return $property->media()->create([
+                'uploaded_by' => $actor->id,
+                'kind' => 'photo',
+                'disk' => $originalDisk,
+                'path' => $original,
+                'public_disk' => $publicDisk,
+                'public_path' => $derivative,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => 'image/jpeg',
+                'size_bytes' => $file->getSize(),
+                'position' => $position,
+                'is_cover' => $cover,
+            ]);
+        } catch (\Throwable $throwable) {
+            Storage::disk($originalDisk)->delete($original);
+            Storage::disk($publicDisk)->delete($derivative);
+
+            throw $throwable;
+        }
     }
 
     public function storeVideo(User $actor, Property $property, string $url): PropertyMedia
@@ -134,9 +155,10 @@ class PropertyMediaLibrary
     public static function isPublicDerivative(Property $property, PropertyMedia $media): bool
     {
         $path = $media->public_path;
+        $allowedDisks = ['r2', 'local'];
 
         return $media->kind === 'photo'
-            && $media->public_disk === 'local'
+            && in_array($media->public_disk ?: 'local', $allowedDisks, true)
             && is_string($path)
             && ! str_contains($path, '..')
             && str_starts_with($path, 'property-derivatives/'.$property->id.'/');
@@ -182,7 +204,7 @@ class PropertyMediaLibrary
         }
     }
 
-    private function derivative(UploadedFile $file, Property $property): string
+    private function derivative(UploadedFile $file, Property $property, string $disk = 'local'): string
     {
         if (! function_exists('imagecreatefromstring') || ! function_exists('imagejpeg')) {
             throw ValidationException::withMessages([
@@ -225,7 +247,7 @@ class PropertyMediaLibrary
         }
 
         $path = 'property-derivatives/'.$property->id.'/'.Str::uuid().'.jpg';
-        Storage::disk('local')->put($path, $jpeg);
+        Storage::disk($disk)->put($path, $jpeg);
 
         return $path;
     }

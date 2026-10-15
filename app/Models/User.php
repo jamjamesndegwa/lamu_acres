@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'phone', 'notify_by_email'])]
@@ -43,6 +44,10 @@ class User extends Authenticatable
     {
         if (blank($this->avatar_path)) {
             return null;
+        }
+
+        if (config('filesystems.disks.r2.bucket') && config('filesystems.disks.r2.url') && Storage::disk('r2')->exists($this->avatar_path)) {
+            return Storage::disk('r2')->url($this->avatar_path);
         }
 
         return route('account.avatar.show', ['v' => $this->updated_at?->getTimestamp()]);
