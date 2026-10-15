@@ -22,7 +22,11 @@ class AccountAvatar
         $path = 'avatars/'.$user->id.'-'.Str::random(8).'.jpg';
 
         $oldPath = $user->avatar_path;
-        Storage::disk($disk)->put($path, $jpeg);
+        if (! Storage::disk($disk)->put($path, $jpeg)) {
+            throw ValidationException::withMessages([
+                'avatar' => 'That photo could not be saved.',
+            ]);
+        }
 
         try {
             $user->forceFill(['avatar_path' => $path])->touch();

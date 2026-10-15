@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OwnershipDocumentType;
 use App\Enums\VerificationItemState;
+use App\Models\Concerns\StoresFileUrls;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +26,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class OwnershipDocument extends Model
 {
+    use StoresFileUrls;
+
     protected $hidden = [
+        'url',
         'path',
         'disk',
     ];

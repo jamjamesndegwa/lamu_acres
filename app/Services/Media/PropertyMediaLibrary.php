@@ -41,7 +41,7 @@ class PropertyMediaLibrary
 
         try {
             $derivative = $this->derivative($file, $property, $publicDisk);
-        } catch (ValidationException $exception) {
+        } catch (\Throwable $exception) {
             Storage::disk($originalDisk)->delete($original);
 
             throw $exception;
@@ -247,7 +247,11 @@ class PropertyMediaLibrary
         }
 
         $path = 'property-derivatives/'.$property->id.'/'.Str::uuid().'.jpg';
-        Storage::disk($disk)->put($path, $jpeg);
+        if (! Storage::disk($disk)->put($path, $jpeg)) {
+            throw ValidationException::withMessages([
+                'photo' => 'The public copy of the photo could not be stored.',
+            ]);
+        }
 
         return $path;
     }

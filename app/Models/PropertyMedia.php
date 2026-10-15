@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\StoresFileUrls;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 class PropertyMedia extends Model
 {
+    use StoresFileUrls;
+
     protected $fillable = [
         'property_id',
         'uploaded_by',

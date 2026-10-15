@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BrokerIntroductionStatus;
+use App\Models\Concerns\StoresFileUrls;
 use Database\Factories\BrokerIntroductionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +41,8 @@ class BrokerIntroduction extends Model
 {
     /** @use HasFactory<BrokerIntroductionFactory> */
     use HasFactory;
+
+    use StoresFileUrls;
 
     protected function casts(): array
     {

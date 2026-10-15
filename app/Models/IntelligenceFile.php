@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\StoresFileUrls;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class IntelligenceFile extends Model
 {
+    use StoresFileUrls;
+
     protected $fillable = [
         'subject_type',
         'subject_id',

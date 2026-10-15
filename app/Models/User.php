@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Workspace;
+use App\Models\Concerns\StoresFileUrls;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'phone', 'notify_by_email'])]
@@ -20,6 +20,8 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
+
+    use StoresFileUrls;
 
     /**
      * @return array<string, string>
@@ -46,8 +48,8 @@ class User extends Authenticatable
             return null;
         }
 
-        if (config('filesystems.disks.r2.bucket') && config('filesystems.disks.r2.url') && Storage::disk('r2')->exists($this->avatar_path)) {
-            return Storage::disk('r2')->url($this->avatar_path);
+        if (filled($this->avatar_url) && config('filesystems.disks.r2.url')) {
+            return $this->avatar_url;
         }
 
         return route('account.avatar.show', ['v' => $this->updated_at?->getTimestamp()]);
