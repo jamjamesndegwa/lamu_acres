@@ -3,12 +3,28 @@
 namespace Tests\Feature\Inventory;
 
 use App\Enums\PropertyStatus;
+use App\Models\County;
+use App\Models\Locality;
 use App\Models\Property;
 use App\Models\User;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PropertyWorkspaceTest extends FoundationTestCase
 {
+    public function test_marketing_tab_renders_the_public_link_for_a_published_property(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
+        $locality = Locality::query()->create([
+            'county_id' => $county->id, 'name' => 'Shela', 'slug' => 'shela', 'kind' => 'place', 'is_active' => true,
+        ]);
+        $property = Property::factory()->published()->listedIn($locality)->create();
+
+        $this->actingAs($staff)->get(route('staff.properties.show', [$property, 'tab' => 'marketing']))
+            ->assertOk()->assertSee('View listing')
+            ->assertSee(route('land.show', [$county, $locality, $property]), false);
+    }
+
     public function test_staff_see_ordered_approval_steps_with_actions_and_outstanding_checks(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();

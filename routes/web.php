@@ -2,20 +2,20 @@
 
 use App\Http\Controllers\Account\CapabilityApplicationController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\EvidenceDownloadController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Land\PropertyController;
+use App\Http\Controllers\EvidenceDownloadController;
 use App\Http\Controllers\Intelligence\FileController;
 use App\Http\Controllers\Intelligence\LibraryController;
+use App\Http\Controllers\Land\PropertyController;
 use App\Http\Controllers\Payments\MpesaCallbackController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSite\BrokerPartnersController;
 use App\Http\Controllers\PublicSite\HomeController;
 use App\Http\Controllers\PublicSite\LandDirectoryController;
-use App\Http\Controllers\PublicSite\ListPropertyController;
 use App\Http\Controllers\PublicSite\ListingInterestController;
+use App\Http\Controllers\PublicSite\ListPropertyController;
 use App\Http\Controllers\PublicSite\PropertyPhotoController;
 use App\Http\Controllers\PublicSite\StartBrokerPartnerApplicationController;
 use App\Http\Controllers\PublicSite\StartPropertyListingController;
@@ -59,6 +59,7 @@ Route::middleware(['auth', 'private.cache'])->group(function () {
     Route::post('/land/{property}/documents', [ListingInterestController::class, 'storeDocuments'])->name('land.documents.store');
 });
 
+Route::get('/land/{county}/{locality}/{property}/videos/{propertyMedia}', [PropertyPhotoController::class, 'video'])->name('land.videos.show');
 Route::get('/land/{county}/{locality}/{property}/photos/{propertyMedia}', [PropertyPhotoController::class, 'show'])->name('land.photos.show');
 Route::get('/land/item/{property}', [LandDirectoryController::class, 'showItem'])->name('land.item');
 Route::get('/land/{county}/{locality}/{property}', [LandDirectoryController::class, 'show'])->name('land.show');

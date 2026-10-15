@@ -27,7 +27,7 @@ class PropertyInventoryController extends Controller
         $this->authorize('create', Property::class);
 
         $properties = Property::query()
-            ->with(['areaCounty:id,name', 'areaLocality:id,name'])
+            ->with(['areaCounty:id,name,slug', 'areaLocality:id,name,slug'])
             ->withSum(['portions as sold_portion_acreage' => fn ($query) => $query->where('status', PropertyStatus::Sold)], 'acreage')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $like = '%'.addcslashes((string) $request->query('q'), '%_\\').'%';
@@ -90,8 +90,8 @@ class PropertyInventoryController extends Controller
     {
         $this->authorize('update', $property);
         $property->load([
-            'areaCounty:id,name',
-            'areaLocality:id,name',
+            'areaCounty:id,name,slug',
+            'areaLocality:id,name,slug',
             'parent:id,slug,reference,title,acreage',
             'portions',
             'submitter:id,name,email',

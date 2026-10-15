@@ -72,6 +72,50 @@ class PropertyMediaLibrary
         }
     }
 
+    public static function maxVideoKilobytes(): int
+    {
+        return min(102400, (int) floor(UploadedFile::getMaxFilesize() / 1024));
+    }
+
+    public function storeVideoUpload(User $actor, Property $property, UploadedFile $file): PropertyMedia
+    {
+        $disk = self::defaultPublicDisk();
+        $path = $file->store('property-videos/'.$property->id, $disk);
+
+        if ($path === false) {
+            throw ValidationException::withMessages(['video' => 'The video could not be stored.']);
+        }
+
+        try {
+            return $property->media()->create([
+                'uploaded_by' => $actor->id,
+                'kind' => 'video',
+                'disk' => $disk,
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+                'size_bytes' => $file->getSize(),
+                'position' => ((int) $property->media()->max('position')) + 1,
+                'is_cover' => false,
+            ]);
+        } catch (\Throwable $exception) {
+            Storage::disk($disk)->delete($path);
+
+            throw $exception;
+        }
+    }
+
+    public static function isUploadedVideo(Property $property, PropertyMedia $media): bool
+    {
+        return $media->property_id === $property->id
+            && $media->kind === 'video'
+            && blank($media->video_url)
+            && in_array($media->disk, ['r2', 'local'], true)
+            && in_array($media->mime, ['video/mp4', 'video/webm'], true)
+            && ! str_contains($media->path, '..')
+            && str_starts_with($media->path, 'property-videos/'.$property->id.'/');
+    }
+
     public function storeVideo(User $actor, Property $property, string $url): PropertyMedia
     {
         $this->assertVideoUrl($url);

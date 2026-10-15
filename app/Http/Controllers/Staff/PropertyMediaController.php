@@ -52,6 +52,12 @@ class PropertyMediaController extends Controller
 
     public function storeVideo(StorePropertyVideoRequest $request, Property $property, PropertyMediaLibrary $library): RedirectResponse
     {
+        if ($request->hasFile('video')) {
+            $library->storeVideoUpload($request->user(), $property, $request->file('video'));
+
+            return back()->with('status', 'Video uploaded. It will be shown when the listing is published.');
+        }
+
         $library->storeVideo($request->user(), $property, $request->string('video_url')->toString());
 
         return back()->with('status', 'Video link saved.');

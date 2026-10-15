@@ -56,7 +56,16 @@
     </section>
 
     <section class="mt-10">
-        <h2 class="text-lg font-semibold text-lamu-900">Video link</h2>
+        <h2 class="text-lg font-semibold text-lamu-900">Videos</h2>
+        <form method="POST" action="{{ route('staff.properties.videos.store', $property) }}" enctype="multipart/form-data" class="mt-4 space-y-3 rounded-2xl border border-sand-200 bg-white p-4">
+            @csrf
+            <h3 class="font-medium text-lamu-900">Upload a video</h3>
+            <x-upload-manager name="video" label="Video file (MP4 or WebM)" accept="video/mp4,video/webm" required />
+            <p class="text-sm text-stone-600">Maximum file size on this server: {{ number_format(\App\Services\Media\PropertyMediaLibrary::maxVideoKilobytes() / 1024, 1) }} MB. Uploaded videos appear on the public listing after publication.</p>
+            @error('video')<p class="text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
+            <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload video</button>
+        </form>
+        <h3 class="mt-6 font-medium text-lamu-900">Or add a video link</h3>
         <form method="POST" action="{{ route('staff.properties.videos.store', $property) }}" class="mt-4 flex flex-wrap items-end gap-3">
             @csrf
             <div class="min-w-72 flex-1">
@@ -71,8 +80,8 @@
         <ul class="mt-3 space-y-2 text-sm">
             @foreach ($property->media->where('kind', 'video') as $media)
                 <li class="flex items-center gap-3">
-                    <span>{{ $media->video_url }}</span>
-                    <form method="POST" action="{{ route('staff.properties.media.destroy', [$property, $media]) }}" data-confirm="Remove this video link?">
+                    <span>{{ $media->video_url ?: $media->original_name }}</span>
+                    <form method="POST" action="{{ route('staff.properties.media.destroy', [$property, $media]) }}" data-confirm="Remove this video?">
                         @csrf
                         @method('DELETE')
                         <button class="text-red-700">Remove</button>

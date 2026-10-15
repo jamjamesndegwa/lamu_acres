@@ -39,9 +39,7 @@ class PublicListing
                 ->get()
                 ->filter(fn (PropertyMedia $media): bool => PropertyMediaLibrary::isPublicDerivative($property, $media))
                 ->map(fn (PropertyMedia $media): array => [
-                    'url' => ($media->public_disk === 'r2' && filled(config('filesystems.disks.r2.url')))
-                        ? ($media->public_url ?: rtrim(config('filesystems.disks.r2.url'), '/').'/'.ltrim($media->public_path, '/'))
-                        : route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $media]),
+                    'url' => route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $media]),
                     'alt' => $property->title,
                     'cover' => (bool) $media->is_cover,
                 ])
@@ -51,11 +49,14 @@ class PublicListing
 
         $videos = $property->media()
             ->where('kind', 'video')
-            ->whereNotNull('video_url')
             ->orderBy('position')
             ->get()
+            ->filter(fn (PropertyMedia $media): bool => filled($media->video_url)
+                || ($property->areaCounty !== null && $property->areaLocality !== null && PropertyMediaLibrary::isUploadedVideo($property, $media)))
             ->map(fn (PropertyMedia $media): array => [
-                'url' => $media->video_url,
+                'url' => filled($media->video_url) ? $media->video_url : route('land.videos.show', [$property->areaCounty, $property->areaLocality, $property, $media]),
+                'uploaded' => blank($media->video_url),
+                'name' => $media->original_name,
             ])
             ->all();
 
@@ -123,9 +124,7 @@ class PublicListing
             'price_per_acre' => $property->pricePerAcre(),
             'acres' => $property->offeredAcreage(),
             'image' => $cover !== null
-                ? (($cover->public_disk === 'r2' && filled(config('filesystems.disks.r2.url')))
-                    ? ($cover->public_url ?: rtrim(config('filesystems.disks.r2.url'), '/').'/'.ltrim($cover->public_path, '/'))
-                    : route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $cover]))
+                ? route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $cover])
                 : 'images/default_land_image.jpg',
             'url' => $property->publicUrl(),
         ];

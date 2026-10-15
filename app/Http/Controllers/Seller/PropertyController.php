@@ -311,6 +311,11 @@ class PropertyController extends Controller
             && in_array($property->status, [PropertyStatus::Draft, PropertyStatus::Review], true);
 
         return [
+            'published' => [
+                'title' => 'Published listings',
+                'empty' => 'No published listings yet.',
+                'items' => $properties->filter(fn (Property $property) => in_array($property->status, [PropertyStatus::Published, PropertyStatus::Reserved], true))->values(),
+            ],
             'returned' => [
                 'title' => 'Returned for corrections',
                 'empty' => 'Nothing is waiting on you.',
@@ -325,11 +330,6 @@ class PropertyController extends Controller
                 'title' => 'Awaiting ownership verification',
                 'empty' => 'No submissions are with staff.',
                 'items' => $properties->filter(fn (Property $property) => $property->status === PropertyStatus::Review && ! $open($property))->values(),
-            ],
-            'published' => [
-                'title' => 'Published listings',
-                'empty' => 'No published listings yet.',
-                'items' => $properties->filter(fn (Property $property) => in_array($property->status, [PropertyStatus::Published, PropertyStatus::Reserved], true))->values(),
             ],
             'closed' => [
                 'title' => 'Unavailable, completed or withdrawn',

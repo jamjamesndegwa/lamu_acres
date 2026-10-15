@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\OwnershipDocumentType;
+use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\OwnershipDocument;
@@ -32,6 +33,58 @@ class CloudflareR2StorageTest extends FoundationTestCase
         Storage::fake('local');
     }
 
+    public function test_video_upload_is_stored_on_r2_and_playable_only_for_a_published_listing(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $property = Property::factory()->published()->listedIn($this->locality())->create();
+
+        $this->actingAs($staff)->post(route('staff.properties.videos.store', $property), [
+            'video' => UploadedFile::fake()->create('land-tour.mp4', 300, 'video/mp4'),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $media = $property->media()->where('kind', 'video')->firstOrFail();
+        $this->assertSame('r2', $media->disk);
+        $this->assertSame('video/mp4', $media->mime);
+        $this->assertNull($media->video_url);
+        Storage::disk('r2')->assertExists($media->path);
+        $url = route('land.videos.show', [$property->areaCounty, $property->areaLocality, $property, $media]);
+        $listing = app(PublicListing::class)->present($property);
+        $this->assertSame($url, $listing['videos'][0]['url']);
+        $this->assertTrue($listing['videos'][0]['uploaded']);
+        $this->get($property->publicUrl())->assertOk()->assertSee('<video', false)->assertSee($url, false);
+        $this->get($url)->assertRedirect();
+
+        $property->forceFill(['status' => PropertyStatus::Draft])->save();
+        $this->get($url)->assertNotFound();
+        $this->actingAs($staff)->delete(route('staff.properties.media.destroy', [$property, $media]))->assertRedirect();
+        Storage::disk('r2')->assertMissing($media->path);
+        $this->assertModelMissing($media);
+    }
+
+    public function test_video_upload_rejects_invalid_files_and_unprivileged_uploads(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $property = Property::factory()->listedIn($this->locality())->create();
+
+        $this->actingAs($buyer)->post(route('staff.properties.videos.store', $property), [
+            'video' => UploadedFile::fake()->create('tour.mp4', 300, 'video/mp4'),
+        ])->assertForbidden();
+        $this->actingAs($staff)->post(route('staff.properties.videos.store', $property), [
+            'video' => UploadedFile::fake()->create('document.pdf', 10, 'application/pdf'),
+        ])->assertSessionHasErrors('video');
+        $this->actingAs($staff)->post(route('staff.properties.videos.store', $property), [
+            'video' => UploadedFile::fake()->create('large.mp4', PropertyMediaLibrary::maxVideoKilobytes() + 1, 'video/mp4'),
+        ])->assertSessionHasErrors('video');
+        $this->actingAs($staff)->post(route('staff.properties.videos.store', $property), [
+            'video' => UploadedFile::fake()->create('tour.mp4', 300, 'video/mp4'),
+            'video_url' => 'https://youtu.be/example',
+        ])->assertSessionHasErrors(['video', 'video_url']);
+
+        $this->assertSame(0, $property->media()->where('kind', 'video')->count());
+        $this->assertSame([], Storage::disk('r2')->allFiles());
+    }
+
     public function test_photo_upload_stores_original_on_r2_private_and_derivative_on_r2(): void
     {
         if (! function_exists('imagecreatefromstring')) {
@@ -58,7 +111,7 @@ class CloudflareR2StorageTest extends FoundationTestCase
         Storage::disk('r2')->assertExists($media->public_path);
     }
 
-    public function test_public_listing_uses_cloudflare_r2_public_url(): void
+    public function test_public_listing_serves_r2_photos_through_the_site_when_the_bucket_is_private(): void
     {
         if (! function_exists('imagecreatefromstring')) {
             $this->markTestSkipped('GD required');
@@ -77,7 +130,16 @@ class CloudflareR2StorageTest extends FoundationTestCase
         $listing = app(PublicListing::class)->present($property);
 
         $this->assertCount(1, $listing['photos']);
-        $this->assertStringStartsWith('https://cdn.lamuacres.co.ke/property-derivatives/', $listing['photos'][0]['url']);
+        $photoUrl = route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $media]);
+        $this->assertSame($photoUrl, $listing['photos'][0]['url']);
+        $this->assertSame($photoUrl, app(PublicListing::class)->card($property->fresh(['media']))['image']);
+        $response = $this->get($photoUrl);
+        $response->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->assertSame(Storage::disk('r2')->get($media->public_path), $response->streamedContent());
+        $this->get(route('land.index'))->assertOk()->assertSee($photoUrl, false);
+
+        $media->forceFill(['public_path' => $media->path, 'public_disk' => 'r2_private'])->save();
+        $this->get($photoUrl)->assertNotFound();
     }
 
     public function test_private_ownership_document_upload_and_authorized_temporary_url(): void
