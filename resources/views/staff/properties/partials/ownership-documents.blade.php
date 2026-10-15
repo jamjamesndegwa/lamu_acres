@@ -9,7 +9,7 @@
     ];
     $canReview = auth()->user()->hasPermission('staff.verification');
 @endphp
-<section class="mt-8 max-w-4xl">
+<section id="seller-documents" class="mt-8 max-w-4xl">
     <h2 class="font-semibold text-lamu-900">Seller documents</h2>
     <p class="mt-1 text-sm text-stone-600">Private evidence. Uploading does not verify anything; record each review outcome with a reason.</p>
     <ul class="mt-3 space-y-2 text-sm">
@@ -21,9 +21,37 @@
         @endforeach
     </ul>
 
+    @if ($canReview && $property->ownershipDocuments->contains(fn ($document) => $document->hasFile() && $document->state !== \App\Enums\VerificationItemState::Verified))
+        <form id="batch-document-approval-{{ $property->id }}" method="POST" action="{{ route('staff.ownership-documents.approve', $property) }}" data-turbo-frame="_top" class="mt-4 space-y-3 rounded-2xl border border-sand-200 bg-white p-4">
+            @csrf
+            @method('PUT')
+            <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" data-select-document-reviews> Select all pending documents</label>
+            <label class="block text-sm">Review reason for the selected documents
+                <input name="reason" required minlength="8" maxlength="2000" value="{{ old('reason') }}" class="mt-1 block w-full rounded-lg border border-sand-200 px-3 py-2">
+            </label>
+            <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Approve selected documents</button>
+            @foreach (['document_ids', 'document_ids.*', 'reason'] as $field)
+                @foreach ($errors->get($field) as $messages)
+                    @foreach ((array) $messages as $message)
+                        <p role="alert" class="text-sm text-red-700">{{ $message }}</p>
+                    @endforeach
+                @endforeach
+            @endforeach
+        </form>
+    @endif
+
+    @if ($canReview && ($showViewer ?? true))
+        <x-private-file-viewer :documents="$property->ownershipDocuments" />
+    @endif
     <ul class="mt-4 space-y-3">
         @forelse ($property->ownershipDocuments as $document)
             <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                @if ($canReview && $document->hasFile() && $document->state !== \App\Enums\VerificationItemState::Verified)
+                    <label class="mb-2 flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="document_ids[]" value="{{ $document->id }}" form="batch-document-approval-{{ $property->id }}" @checked(in_array($document->id, old('document_ids', [])))>
+                        Select {{ $document->document_type?->label() ?? 'document' }} for approval
+                    </label>
+                @endif
                 <p class="font-medium text-lamu-900">{{ $document->document_type?->label() ?? 'Document' }} · {{ $document->state?->label() ?? 'Received' }}</p>
                 <p class="text-stone-600">
                     @if ($document->hasFile())

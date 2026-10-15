@@ -13,10 +13,36 @@ use App\Models\Property;
 use App\Models\User;
 use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class EvidenceAccessTest extends FoundationTestCase
 {
+    public function test_verification_viewer_displays_and_logs_evidence_and_rejects_unsafe_inline_types(): void
+    {
+        Storage::fake('local');
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $property = Property::factory()->create();
+        $desk = app(VerificationDesk::class);
+        $desk->seed($property);
+        $item = $property->verificationItems()->firstOrFail();
+        $image = $desk->storeEvidence($item, $staff, UploadedFile::fake()->image('boundary.png'), EvidenceSensitivity::Parcel);
+        $html = $desk->storeEvidence($item, $staff, UploadedFile::fake()->createWithContent('notes.html', '<html><script>alert(1)</script></html>'), EvidenceSensitivity::General);
+
+        $this->actingAs($staff)->get(route('staff.verification.show', $property))
+            ->assertOk()->assertSee('Document viewing section')->assertSee('boundary.png')->assertSee('notes.html')
+            ->assertSee(route('staff.verification.files.preview', [$image, 'inline' => 1]), false);
+        $this->actingAs($buyer)->get(route('staff.verification.files.preview', [$image, 'inline' => 1]))->assertForbidden();
+        $response = $this->actingAs($staff)->get(route('staff.verification.files.preview', [$image, 'inline' => 1]));
+        $response->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->assertSame(Storage::disk('local')->get($image->path), $response->streamedContent());
+        $this->assertSame(1, $image->accessLogs()->where('user_id', $staff->id)->where('outcome', 'allowed')->count());
+        $this->actingAs($staff)->get(route('staff.verification.files.preview', [$html, 'inline' => 1]))->assertUnsupportedMediaType();
+        $this->actingAs($staff)->get(route('staff.verification.files.preview', $html))->assertOk()
+            ->assertDownload('notes.html');
+    }
+
     public function test_document_release_is_time_limited_and_private(): void
     {
         $seller = User::factory()->withRoles('seller')->create();

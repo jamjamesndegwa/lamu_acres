@@ -10,7 +10,7 @@ use App\Enums\PropertyStatus;
 use App\Enums\SaleInstructionKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\SellerListingRequest;
-use App\Http\Requests\Staff\StorePropertyPhotoRequest;
+use App\Http\Requests\Seller\StorePropertyPhotosRequest;
 use App\Models\County;
 use App\Models\OwnershipDocument;
 use App\Models\Property;
@@ -20,6 +20,7 @@ use App\Services\Media\PropertyMediaLibrary;
 use App\Services\Seller\SellerPortal;
 use App\Services\Verification\VerificationDesk;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -94,6 +95,9 @@ class PropertyController extends Controller
             'property' => $property,
             'verified' => $portal->visibleToSeller($request->user(), $property),
             'isSubmitter' => $isSubmitter,
+            'counties' => $isSubmitter && $property->isEditableBySubmitter() ? $this->counties() : collect(),
+            'relationship' => $property->owners()->where('user_id', $request->user()->id)->value('relationship') ?? OwnerRelationship::Owner->value,
+            'submissionGaps' => $portal->submissionGaps($property),
             'canEdit' => $isSubmitter && $property->isEditableBySubmitter(),
             'passport' => $verification->publicSummary($property),
             'requirements' => $portal->documentRequirements($property),
@@ -116,10 +120,14 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function update(SellerListingRequest $request, Property $property, SellerPortal $portal): RedirectResponse
+    public function update(SellerListingRequest $request, Property $property, SellerPortal $portal): RedirectResponse|JsonResponse
     {
         $this->authorizeEdit($request, $property, $portal);
         $portal->update($request->user(), $property, $request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json(['id' => $property->id, 'message' => 'Listing details saved.']);
+        }
 
         return redirect()
             ->route('seller.properties.show', $property)
@@ -136,7 +144,7 @@ class PropertyController extends Controller
             ->with('status', 'Listing submitted. Staff will verify ownership and authority before anything is published.');
     }
 
-    public function document(Request $request, Property $property, SellerPortal $portal): RedirectResponse
+    public function document(Request $request, Property $property, SellerPortal $portal): RedirectResponse|JsonResponse
     {
         $this->authorizeView($request, $property, $portal);
         abort_if(in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true), 403);
@@ -146,7 +154,11 @@ class PropertyController extends Controller
             'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
 
-        $portal->storeDocument($property, $request->user(), $data['document'], OwnershipDocumentType::from($data['document_type']));
+        $document = $portal->storeDocument($property, $request->user(), $data['document'], OwnershipDocumentType::from($data['document_type']));
+
+        if ($request->expectsJson()) {
+            return response()->json(['id' => $document->id, 'message' => 'Document stored privately for staff review.'], 201);
+        }
 
         return back()->with('status', 'Document stored privately. Staff will review it.');
     }
@@ -214,15 +226,35 @@ class PropertyController extends Controller
         return back()->with('status', 'Reply sent to staff.');
     }
 
-    public function storePhoto(StorePropertyPhotoRequest $request, Property $property, PropertyMediaLibrary $library): RedirectResponse
+    public function storePhoto(StorePropertyPhotosRequest $request, Property $property, PropertyMediaLibrary $library): RedirectResponse|JsonResponse
     {
-        if ($property->media()->where('kind', 'photo')->count() >= self::MAX_PHOTOS) {
-            throw ValidationException::withMessages(['photo' => 'A listing can hold up to '.self::MAX_PHOTOS.' photographs.']);
+        $files = $request->file('photos') ?? [$request->file('photo')];
+
+        if ($property->media()->where('kind', 'photo')->count() + count($files) > self::MAX_PHOTOS) {
+            throw ValidationException::withMessages(['photos' => 'A listing can hold up to '.self::MAX_PHOTOS.' photographs.']);
         }
 
-        $library->storePhoto($request->user(), $property, $request->file('photo'));
+        $uploaded = [];
 
-        return back()->with('status', 'Photo stored. The public copy has had location data removed.');
+        try {
+            foreach ($files as $file) {
+                $uploaded[] = $library->storePhoto($request->user(), $property, $file);
+            }
+        } catch (\Throwable $exception) {
+            foreach ($uploaded as $media) {
+                $library->delete($media);
+            }
+
+            throw $exception;
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['id' => $uploaded[0]->id, 'count' => count($uploaded)], 201);
+        }
+
+        return back()->with('status', count($uploaded) === 1
+            ? 'Photo uploaded. The public copy has had location data removed.'
+            : count($uploaded).' photos uploaded. The public copies have had location data removed.');
     }
 
     public function destroyPhoto(Property $property, PropertyMedia $propertyMedia, PropertyMediaLibrary $library): RedirectResponse

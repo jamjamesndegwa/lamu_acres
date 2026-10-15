@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Enums\LandTenure;
+use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
@@ -215,6 +217,167 @@ class SellerDocumentTest extends FoundationTestCase
         $this->assertSame(PropertyStatus::Review, $property->refresh()->status);
     }
 
+    public function test_selected_document_uploads_keep_their_types_and_appear_in_both_staff_tabs(): void
+    {
+        config([
+            'filesystems.disks.r2.bucket' => 'public-files',
+            'filesystems.disks.r2_private.bucket' => 'private-files',
+        ]);
+        Storage::fake('r2_private');
+        [$seller, $property] = $this->createSellerDraft();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
+
+        $this->actingAs($seller)->get(route('seller.properties.show', $property))
+            ->assertOk()
+            ->assertSee('Upload all selected documents')
+            ->assertSee('documents[national_id]', false)
+            ->assertSee('documents[title_deed]', false);
+
+        foreach (['national_id' => 'identity.pdf', 'title_deed' => 'deed.pdf'] as $type => $name) {
+            $this->actingAs($seller)->postJson(route('seller.properties.documents.store', $property), [
+                'document_type' => $type,
+                'document' => UploadedFile::fake()->create($name, 300, 'application/pdf'),
+            ])->assertCreated()->assertJsonStructure(['id', 'message']);
+        }
+
+        $documents = $property->ownershipDocuments()->get();
+        $this->assertSame(['national_id', 'title_deed'], $documents->pluck('document_type')->map(fn ($type) => $type->value)->all());
+        foreach ($documents as $document) {
+            $this->assertSame(VerificationItemState::Received, $document->state);
+            $this->assertSame('r2_private', $document->disk);
+            Storage::disk('r2_private')->assertExists($document->path);
+        }
+
+        foreach (['owners', 'verification'] as $tab) {
+            $this->actingAs($staff)->get(route('staff.properties.show', [$property, 'tab' => $tab]))
+                ->assertOk()
+                ->assertSee('identity.pdf')
+                ->assertSee('deed.pdf')
+                ->assertSee('Approve selected documents')
+                ->assertSee(route('staff.ownership-documents.download', $documents->first()), false);
+        }
+    }
+
+    public function test_staff_batch_approval_reviews_only_selected_documents_and_audits_each_one(): void
+    {
+        Storage::fake('local');
+        [$seller, $property] = $this->createSellerDraft();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+        $portal = app(SellerPortal::class);
+        $first = $portal->storeDocument($property, $seller, UploadedFile::fake()->create('id.pdf', 10, 'application/pdf'), OwnershipDocumentType::NationalId);
+        $second = $portal->storeDocument($property, $seller, UploadedFile::fake()->create('title.pdf', 10, 'application/pdf'), OwnershipDocumentType::TitleDeed);
+        $unselected = $portal->storeDocument($property, $seller, UploadedFile::fake()->create('search.pdf', 10, 'application/pdf'), OwnershipDocumentType::OfficialSearch);
+
+        $this->actingAs($staff)->put(route('staff.ownership-documents.approve', $property), [
+            'document_ids' => [$first->id, $second->id],
+            'reason' => 'Reviewed the uploaded originals.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        foreach ([$first, $second] as $document) {
+            $document->refresh();
+            $this->assertSame(VerificationItemState::Verified, $document->state);
+            $this->assertSame($staff->id, $document->reviewed_by);
+            $this->assertSame('Reviewed the uploaded originals.', $document->review_note);
+            $this->assertNotNull($document->reviewed_at);
+        }
+        $this->assertSame(VerificationItemState::Received, $unselected->fresh()->state);
+        $this->assertSame(2, PropertyAudit::query()->where('property_id', $property->id)->where('action', 'ownership_document_reviewed')->where('actor_id', $staff->id)->count());
+    }
+
+    public function test_batch_approval_rejects_documents_from_another_property_without_approving_any(): void
+    {
+        Storage::fake('local');
+        [$seller, $property] = $this->createSellerDraft();
+        [$otherSeller, $otherProperty] = $this->createSellerDraft();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+        $portal = app(SellerPortal::class);
+        $own = $portal->storeDocument($property, $seller, UploadedFile::fake()->create('own.pdf', 10, 'application/pdf'));
+        $foreign = $portal->storeDocument($otherProperty, $otherSeller, UploadedFile::fake()->create('foreign.pdf', 10, 'application/pdf'));
+
+        $this->actingAs($staff)->put(route('staff.ownership-documents.approve', $property), [
+            'document_ids' => [$own->id, $foreign->id],
+            'reason' => 'Reviewed supporting documents.',
+        ])->assertNotFound();
+
+        $this->assertSame(VerificationItemState::Received, $own->fresh()->state);
+        $this->assertSame(VerificationItemState::Received, $foreign->fresh()->state);
+        $this->assertSame(0, PropertyAudit::query()->where('action', 'ownership_document_reviewed')->count());
+    }
+
+    public function test_batch_approval_requires_verification_permission_selection_and_review_reason(): void
+    {
+        [$seller, $property] = $this->createSellerDraft();
+        $unprivileged = User::factory()->withRoles('staff')->create();
+        $reviewer = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+
+        $this->actingAs($unprivileged)->put(route('staff.ownership-documents.approve', $property), [
+            'document_ids' => [1], 'reason' => 'Reviewed supporting documents.',
+        ])->assertForbidden();
+        $this->actingAs($reviewer)->put(route('staff.ownership-documents.approve', $property), [])
+            ->assertSessionHasErrors(['document_ids', 'reason']);
+
+        $this->assertSame(0, PropertyAudit::query()->where('action', 'ownership_document_reviewed')->count());
+    }
+
+    public function test_batch_approval_rejects_a_record_without_a_file_atomically(): void
+    {
+        Storage::fake('local');
+        [$seller, $property] = $this->createSellerDraft();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+        $portal = app(SellerPortal::class);
+        $uploaded = $portal->storeDocument($property, $seller, UploadedFile::fake()->create('title.pdf', 10, 'application/pdf'));
+        $exception = $portal->markDocumentNotApplicable($property, OwnershipDocumentType::SpousalConsent, $staff, 'Not required for this listing.');
+
+        $this->actingAs($staff)->put(route('staff.ownership-documents.approve', $property), [
+            'document_ids' => [$uploaded->id, $exception->id],
+            'reason' => 'Reviewed supporting documents.',
+        ])->assertUnprocessable();
+
+        $this->assertSame(VerificationItemState::Received, $uploaded->fresh()->state);
+        $this->assertSame(VerificationItemState::NotApplicable, $exception->fresh()->state);
+        $this->assertSame(0, PropertyAudit::query()->where('action', 'ownership_document_reviewed')->count());
+    }
+
+    public function test_owner_workspace_shows_required_data_and_combined_bulk_save(): void
+    {
+        [$seller, $property] = $this->createSellerDraft();
+
+        $this->actingAs($seller)->get(route('seller.properties.show', $property))
+            ->assertOk()->assertSee('Everything to provide for your listing')
+            ->assertSee('Provide all listing details in one form')
+            ->assertSee('Save details and upload selected files')
+            ->assertSee('documents[national_id]', false)
+            ->assertSee('documents[title_deed]', false)
+            ->assertSee('data-owner-bulk-save', false);
+
+        $this->actingAs($seller)->putJson(route('seller.properties.update', $property), [
+            'title' => 'Updated bulk listing', 'purpose' => 'sale', 'relationship' => 'owner',
+            'summary' => 'The updated owner supplied summary.',
+        ])->assertOk()->assertJsonPath('id', $property->id);
+        $this->assertSame('Updated bulk listing', $property->fresh()->title);
+        $this->assertSame('The updated owner supplied summary.', $property->fresh()->summary);
+    }
+
+    public function test_staff_can_preview_private_images_and_pdfs_without_public_urls(): void
+    {
+        Storage::fake('r2_private');
+        config(['filesystems.disks.r2_private.bucket' => 'private-documents']);
+        [$seller, $property] = $this->createSellerDraft();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
+        $image = app(SellerPortal::class)->storeDocument($property, $seller, UploadedFile::fake()->image('identity.png'));
+        $pdf = app(SellerPortal::class)->storeDocument($property, $seller, UploadedFile::fake()->createWithContent('deed.pdf', "%PDF-1.4\nTest document"));
+
+        foreach ([$image, $pdf] as $document) {
+            $this->actingAs($seller)->get(route('staff.ownership-documents.download', [$document, 'inline' => 1]))->assertForbidden();
+            $response = $this->actingAs($staff)->get(route('staff.ownership-documents.download', [$document, 'inline' => 1]));
+            $response->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+            $this->assertStringContainsString('inline', $response->headers->get('Content-Disposition'));
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+            $this->assertSame(Storage::disk('r2_private')->get($document->path), $response->streamedContent());
+        }
+        $this->assertSame(2, PropertyAudit::query()->where('property_id', $property->id)->where('action', 'ownership_document_opened')->count());
+    }
+
     /**
      * @return array{0: User, 1: Property}
      */
@@ -232,8 +395,8 @@ class SellerDocumentTest extends FoundationTestCase
             'summary' => 'A prime parcel ready for sale.',
             'description' => 'Detailed description of the parcel.',
             'purpose' => ListingPurpose::Sale,
-            'land_use' => \App\Enums\LandUse::Agricultural,
-            'tenure' => \App\Enums\LandTenure::Freehold,
+            'land_use' => LandUse::Agricultural,
+            'tenure' => LandTenure::Freehold,
             'price_basis' => PriceBasis::Total,
             'price_amount' => 5_000_000,
             'acreage' => 3.0,

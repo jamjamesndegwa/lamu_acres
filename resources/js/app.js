@@ -4,6 +4,217 @@ import 'sweetalert2/dist/sweetalert2.min.css'
 
 Turbo.session.drive = false
 
+async function saveOwnerSubmission(url, data) {
+    const response = await fetch(url, {
+        method: 'POST', body: data, credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok || !result.id) {
+        throw new Error(Object.values(result.errors ?? {}).flat().join(' ') || result.message || 'The request could not be saved. Please try again.')
+    }
+    return result
+}
+
+document.addEventListener('submit', async (event) => {
+    const form = event.target
+    if (!(form instanceof HTMLFormElement) || !form.matches('[data-owner-bulk-save]')) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    if (form.dataset.saving === 'true') return
+
+    const progress = form.querySelector('[data-owner-save-progress]')
+    const errors = form.querySelector('[data-owner-save-errors]')
+    const details = new FormData(form)
+    const token = form.querySelector('[name="_token"]').value
+    const uploadForms = ['seller-document-uploads', 'seller-photo-uploads'].map((id) => document.getElementById(id)).filter(Boolean)
+    const uploads = []
+    for (const uploadForm of uploadForms) {
+        for (const input of Array.from(uploadForm.elements)) {
+            if (!(input instanceof HTMLInputElement) || input.type !== 'file') continue
+            for (const file of input.files) {
+                uploads.push({ input, file, action: uploadForm.action, type: input.dataset.documentType })
+            }
+        }
+    }
+    const controls = [form, ...uploadForms].flatMap((item) => Array.from(item.elements)).filter((element) => !element.disabled)
+    controls.forEach((element) => { element.disabled = true })
+    form.dataset.saving = 'true'
+    errors.replaceChildren()
+    let completed = 0
+    const successfulInputs = new Set()
+
+    try {
+        progress.textContent = 'Saving all listing details…'
+        await saveOwnerSubmission(form.action, details)
+        for (const [index, upload] of uploads.entries()) {
+            progress.textContent = `Details saved. Uploading file ${index + 1} of ${uploads.length}: ${upload.file.name}`
+            const data = new FormData()
+            data.set('_token', token)
+            data.set(upload.type ? 'document' : 'photo', upload.file)
+            if (upload.type) data.set('document_type', upload.type)
+            try {
+                await saveOwnerSubmission(upload.action, data)
+                completed++
+                successfulInputs.add(upload.input)
+            } catch (error) {
+                const item = document.createElement('li')
+                item.textContent = `${upload.file.name}: ${error.message}`
+                errors.append(item)
+            }
+        }
+        for (const input of successfulInputs) {
+            if (uploads.filter((upload) => upload.input === input).length === 1) input.value = ''
+        }
+        progress.textContent = `All listing details saved. ${completed} of ${uploads.length} selected files uploaded.`
+        if (completed === uploads.length) {
+            window.location.reload()
+        } else {
+            const item = document.createElement('li')
+            item.textContent = 'Successful uploads have been saved. Select only the files that failed before retrying, or refresh to see the updated checklist.'
+            errors.append(item)
+        }
+    } catch (error) {
+        progress.textContent = 'Details could not be saved. Your selected files have not been uploaded.'
+        const item = document.createElement('li')
+        item.textContent = error.message
+        errors.append(item)
+    } finally {
+        form.dataset.saving = 'false'
+        controls.forEach((element) => { element.disabled = false })
+    }
+}, true)
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-preview-file]')
+    if (!button) return
+    const viewer = button.closest('[data-private-file-viewer]')
+    const image = viewer.querySelector('[data-preview-image]')
+    const pdf = viewer.querySelector('[data-preview-pdf]')
+    const message = viewer.querySelector('[data-preview-message]')
+    const download = viewer.querySelector('[data-preview-download]')
+    viewer.querySelectorAll('[data-preview-file]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)))
+    viewer.querySelector('[data-preview-name]').textContent = button.dataset.fileName
+    image.hidden = true
+    pdf.hidden = true
+    image.removeAttribute('src')
+    pdf.removeAttribute('src')
+    download.href = button.dataset.downloadUrl
+    download.hidden = false
+    const mime = button.dataset.fileMime || ''
+    const name = button.dataset.fileName.toLowerCase()
+    const isImage = ['image/jpeg', 'image/png', 'image/webp'].includes(mime) || (!mime && /\.(jpe?g|png|webp)$/.test(name))
+    const isPdf = mime === 'application/pdf' || (!mime && name.endsWith('.pdf'))
+    message.hidden = isImage || isPdf
+    if (isImage) {
+        image.alt = button.dataset.fileName
+        image.onerror = () => {
+            image.hidden = true
+            message.hidden = false
+            message.textContent = 'The image preview could not be loaded. Use the original file link below.'
+        }
+        image.src = button.dataset.previewUrl
+        image.hidden = false
+    } else if (isPdf) {
+        pdf.src = button.dataset.previewUrl
+        pdf.hidden = false
+    } else {
+        message.textContent = 'This file type cannot be displayed here. Open or download the original file below.'
+    }
+})
+
+document.addEventListener('change', (event) => {
+    const checkbox = event.target
+    if (!(checkbox instanceof HTMLInputElement) || !checkbox.matches('[data-select-document-reviews]')) return
+
+    Array.from(checkbox.form.elements).forEach((input) => {
+        if (input instanceof HTMLInputElement && input.name === 'document_ids[]') {
+            input.checked = checkbox.checked
+        }
+    })
+})
+
+document.addEventListener('submit', async (event) => {
+    const form = event.target
+    if (!(form instanceof HTMLFormElement) || !form.matches('[data-document-batch-upload]')) return
+
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    if (form.dataset.uploading === 'true') return
+
+    const inputs = Array.from(form.elements).filter((input) => input instanceof HTMLInputElement && input.type === 'file')
+    const selected = inputs.filter((input) => input.files.length > 0)
+    const section = form.closest('section')
+    const progress = section.querySelector('[data-document-upload-progress]')
+    const errors = section.querySelector('[data-document-upload-errors]')
+    errors.replaceChildren()
+
+    if (selected.length === 0) {
+        progress.textContent = 'Choose at least one document to upload.'
+        return
+    }
+
+    const oversized = selected.filter((input) => input.files[0].size > 10 * 1024 * 1024)
+    if (oversized.length > 0) {
+        progress.textContent = 'Each document must be 10 MB or smaller. Choose smaller files and try again.'
+        return
+    }
+
+    form.dataset.uploading = 'true'
+    const button = Array.from(form.elements).find((element) => element instanceof HTMLButtonElement && element.type === 'submit')
+    button.disabled = true
+    inputs.forEach((input) => { input.disabled = true })
+    let completed = 0
+
+    try {
+        for (const [index, input] of selected.entries()) {
+            progress.textContent = `Uploading ${index + 1} of ${selected.length}: ${input.dataset.documentLabel}…`
+            const data = new FormData()
+            data.set('_token', form.querySelector('[name="_token"]').value)
+            data.set('document_type', input.dataset.documentType)
+            data.set('document', input.files[0])
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: data,
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                })
+                const result = await response.json().catch(() => ({}))
+                if (!response.ok || !result.id) {
+                    const details = Object.values(result.errors ?? {}).flat().join(' ')
+                    throw new Error(details || result.message || 'The document could not be uploaded. Please try again.')
+                }
+                completed++
+                input.value = ''
+            } catch (error) {
+                const item = document.createElement('li')
+                item.textContent = `${input.dataset.documentLabel}: ${error.message}`
+                errors.append(item)
+            }
+        }
+
+        progress.textContent = `${completed} of ${selected.length} documents uploaded privately for staff review.`
+        if (completed === selected.length) {
+            window.location.hash = 'documents'
+            window.location.reload()
+        } else if (completed > 0) {
+            const item = document.createElement('li')
+            const link = document.createElement('a')
+            link.href = window.location.href.split('#')[0] + '#documents'
+            link.textContent = 'Refresh to see the uploaded documents, or retry the remaining files.'
+            link.className = 'underline'
+            item.append(link)
+            errors.append(item)
+        }
+    } finally {
+        form.dataset.uploading = 'false'
+        button.disabled = false
+        inputs.forEach((input) => { input.disabled = false })
+    }
+}, true)
+
 document.addEventListener('click', (event) => {
     const menu = document.getElementById('public-mobile-menu')
     if (!(menu instanceof HTMLDialogElement)) return

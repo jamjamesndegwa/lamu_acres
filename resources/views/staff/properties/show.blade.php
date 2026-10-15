@@ -2,33 +2,15 @@
     <p class="mt-2 text-sm text-stone-600">{{ $property->reference }} · {{ $property->status->label() }} · {{ $property->locationLabel() }}</p>
     @include('staff.properties.partials.tabs')
 
+    @include('staff.properties.partials.approval-guide')
+
     @if ($tab === 'overview')
         <div class="mt-6 flex flex-wrap gap-2">
             <a href="{{ route('staff.properties.edit', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Edit details</a>
             <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'status']) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Change status</a>
             <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'portion']) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Partial sale</a>
-            @if (in_array(\App\Enums\PropertyStatus::Published, $property->allowedTransitions(), true))
-                <form method="POST" action="{{ route('staff.properties.listing', $property) }}" data-turbo-frame="_top" data-confirm="Publish this listing? Every verification and listing check must be clear.">
-                    @csrf
-                    <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Approve and publish</button>
-                </form>
-            @endif
         </div>
-        <section class="mt-6 max-w-4xl rounded-2xl border border-sand-200 bg-white p-5">
-            <h2 class="font-semibold text-lamu-900">Publication checks</h2>
-            @if ($blockers === [])
-                <p class="mt-2 text-sm text-stone-600">No blocking issue. Publication still needs a staff decision.</p>
-            @else
-                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-stone-700">
-                    @foreach ($blockers as $blocker)
-                        <li>{{ $blocker }}</li>
-                    @endforeach
-                </ul>
-            @endif
-            @error('listing')
-                <p class="mt-2 text-sm text-red-700" role="alert">{{ $message }}</p>
-            @enderror
-        </section>
+        <h2 id="listing-details" class="mt-8 text-lg font-semibold text-lamu-900">Listing details</h2>
         <dl class="mt-6 grid max-w-4xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
             <div><dt class="text-sm text-stone-500">Type</dt><dd>{{ $property->property_type?->label() ?? 'Not recorded' }}</dd></div>
             <div><dt class="text-sm text-stone-500">Land use</dt><dd>{{ $property->land_use?->label() ?? 'Not recorded' }}</dd></div>
@@ -61,6 +43,8 @@
             @endforelse
         </ul>
     @elseif ($tab === 'owners')
+        <h2 class="mt-6 text-lg font-semibold text-lamu-900">Ownership and seller documents</h2>
+        <p class="mt-1 max-w-3xl text-sm text-stone-600">Review the uploaded files below, then confirm the owner's relationship to the property. These are separate decisions.</p>
         <ul class="mt-6 max-w-3xl space-y-3">
             @forelse ($property->owners as $owner)
                 <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
@@ -98,6 +82,15 @@
         <p class="mt-2 text-sm text-stone-600">The account must already be a seller. This does not create a new user.</p>
         @include('staff.properties.partials.ownership-documents')
     @elseif ($tab === 'verification')
+        <div class="mt-6 rounded-2xl border border-sand-200 bg-white p-5">
+            <h2 class="font-semibold text-lamu-900">Record verification decisions</h2>
+            <p class="mt-1 text-sm text-stone-600">Use the verification desk to review each critical check, record evidence and clear exceptions. Approving the seller's files alone does not complete the passport.</p>
+            @if (auth()->user()->hasPermission('staff.verification'))
+                <a href="{{ route('staff.verification.show', $property) }}" class="mt-3 inline-flex rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Open verification desk</a>
+            @else
+                <p class="mt-3 text-sm text-stone-600">Ask verification staff to complete these decisions.</p>
+            @endif
+        </div>
         <dl class="mt-6 grid max-w-3xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
             <div><dt class="text-sm text-stone-500">Public review level</dt><dd>{{ $property->verification_level?->label() ?? 'Not reviewed' }}</dd></div>
             <div><dt class="text-sm text-stone-500">Last review</dt><dd>{{ $property->last_reviewed_at?->format('j M Y') ?? 'No review date recorded' }}</dd></div>
@@ -127,6 +120,7 @@
         @if (auth()->user()->hasPermission('staff.verification'))
             <a href="{{ route('staff.verification.show', $property) }}" class="mt-4 inline-block text-sm font-medium text-lamu-800">Open the verification desk</a>
         @endif
+        @include('staff.properties.partials.ownership-documents')
     @elseif ($tab === 'marketing')
         <dl class="mt-6 grid max-w-3xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
             <div><dt class="text-sm text-stone-500">Marketing role</dt><dd>{{ $property->marketing_role?->label() ?? 'Not recorded' }}</dd></div>

@@ -26,6 +26,7 @@ use App\Services\Seller\SellerPortal;
 use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -126,6 +127,31 @@ class SellerDeskController extends Controller
         return back()->with('status', 'Document review recorded.');
     }
 
+    public function approveDocuments(Request $request, Property $property, SellerPortal $portal): RedirectResponse
+    {
+        $data = $request->validate([
+            'document_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'document_ids.*' => ['required', 'integer', 'distinct'],
+            'reason' => ['required', 'string', 'min:8', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($request, $property, $portal, $data): void {
+            $documents = $property->ownershipDocuments()
+                ->whereIn('id', $data['document_ids'])
+                ->lockForUpdate()
+                ->get();
+
+            abort_unless($documents->count() === count($data['document_ids']), 404);
+            abort_if($documents->contains(fn (OwnershipDocument $document): bool => ! $document->hasFile()), 422, 'Only uploaded documents can be approved.');
+
+            foreach ($documents as $document) {
+                $portal->reviewDocument($document, $request->user(), VerificationItemState::Verified, $data['reason'], $document->expires_at?->format('Y-m-d'));
+            }
+        });
+
+        return back()->with('status', count($data['document_ids']).' documents approved.');
+    }
+
     public function documentNotApplicable(Request $request, Property $property, SellerPortal $portal): RedirectResponse
     {
         $data = $request->validate([
@@ -148,6 +174,17 @@ class SellerDeskController extends Controller
             'action' => 'ownership_document_opened',
             'changes' => ['document' => $ownershipDocument->id, 'type' => $ownershipDocument->document_type?->value],
         ]);
+
+        if ($request->boolean('inline')) {
+            $mime = Storage::disk($ownershipDocument->disk)->mimeType($ownershipDocument->path);
+            abort_unless(in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], true), 415);
+
+            return Storage::disk($ownershipDocument->disk)->response($ownershipDocument->path, $ownershipDocument->original_name, [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'private, no-store',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
 
         if ($ownershipDocument->disk !== 'local') {
             return redirect()->away(Storage::disk($ownershipDocument->disk)->temporaryUrl($ownershipDocument->path, now()->addMinutes(15)));

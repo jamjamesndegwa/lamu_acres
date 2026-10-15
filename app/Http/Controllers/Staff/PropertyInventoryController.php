@@ -127,6 +127,8 @@ class PropertyInventoryController extends Controller
             $tab = 'overview';
         }
 
+        $requirements = app(SellerPortal::class)->documentRequirements($property);
+
         return view('staff.properties.show', [
             'property' => $property,
             'tab' => $tab,
@@ -134,7 +136,8 @@ class PropertyInventoryController extends Controller
             'roads' => RoadAccess::cases(),
             'documentStates' => DocumentCheckState::cases(),
             'blockers' => app(VerificationOperations::class)->blockers($property),
-            'requirements' => app(SellerPortal::class)->documentRequirements($property),
+            'requirements' => $requirements,
+            'approvalSteps' => app(VerificationOperations::class)->approvalSteps($property, $requirements),
             'infrastructure' => $property->county_id
                 ? InfrastructureFeature::query()->active()->where('county_id', $property->county_id)->orderBy('name')->get()
                 : collect(),

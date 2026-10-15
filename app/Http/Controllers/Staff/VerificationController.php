@@ -10,6 +10,7 @@ use App\Models\EvidenceFile;
 use App\Models\Property;
 use App\Models\User;
 use App\Models\VerificationItem;
+use App\Services\Seller\SellerPortal;
 use App\Services\Verification\VerificationDesk;
 use App\Services\Verification\VerificationOperations;
 use App\Support\ApprovalsReturn;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class VerificationController extends Controller
 {
@@ -38,14 +40,22 @@ class VerificationController extends Controller
         abort_unless($request->user()->hasPermission('staff.verification'), 403);
 
         $desk->seed($property);
-        $property->load(['passport', 'verificationItems.reviewer', 'verificationItems.files', 'owners.user']);
+        $property->load(['passport', 'verificationItems.reviewer', 'verificationItems.files', 'owners.user', 'ownershipDocuments.reviewer']);
 
         return view('staff.verification.show', [
             'property' => $property,
+            'requirements' => app(SellerPortal::class)->documentRequirements($property),
             'states' => VerificationItemState::cases(),
             'sensitivities' => EvidenceSensitivity::cases(),
             'overrides' => VerificationOverride::cases(),
         ]);
+    }
+
+    public function previewEvidence(Request $request, EvidenceFile $evidenceFile, VerificationDesk $desk): Response
+    {
+        abort_unless($request->user()->hasPermission('staff.verification'), 403);
+
+        return $desk->download($evidenceFile, $request->user(), $request->boolean('inline'));
     }
 
     public function review(Request $request, VerificationItem $verificationItem, VerificationDesk $desk): RedirectResponse

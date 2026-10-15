@@ -5,6 +5,12 @@
         <p class="mt-2 text-sm text-stone-700">Critical exception: {{ $property->passport->critical_exception }}</p>
     @endif
 
+    <div class="mt-6 grid items-start gap-6 xl:grid-cols-2">
+        <div class="xl:sticky xl:top-4">
+            <x-private-file-viewer :documents="$property->ownershipDocuments" :evidence="$property->verificationItems->flatMap->files" />
+            <a href="#seller-documents" class="mt-3 inline-block text-sm font-medium text-lamu-800 underline">Review and batch approve seller documents</a>
+        </div>
+        <div>
     <form method="POST" action="{{ route('staff.verification.override', $property) }}" data-turbo-frame="_top" data-confirm="Save this verification override?" class="mt-6 flex flex-wrap items-end gap-3">
         @csrf
         @include('admin.approvals.return-field')
@@ -80,4 +86,7 @@
             </article>
         @endforeach
     </div>
+        </div>
+    </div>
+    @include('staff.properties.partials.ownership-documents', ['showViewer' => false])
 </x-workspace-layout>

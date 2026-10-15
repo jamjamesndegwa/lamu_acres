@@ -9,6 +9,45 @@ use Tests\Feature\Foundation\FoundationTestCase;
 
 class PropertyWorkspaceTest extends FoundationTestCase
 {
+    public function test_staff_see_ordered_approval_steps_with_actions_and_outstanding_checks(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
+        $property = Property::factory()->create(['status' => PropertyStatus::Review]);
+
+        $response = $this->actingAs($staff)->get(route('staff.properties.show', $property));
+
+        $response->assertOk()
+            ->assertSeeInOrder([
+                'Staff approval workflow', 'Check listing details', 'Review seller documents',
+                'Verify the ownership relationship', 'Confirm marketing authority',
+                'Check public photographs', 'Complete the verification passport', '7. Approve and publish',
+            ])
+            ->assertSee('Publication is blocked.')
+            ->assertSee('At least one public photograph is required.')
+            ->assertSee(route('staff.properties.edit', $property), false)
+            ->assertSee(route('staff.properties.media', $property), false);
+
+        $steps = collect($response->viewData('approvalSteps'))->keyBy('key');
+        $this->assertFalse($steps['photos']['complete']);
+        $this->assertFalse($steps['documents']['complete']);
+        $this->assertFalse($steps['verification']['complete']);
+    }
+
+    public function test_verification_step_clears_after_critical_checks_are_reviewed(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
+        $property = Property::factory()->create(['status' => PropertyStatus::Review]);
+        $this->clearCriticalVerification($property, $staff);
+
+        $response = $this->actingAs($staff)->get(route('staff.properties.show', [$property, 'tab' => 'verification']));
+
+        $response->assertOk()->assertSee('Open verification desk')
+            ->assertSee(route('staff.verification.show', $property), false);
+        $step = collect($response->viewData('approvalSteps'))->firstWhere('key', 'verification');
+        $this->assertTrue($step['complete']);
+        $this->assertSame([], $step['issues']);
+    }
+
     public function test_staff_property_screens_expose_the_workspace_tabs_and_review_queues(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();

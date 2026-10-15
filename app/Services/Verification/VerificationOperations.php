@@ -13,10 +13,10 @@ use App\Enums\VerificationQueue;
 use App\Models\MarketingAuthority;
 use App\Models\Property;
 use App\Models\PropertyMedia;
-use App\Services\Media\PropertyMediaLibrary;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
+use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -180,31 +180,37 @@ class VerificationOperations
      */
     public function listingBlockers(Property $property): array
     {
+        return array_merge(...array_values($this->listingBlockerGroups($property)));
+    }
+
+    /** @return array<string, list<string>> */
+    public function listingBlockerGroups(Property $property): array
+    {
         $property->loadMissing(['media', 'owners', 'authorities']);
-        $blockers = [];
+        $blockers = ['details' => [], 'photos' => [], 'owners' => [], 'authority' => [], 'parcel' => []];
 
         if ($property->purpose === null) {
-            $blockers[] = 'Listing purpose (sale or lease) is not set.';
+            $blockers['details'][] = 'Listing purpose (sale or lease) is not set.';
         } elseif ($property->priceBasis() !== PriceBasis::Total && $property->priceBasis()->purpose() !== $property->purpose) {
-            $blockers[] = 'The price basis does not match a '.strtolower($property->purpose->label()).' listing.';
+            $blockers['details'][] = 'The price basis does not match a '.strtolower($property->purpose->label()).' listing.';
         }
 
         if (blank($property->title) || (blank($property->summary) && blank($property->description))) {
-            $blockers[] = 'Title and a summary or description are required.';
+            $blockers['details'][] = 'Title and a summary or description are required.';
         }
 
         if ($property->county_id === null || $property->locality_id === null) {
-            $blockers[] = 'County and locality are not set.';
+            $blockers['details'][] = 'County and locality are not set.';
         }
 
         if ((float) $property->acreage <= 0) {
-            $blockers[] = 'Acreage is not recorded.';
+            $blockers['details'][] = 'Acreage is not recorded.';
         } elseif ($property->offered_acreage !== null && (float) $property->offered_acreage > $property->remainingAcreage() + 0.0001) {
-            $blockers[] = 'The acreage offered is larger than the land still held.';
+            $blockers['details'][] = 'The acreage offered is larger than the land still held.';
         }
 
         if ($property->price_amount === null) {
-            $blockers[] = $property->isLease() ? 'Asking rent is not recorded.' : 'Asking price is not recorded.';
+            $blockers['details'][] = $property->isLease() ? 'Asking rent is not recorded.' : 'Asking price is not recorded.';
         }
 
         $hasPublicPhoto = $property->media->contains(
@@ -212,12 +218,12 @@ class VerificationOperations
         );
 
         if (! $hasPublicPhoto) {
-            $blockers[] = 'At least one public photograph is required.';
+            $blockers['photos'][] = 'At least one public photograph is required.';
         }
 
         if ($property->owners->isNotEmpty()) {
             if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
-                $blockers[] = 'No ownership or authority relationship has been verified.';
+                $blockers['owners'][] = 'No ownership or authority relationship has been verified.';
             }
 
             $authorised = $property->purpose !== null && $property->authorities->contains(
@@ -225,17 +231,48 @@ class VerificationOperations
             );
 
             if (! $authorised) {
-                $blockers[] = 'No active marketing authority covers this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+                $blockers['authority'][] = 'No active marketing authority covers this '.strtolower($property->purpose?->label() ?? 'listing').'.';
             }
         }
 
         $conflict = $this->parcelConflict($property);
 
         if ($conflict !== null) {
-            $blockers[] = 'Parcel '.$property->parcel_identifier.' is already marketed as '.$conflict->reference.'.';
+            $blockers['parcel'][] = 'Parcel '.$property->parcel_identifier.' is already marketed as '.$conflict->reference.'.';
         }
 
         return $blockers;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $requirements
+     * @return list<array{key: string, title: string, instruction: string, issues: list<string>, complete: bool, tab: string, action: string}>
+     */
+    public function approvalSteps(Property $property, array $requirements): array
+    {
+        $groups = $this->listingBlockerGroups($property);
+        $documentIssues = [];
+
+        foreach ($requirements as $requirement) {
+            if (in_array($requirement['requirement'], ['required', 'conditional'], true)
+                && ! in_array($requirement['state'], [VerificationItemState::Verified->label(), VerificationItemState::NotApplicable->label()], true)) {
+                $documentIssues[] = $requirement['label'].': '.$requirement['state'].'.';
+            }
+        }
+
+        $steps = [
+            ['details', 'Check listing details', 'Confirm the parcel, location, acreage, asking price and description. Resolve duplicate parcel listings before publication.', array_merge($groups['details'], $groups['parcel']), 'overview', 'Edit listing details'],
+            ['documents', 'Review seller documents', 'Open the private files and approve the documents you have checked. Review required and conditional documents; optional files can be reviewed when supplied.', $documentIssues, 'owners', 'Review uploaded documents'],
+            ['owners', 'Verify the ownership relationship', 'Check the identity and authority of the linked owner or representative, then record the ownership verification.', $groups['owners'], 'owners', 'Verify ownership'],
+            ['authority', 'Confirm marketing authority', 'Confirm that an active, unexpired authority covers the sale or lease being advertised. A signed attachment also needs an authority decision.', $groups['authority'], 'marketing', 'Review marketing authority'],
+            ['photos', 'Check public photographs', 'Review the gallery and cover image. At least one public photograph is required.', $groups['photos'], 'media', 'Review photographs'],
+            ['verification', 'Complete the verification passport', 'Record a decision for every critical check and resolve overrides or critical exceptions. Document approvals do not automatically verify these checks.', $this->passportBlockers($property), 'verification', 'Complete verification checks'],
+        ];
+
+        return array_map(fn (array $step): array => [
+            'key' => $step[0], 'title' => $step[1], 'instruction' => $step[2],
+            'issues' => $step[3], 'complete' => $step[3] === [], 'tab' => $step[4], 'action' => $step[5],
+        ], $steps);
     }
 
     /**

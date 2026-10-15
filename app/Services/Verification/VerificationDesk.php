@@ -202,7 +202,7 @@ class VerificationDesk
         ]);
     }
 
-    public function download(EvidenceFile $file, User $user): Response
+    public function download(EvidenceFile $file, User $user, bool $inline = false): Response
     {
         $allowed = $user->hasPermission('staff.verification') || $this->activeGrant($file, $user) !== null;
 
@@ -213,6 +213,17 @@ class VerificationDesk
         ]);
 
         abort_unless($allowed, 403);
+
+        if ($inline) {
+            $mime = Storage::disk($file->disk)->mimeType($file->path);
+            abort_unless(in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], true), 415);
+
+            return Storage::disk($file->disk)->response($file->path, $file->original_name, [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'private, no-store',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
 
         if ($file->disk !== 'local') {
             return redirect()->away(Storage::disk($file->disk)->temporaryUrl($file->path, now()->addMinutes(15)));

@@ -37,6 +37,8 @@
         @endif
     </section>
 
+    @include('seller.properties.partials.submission-guide')
+
     @if ($openRequests->isNotEmpty() && $isSubmitter)
         <section id="requests" class="mt-6 max-w-3xl space-y-3">
             <h2 class="font-semibold text-lamu-900">Requests from staff</h2>
@@ -117,11 +119,18 @@
             <p class="mt-3 text-sm text-stone-600">No photographs yet. At least one is needed before you submit.</p>
         @endif
         @can('manageMedia', $property)
-            <form method="POST" action="{{ route('seller.properties.photos.store', $property) }}" enctype="multipart/form-data" data-turbo-frame="_top" class="mt-4 flex flex-wrap items-end gap-3">
+            <form id="seller-photo-uploads" method="POST" action="{{ route('seller.properties.photos.store', $property) }}" enctype="multipart/form-data" data-turbo-frame="_top" class="mt-4 flex flex-wrap items-end gap-3">
                 @csrf
-                <x-upload-manager name="photo" label="Add a photograph (JPEG, PNG or WebP)" accept="image/jpeg,image/png,image/webp" required />
-                <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload photo</button>
+                <x-upload-manager name="photos[]" label="Select photographs (JPEG, PNG or WebP, up to 5 MB each)" accept="image/jpeg,image/png,image/webp" multiple required />
+                <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload selected photos</button>
             </form>
+            <p class="mt-2 text-sm text-stone-600">Select several images at once. A listing can hold up to 12 photographs.</p>
+            @error('photos')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
+            @foreach ($errors->get('photos.*') as $messages)
+                @foreach ($messages as $message)
+                    <p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>
+                @endforeach
+            @endforeach
             @error('photo')<p class="mt-1 text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
         @endcan
     </section>
@@ -129,14 +138,36 @@
     <section id="documents" class="mt-8 max-w-3xl">
         <h2 class="font-semibold text-lamu-900">Private ownership documents</h2>
         <p class="mt-1 text-sm text-stone-600">Only you and verification staff can open these. They are never shown on the public listing. Uploading a document does not mean it has been accepted.</p>
+        @unless (in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true))
+            <form id="seller-document-uploads" method="POST" action="{{ route('seller.properties.documents.store', $property) }}" enctype="multipart/form-data" data-document-batch-upload data-turbo="false" class="mt-4 rounded-2xl border border-sand-200 bg-white p-4">
+                @csrf
+                <p class="text-sm text-stone-600">Choose a file for each document you want to provide, then upload all selected files below. PDF, JPG or PNG, up to 10 MB per file. Leave the others blank.</p>
+                <noscript><p class="mt-2 text-sm text-red-700">Enable JavaScript to upload the selected documents together.</p></noscript>
+            </form>
+        @endunless
         <ul class="mt-3 space-y-2 text-sm">
             @foreach ($requirements as $requirement)
-                <li class="flex flex-wrap justify-between gap-2 rounded-xl border border-sand-200 bg-white px-4 py-3">
-                    <span><span class="font-medium text-lamu-900">{{ $requirement['label'] }}</span> · {{ $requirementLabels[$requirement['requirement']] ?? $requirement['requirement'] }}<br><span class="text-stone-600">{{ $requirement['reason'] }}</span></span>
-                    <x-status-badge :label="$requirement['state']" />
+                <li class="rounded-xl border border-sand-200 bg-white px-4 py-3">
+                    <div class="flex flex-wrap justify-between gap-2">
+                        <span><span class="font-medium text-lamu-900">{{ $requirement['label'] }}</span> · {{ $requirementLabels[$requirement['requirement']] ?? $requirement['requirement'] }}<br><span class="text-stone-600">{{ $requirement['reason'] }}</span></span>
+                        <x-status-badge :label="$requirement['state']" />
+                    </div>
+                    @if ($requirement['type'] && ! in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true))
+                        <label class="mt-3 block text-sm">
+                            <span class="font-medium">Choose {{ $requirement['label'] }}</span>
+                            <input type="file" name="documents[{{ $requirement['type'] }}]" form="seller-document-uploads" data-document-type="{{ $requirement['type'] }}" data-document-label="{{ $requirement['label'] }}" accept=".pdf,image/jpeg,image/png" class="mt-1 block w-full text-sm">
+                        </label>
+                    @endif
                 </li>
             @endforeach
         </ul>
+        @unless (in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true))
+            <div class="mt-4 space-y-3">
+                <p data-document-upload-progress role="status" aria-live="polite" class="text-sm text-stone-700"></p>
+                <ul data-document-upload-errors role="alert" class="space-y-1 text-sm text-red-700"></ul>
+                <button type="submit" form="seller-document-uploads" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Upload all selected documents</button>
+            </div>
+        @endunless
 
         @if ($property->ownershipDocuments->isNotEmpty())
             <h3 class="mt-5 text-sm font-medium text-lamu-900">Uploaded</h3>
@@ -154,25 +185,6 @@
                 @endforeach
             </ul>
         @endif
-
-        @unless (in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true))
-            <form method="POST" action="{{ route('seller.properties.documents.store', $property) }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Store this document privately for staff review?" class="mt-4 space-y-3 rounded-2xl border border-sand-200 bg-white p-4">
-                @csrf
-                <label class="block text-sm">
-                    <span class="font-medium">Document type</span>
-                    <select name="document_type" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-                        @foreach (\App\Enums\OwnershipDocumentType::cases() as $type)
-                            <option value="{{ $type->value }}" @selected(old('document_type') === $type->value)>{{ $type->label() }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <x-upload-manager name="document" label="File (PDF, JPG or PNG, up to 10 MB)" accept=".pdf,image/jpeg,image/png" required />
-                @foreach (['document_type', 'document'] as $field)
-                    @error($field)<p class="text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
-                @endforeach
-                <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload privately</button>
-            </form>
-        @endunless
     </section>
 
     <section id="verification" class="mt-8 max-w-3xl">

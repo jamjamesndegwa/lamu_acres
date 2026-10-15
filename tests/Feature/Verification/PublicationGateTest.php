@@ -12,16 +12,28 @@ use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
-use App\Models\MarketingAuthority;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\Broker\PropertySubmission;
-use App\Services\Inventory\PropertyInventory;
 use Illuminate\Validation\ValidationException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PublicationGateTest extends FoundationTestCase
 {
+    public function test_workspace_reports_ready_only_when_publication_gates_are_clear(): void
+    {
+        [$staff, $seller, $property] = $this->createEligibleProperty();
+        $this->clearCriticalVerification($property, $staff);
+
+        $response = $this->actingAs($staff)->get(route('staff.properties.show', $property));
+
+        $response->assertOk()->assertSee('Publication checks are clear.')
+            ->assertSee('Confirm that your document review is complete')
+            ->assertDontSee('Publication is blocked.');
+        $this->assertSame([], $response->viewData('blockers'));
+        $this->assertSame(PropertyStatus::Review, $property->fresh()->status);
+    }
+
     public function test_all_publication_paths_blocked_when_unverified(): void
     {
         [$staff, $seller, $property] = $this->createEligibleProperty();

@@ -25,7 +25,7 @@
     </div>
 @endif
 
-<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-seller-listing-form class="mt-6 max-w-3xl space-y-10">
+<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-seller-listing-form @if ($bulkSave ?? false) data-owner-bulk-save @endif class="mt-6 max-w-3xl space-y-10">
     @csrf
     @if ($method !== 'POST')
         @method($method)
@@ -285,6 +285,11 @@
     </section>
 
     <div class="flex flex-wrap items-center gap-3">
+        @if ($bulkSave ?? false)
+            <p data-owner-save-progress role="status" aria-live="polite" class="text-sm text-stone-700"></p>
+            <ul data-owner-save-errors role="alert" class="space-y-1 text-sm text-red-700"></ul>
+            <p class="text-sm text-stone-600">This saves all the details above and uploads the photographs and documents you have selected on this page. Files already uploaded are kept.</p>
+        @endif
         <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">{{ $submitLabel }}</button>
         <span class="text-sm text-stone-600">Saving does not submit the listing. You will review and submit it on the next page.</span>
     </div>

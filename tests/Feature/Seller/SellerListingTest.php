@@ -2,14 +2,11 @@
 
 namespace Tests\Feature\Seller;
 
-use App\Enums\AuthorityScope;
-use App\Enums\AuthorityStatus;
 use App\Enums\LandTenure;
 use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
-use App\Enums\OwnershipDocumentType;
 use App\Enums\OwnershipStructure;
 use App\Enums\ParcelReferenceType;
 use App\Enums\PriceBasis;
@@ -19,11 +16,8 @@ use App\Enums\PropertyType;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
-use App\Models\PropertyMedia;
 use App\Models\User;
 use App\Notifications\PropertySubmittedNotification;
-use App\Services\Media\PropertyMediaLibrary;
-use App\Services\Seller\SellerPortal;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -203,6 +197,113 @@ class SellerListingTest extends FoundationTestCase
                 'relationship' => 'owner',
             ])
             ->assertForbidden();
+    }
+
+    public function test_seller_uploads_multiple_photos_in_one_request(): void
+    {
+        config([
+            'filesystems.disks.r2.bucket' => 'public-photos',
+            'filesystems.disks.r2.url' => 'https://cdn.example.com',
+            'filesystems.disks.r2_private.bucket' => 'private-photos',
+        ]);
+        Storage::fake('r2');
+        Storage::fake('r2_private');
+        $seller = User::factory()->withRoles('seller')->create();
+        $property = Property::factory()->listedIn($this->createLocality())->create([
+            'submitted_by' => $seller->id,
+            'status' => PropertyStatus::Draft,
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.properties.photos.store', $property), [
+                'photos' => [
+                    UploadedFile::fake()->image('first.jpg'),
+                    UploadedFile::fake()->image('second.png'),
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $photos = $property->media()->orderBy('position')->get();
+        $this->assertSame(['first.jpg', 'second.png'], $photos->pluck('original_name')->all());
+        $this->assertSame([1, 2], $photos->pluck('position')->all());
+        $this->assertSame([true, false], $photos->pluck('is_cover')->all());
+        foreach ($photos as $photo) {
+            $this->assertSame('r2_private', $photo->disk);
+            $this->assertSame('r2', $photo->public_disk);
+            $this->assertStringStartsWith('https://cdn.example.com/property-derivatives/', $photo->public_url);
+            Storage::disk('r2_private')->assertExists($photo->path);
+            Storage::disk('r2')->assertExists($photo->public_path);
+        }
+    }
+
+    public function test_invalid_photo_rejects_the_entire_selection(): void
+    {
+        Storage::fake('local');
+        $seller = User::factory()->withRoles('seller')->create();
+        $property = Property::factory()->listedIn($this->createLocality())->create([
+            'submitted_by' => $seller->id,
+            'status' => PropertyStatus::Draft,
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.properties.photos.store', $property), [
+                'photos' => [
+                    UploadedFile::fake()->image('valid.jpg'),
+                    UploadedFile::fake()->create('document.pdf', 10, 'application/pdf'),
+                ],
+            ])
+            ->assertSessionHasErrors('photos.1');
+
+        $this->assertSame(0, $property->media()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_batch_cannot_exceed_the_remaining_listing_photo_slots(): void
+    {
+        Storage::fake('local');
+        $seller = User::factory()->withRoles('seller')->create();
+        $property = Property::factory()->listedIn($this->createLocality())->create([
+            'submitted_by' => $seller->id,
+            'status' => PropertyStatus::Draft,
+        ]);
+        for ($index = 0; $index < 11; $index++) {
+            $this->attachPublicPhoto($property, $seller);
+        }
+
+        $this->actingAs($seller)
+            ->post(route('seller.properties.photos.store', $property), [
+                'photos' => [
+                    UploadedFile::fake()->image('first.jpg'),
+                    UploadedFile::fake()->image('second.jpg'),
+                ],
+            ])
+            ->assertSessionHasErrors(['photos' => 'A listing can hold up to 12 photographs.']);
+
+        $this->assertSame(11, $property->media()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
+    public function test_unreadable_photo_rolls_back_files_already_uploaded_in_the_batch(): void
+    {
+        Storage::fake('local');
+        $seller = User::factory()->withRoles('seller')->create();
+        $property = Property::factory()->listedIn($this->createLocality())->create([
+            'submitted_by' => $seller->id,
+            'status' => PropertyStatus::Draft,
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.properties.photos.store', $property), [
+                'photos' => [
+                    UploadedFile::fake()->image('valid.jpg'),
+                    UploadedFile::fake()->create('broken.jpg', 10, 'image/jpeg'),
+                ],
+            ])
+            ->assertSessionHasErrors(['photo' => 'That image could not be read.']);
+
+        $this->assertSame(0, $property->media()->count());
+        $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
     public function test_seller_can_manage_listing_photos(): void
