@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Foundation;
 
-use App\Livewire\WorkspaceSidebar;
 use App\Livewire\WorkspaceSubnav;
 use App\Models\OtpChallenge;
 use App\Models\Role;
@@ -36,6 +35,29 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->assertAuthenticated();
         $this->assertNotSame($sessionId, session()->getId());
         $this->assertNotSame($token, session()->token());
+    }
+
+    public function test_new_buyer_can_register_log_out_and_sign_in_again(): void
+    {
+        $this->get(route('login'))->assertOk()->assertSee('Create a buyer account')->assertSee('Welcome back');
+        $this->get(route('register'))->assertOk()->assertSee('Create buyer account');
+
+        $this->post(route('register'), [
+            'name' => 'Coastal Buyer', 'email' => 'coastal-buyer@example.com',
+            'password' => 'password', 'password_confirmation' => 'password',
+        ])->assertRedirect(route('buyer.dashboard'));
+        $buyer = User::query()->where('email', 'coastal-buyer@example.com')->firstOrFail();
+        $this->assertAuthenticatedAs($buyer);
+        $this->assertTrue($buyer->hasRole('buyer'));
+        $this->get(route('buyer.dashboard'))->assertOk();
+
+        $this->post(route('logout'))->assertRedirect(route('home'));
+        $this->assertGuest();
+        $this->post(route('login'), [
+            'email' => 'coastal-buyer@example.com', 'password' => 'password',
+        ])->assertRedirect(route('buyer.dashboard'));
+        $this->assertAuthenticatedAs($buyer);
+        $this->get(route('buyer.dashboard'))->assertOk();
     }
 
     public function test_registration_creates_a_buyer_and_ignores_a_posted_role(): void

@@ -1,19 +1,20 @@
 <x-auth-layout title="Login — Lamu Acres">
-    <h1 class="text-2xl font-semibold text-lamu-900">Login</h1>
-    <p class="mt-2 text-sm text-stone-600">Use the email and password for your Lamu Acres account.</p>
+    <p class="text-xs font-semibold uppercase tracking-widest text-stone-500">Your Lamu Acres account</p>
+    <h1 class="home-serif mt-2 text-3xl font-semibold text-lamu-900 sm:text-4xl">Welcome back</h1>
+    <p class="mt-2 text-sm text-stone-600">Sign in to manage your saved properties, enquiries and next steps.</p>
 
     <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-4">
         @csrf
         <div>
             <label for="email" class="block text-sm font-medium">Email</label>
-            <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus autocomplete="username" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+            <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus autocomplete="username" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
             @error('email')
                 <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
             @enderror
         </div>
         <div>
             <label for="password" class="block text-sm font-medium">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+            <input id="password" name="password" type="password" required autocomplete="current-password" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
             @error('password')
                 <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
             @enderror
@@ -22,17 +23,23 @@
             <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
             Remember me
         </label>
-        <button type="submit" class="w-full rounded-full bg-lamu-900 px-4 py-3 text-sm font-medium text-white">Login</button>
+        <button type="submit" class="w-full rounded-full bg-lamu-900 px-4 py-3 text-sm font-medium text-white">Sign in</button>
     </form>
-    <p class="mt-3 text-sm"><a href="{{ route('password.request') }}" class="font-medium text-lamu-800">Forgot password</a></p>
+    <p class="mt-4 text-right text-sm"><a href="{{ route('password.request') }}" class="font-medium text-lamu-800">Forgot password</a></p>
 
-    <form method="POST" action="{{ route('login.phone') }}" class="mt-10 space-y-4 border-t border-sand-200 pt-8">
+    <div class="mt-6 border-t border-sand-200 pt-6 text-center">
+        <p class="text-sm text-stone-600">New to Lamu Acres?</p>
+        <a href="{{ route('register') }}" class="mt-3 inline-flex w-full items-center justify-center rounded-full border border-lamu-900 px-4 py-3 text-sm font-semibold text-lamu-900 hover:bg-sand-50">Create a buyer account</a>
+    </div>
+    <details class="mt-6 border-t border-sand-200 pt-5" @if ($errors->has('phone')) open @endif>
+        <summary class="cursor-pointer text-sm font-medium text-lamu-800">Use phone sign-in instead</summary>
+    <form method="POST" action="{{ route('login.phone') }}" class="mt-4 space-y-4">
         @csrf
         <h2 class="text-lg font-semibold text-lamu-900">Phone sign-in</h2>
-        <p class="text-sm text-stone-600">For public customers. A code is sent only when a delivery provider is configured.</p>
+        <p class="text-sm text-stone-600">Enter your phone number to request a sign-in code.</p>
         <div>
             <label for="phone" class="block text-sm font-medium">Phone</label>
-            <input id="phone" name="phone" type="text" value="{{ old('phone') }}" autocomplete="tel" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+            <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" autocomplete="tel" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
             @error('phone')
                 <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
             @enderror
@@ -40,5 +47,5 @@
         <button type="submit" class="w-full rounded-full border border-lamu-900 px-4 py-3 text-sm font-medium text-lamu-900">Send code</button>
     </form>
 
-    <p class="mt-6 text-sm text-stone-600">No account yet? <a href="{{ route('register') }}" class="font-medium text-lamu-800">Register as a buyer</a></p>
+    </details>
 </x-auth-layout>
