@@ -40,6 +40,11 @@ class PropertyInventoryTest extends FoundationTestCase
         ])->assertSessionHasErrors('status');
 
         $this->actingAs($staff)->put(route('staff.properties.transition', $property), ['status' => 'review'])->assertRedirect();
+        $this->actingAs($staff)->put(route('staff.properties.transition', $property), ['status' => 'published'])->assertSessionHasErrors('listing');
+        $this->assertSame(PropertyStatus::Review, $property->refresh()->status);
+
+        $this->attachPublicPhoto($property, $staff);
+        $this->clearCriticalVerification($property, $staff);
         $this->actingAs($staff)->put(route('staff.properties.transition', $property), ['status' => 'published'])->assertRedirect();
 
         $property->refresh();
@@ -75,7 +80,9 @@ class PropertyInventoryTest extends FoundationTestCase
         $this->assertSame(100_000, $portion->pricePerAcre());
 
         $this->actingAs($staff)->put(route('staff.properties.transition', $portion), ['status' => 'review']);
-        $this->actingAs($staff)->put(route('staff.properties.transition', $portion), ['status' => 'published']);
+        $this->attachPublicPhoto($portion, $staff);
+        $this->clearCriticalVerification($portion, $staff);
+        $this->actingAs($staff)->put(route('staff.properties.transition', $portion), ['status' => 'published'])->assertSessionHasNoErrors();
         $this->actingAs($staff)->post(route('staff.properties.sell-portion', $portion))->assertRedirect();
 
         $this->assertSame(PropertyStatus::Sold, $portion->fresh()->status);

@@ -96,7 +96,7 @@ class SalesController extends Controller
             ->whereHas('owners', fn ($query) => $query
                 ->where('user_id', $request->user()->id)
                 ->where('status', OwnerLinkStatus::Verified)
-                ->whereIn('relationship', [OwnerRelationship::Owner, OwnerRelationship::Authorized]))
+                ->whereIn('relationship', OwnerRelationship::sellerFacing()))
             ->get();
     }
 }

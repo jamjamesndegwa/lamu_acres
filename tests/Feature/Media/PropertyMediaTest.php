@@ -160,6 +160,8 @@ class PropertyMediaTest extends FoundationTestCase
         $property = $inventory->create($staff, $payload);
         $inventory->update($staff, $property, [...$payload, 'price_amount' => 1_200_000]);
         $inventory->transition($staff, $property, PropertyStatus::Review);
+        $this->attachPublicPhoto($property, $staff);
+        $this->clearCriticalVerification($property, $staff);
         $inventory->transition($staff, $property->refresh(), PropertyStatus::Published);
 
         $this->assertSame([1_000_000, 1_200_000], PropertyPriceChange::query()->where('property_id', $property->id)->orderBy('id')->pluck('price_amount')->all());

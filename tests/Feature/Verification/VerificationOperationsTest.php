@@ -22,7 +22,7 @@ class VerificationOperationsTest extends FoundationTestCase
         $this->actingAs($manager)->get(route('staff.verification.new'))->assertForbidden();
         $this->actingAs($seller)->get(route('staff.verification.missing'))->assertForbidden();
 
-        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Shela review']);
+        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Shela review', 'purpose' => 'sale', 'relationship' => 'owner']);
         $property = Property::query()->where('title', 'Shela review')->firstOrFail();
 
         $this->actingAs($officer)->get(route('staff.verification.new'))->assertOk()->assertSee('Shela review')->assertSee('New Reviews');

@@ -29,7 +29,7 @@ class PropertyApprovedNotification extends Notification
             'property_id' => $this->property->id,
             'title' => 'Listing approved',
             'message' => $this->property->title.' is now published.',
-            'url' => route('broker.listings.show', $this->property),
+            'url' => $this->property->submitterUrl(),
         ];
     }
 }

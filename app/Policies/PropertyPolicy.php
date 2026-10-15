@@ -62,8 +62,15 @@ class PropertyPolicy
             return true;
         }
 
-        return (int) $property->submitted_by === (int) $user->id
-            && $user->hasPermission('workspace.broker');
+        if ((int) $property->submitted_by !== (int) $user->id) {
+            return false;
+        }
+
+        if ($user->hasPermission('workspace.broker')) {
+            return true;
+        }
+
+        return $user->hasPermission('workspace.seller') && $property->isEditableBySubmitter();
     }
 
     public function submit(User $user): bool

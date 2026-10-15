@@ -193,7 +193,7 @@ class ApprovalsCentre
     {
         return Property::query()
             ->whereNotNull('submitted_by')
-            ->where('status', '!=', PropertyStatus::Published)
+            ->whereNotIn('status', [PropertyStatus::Published, PropertyStatus::Draft])
             ->with('submitter:id,name')
             ->withExists(['informationRequests as returned' => fn ($query) => $query->whereNull('responded_at')])
             ->latest()

@@ -8,7 +8,6 @@ use App\Models\Locality;
 use App\Models\Property;
 use App\Models\SavedProperty;
 use App\Services\Catalog\AppliedLandFilters;
-use App\Services\Catalog\PreviewLandListings;
 use App\Services\Catalog\PropertyCatalog;
 use App\Services\Catalog\PublicListing;
 use App\Services\Verification\VerificationDesk;
@@ -21,7 +20,7 @@ class LandDirectoryController extends Controller
     public function index(
         Request $request,
         PropertyCatalog $catalog,
-        PreviewLandListings $previewListings,
+        PublicListing $publicListing,
         AppliedLandFilters $appliedFilters,
         ?string $county = null,
         ?string $locality = null,
@@ -29,9 +28,15 @@ class LandDirectoryController extends Controller
         $countyModel = $this->county($county);
         $localityModel = $this->locality($countyModel, $locality);
         $filters = $catalog->filters($request);
+        $listings = $catalog->listings($filters, $countyModel, $localityModel);
+        $listings->getCollection()->load(['media' => fn ($query) => $query
+            ->where('kind', 'photo')
+            ->whereNotNull('public_path')
+            ->orderByDesc('is_cover')
+            ->orderBy('position')]);
 
         return view('public.land.index', [
-            'previewListings' => $previewListings->paginate($filters, $countyModel, $localityModel),
+            'listings' => $listings->through(fn (Property $property): array => $publicListing->card($property)),
             'filterChips' => $appliedFilters->chips($request, $filters, $countyModel, $localityModel),
             'clearFiltersUrl' => $appliedFilters->clearUrl($request),
             'filters' => $filters,

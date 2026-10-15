@@ -47,7 +47,7 @@
                 <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-stone-700">
                     <li>Staff review this seller application.</li>
                     <li>You receive a recorded decision on your applications page.</li>
-                    <li>If approved, open <a href="{{ route('seller.properties.create') }}" data-turbo-frame="modal" class="font-medium text-lamu-800 hover:underline">Submit property</a> in the seller workspace.</li>
+                    <li>If approved, open <a href="{{ route('seller.properties.create') }}" data-turbo-frame="_top" class="font-medium text-lamu-800 hover:underline">Submit property</a> in the seller workspace.</li>
                     <li>Each property still passes verification before publication.</li>
                 </ol>
             </div>

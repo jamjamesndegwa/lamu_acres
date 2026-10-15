@@ -74,6 +74,9 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/verification/files/{evidenceFile}/grants', [VerificationController::class, 'grant'])->name('verification.grant');
             Route::get('/verification/{property}', [VerificationController::class, 'show'])->name('verification.show');
             Route::put('/verification/{property}/override', [VerificationController::class, 'override'])->name('verification.override');
+            Route::put('/ownership-documents/{ownershipDocument}', [SellerDeskController::class, 'reviewDocument'])->name('ownership-documents.review');
+            Route::get('/ownership-documents/{ownershipDocument}', [SellerDeskController::class, 'downloadDocument'])->name('ownership-documents.download');
+            Route::post('/properties/{property}/ownership-documents/not-applicable', [SellerDeskController::class, 'documentNotApplicable'])->name('ownership-documents.not-applicable');
         });
 
         Route::post('/owners/{propertyOwner}/verification', [SellerDeskController::class, 'verifyOwner'])->name('owners.verify');
@@ -84,6 +87,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         Route::post('/enquiries/{enquiry}/briefing', [SellerDeskController::class, 'briefing'])->name('enquiries.briefing');
         Route::post('/offers/{offer}/presentation', [SellerDeskController::class, 'presentOffer'])->name('offers.present');
         Route::post('/properties/{property}/transactions', [SellerDeskController::class, 'transaction'])->name('properties.transactions.store');
+        Route::post('/properties/{property}/leases', [SellerDeskController::class, 'recordLease'])->name('properties.leases.store');
+        Route::put('/leases/{propertyTransaction}/end', [SellerDeskController::class, 'endLease'])->name('leases.end');
 
         Route::middleware('permission:staff.properties')->group(function () {
             Route::get('/media', [PropertyMediaController::class, 'library'])->name('media.index');

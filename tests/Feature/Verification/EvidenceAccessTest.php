@@ -24,7 +24,7 @@ class EvidenceAccessTest extends FoundationTestCase
         $buyer = User::factory()->withRoles('buyer')->create();
         $intruder = User::factory()->withRoles('buyer')->create();
 
-        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Manda plot']);
+        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Manda plot', 'purpose' => 'sale', 'relationship' => 'owner']);
         $property = Property::query()->where('title', 'Manda plot')->first();
         $property->forceFill([
             'parcel_identifier' => 'LAMU-PARCEL-999',

@@ -15,6 +15,7 @@ use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Communications\MessageDesk;
+use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -108,7 +109,7 @@ class PropertySubmission
         return $request;
     }
 
-    public function respond(User $broker, PropertyInformationRequest $request, string $response): void
+    public function respond(User $broker, PropertyInformationRequest $request, string $response, string $message = 'A broker replied to a request for information.'): void
     {
         $request->load('property');
 
@@ -127,21 +128,19 @@ class PropertySubmission
 
         Notification::send(
             User::permission('staff.properties')->get(),
-            new PropertySubmittedNotification($request->property, 'A broker replied to a request for information.'),
+            new PropertySubmittedNotification($request->property, $message),
         );
     }
 
     public function approve(User $staff, Property $property): Property
     {
-        app(\App\Services\Verification\VerificationOperations::class)->assertClear($property);
-
         $from = $property->status;
 
-        $property->update([
-            'status' => PropertyStatus::Published,
-            'availability' => PropertyAvailability::Available,
-            'published_at' => now(),
-        ]);
+        if ($from === PropertyStatus::Published) {
+            return $property;
+        }
+
+        app(PropertyInventory::class)->publish($staff, $property);
 
         PropertyAudit::query()->create([
             'property_id' => $property->id,
@@ -159,7 +158,7 @@ class PropertySubmission
                 'title' => $property->title,
                 'reference' => $property->reference,
                 'summary' => $property->title.' is approved for listing.',
-                'url' => route('broker.listings.show', $property),
+                'url' => $property->submitterUrl(),
             ], 'property:'.$property->id);
         }
 

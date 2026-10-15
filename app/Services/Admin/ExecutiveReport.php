@@ -989,7 +989,7 @@ class ExecutiveReport
         if ($this->ready('property_audits')) {
             $items = $items->concat(
                 PropertyAudit::query()
-                    ->with('property:id,title')
+                    ->with('property:id,title,slug')
                     ->whereBetween('created_at', [$this->window->from, $this->window->to])
                     ->latest()
                     ->limit(12)

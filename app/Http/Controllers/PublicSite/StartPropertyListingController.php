@@ -23,11 +23,13 @@ class StartPropertyListingController extends Controller
         }
 
         if ($request->user()->hasPermission('workspace.seller')) {
-            return redirect()->route('seller.properties.create');
+            return redirect()->route('seller.properties.create', array_filter([
+                'purpose' => ListingPurpose::tryFrom((string) $request->query('purpose'))?->value,
+            ]));
         }
 
         return redirect()
             ->route('account.applications.create', ['capability' => 'seller'])
-            ->with('status', 'Apply for a seller workspace before submitting property. Sale or lease terms for seller listings are handled during staff review.');
+            ->with('status', 'Apply for a seller workspace before submitting property. You choose sale or lease terms when you list the land.');
     }
 }

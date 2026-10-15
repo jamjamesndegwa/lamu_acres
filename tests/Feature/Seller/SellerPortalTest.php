@@ -6,9 +6,8 @@ use App\Enums\AuthorityStatus;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
 use App\Enums\PropertyStatus;
-use App\Enums\VerificationCategory;
-use App\Enums\VerificationItemState;
-use App\Services\Verification\VerificationDesk;
+use App\Models\County;
+use App\Models\Locality;
 use App\Models\MarketingAuthority;
 use App\Models\Offer;
 use App\Models\Property;
@@ -16,6 +15,7 @@ use App\Models\PropertyOwner;
 use App\Models\PropertyTransaction;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class SellerPortalTest extends FoundationTestCase
@@ -27,13 +27,14 @@ class SellerPortalTest extends FoundationTestCase
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
 
         $this->actingAs($seller)
-            ->post(route('seller.properties.store'), ['title' => 'Shela holding', 'locality' => 'Shela', 'acreage' => 4])
+            ->post(route('seller.properties.store'), ['title' => 'Shela holding', 'purpose' => 'sale', 'relationship' => 'owner', 'acreage' => 4])
             ->assertRedirect();
 
         $property = Property::query()->where('title', 'Shela holding')->first();
         $this->assertSame(1, Property::query()->where('title', 'Shela holding')->count());
 
-        $this->actingAs($seller)->get(route('seller.properties.index'))->assertOk()->assertDontSee('Shela holding');
+        $this->actingAs($seller)->get(route('seller.properties.index'))->assertOk()->assertSeeInOrder(['Drafts', 'Shela holding', 'Awaiting ownership verification']);
+        $this->actingAs($other)->get(route('seller.properties.index'))->assertOk()->assertDontSee('Shela holding');
         $this->actingAs($other)->get(route('seller.properties.show', $property))->assertForbidden();
 
         $link = PropertyOwner::query()->where('property_id', $property->id)->first();
@@ -42,6 +43,7 @@ class SellerPortalTest extends FoundationTestCase
             ->assertRedirect();
 
         $this->actingAs($seller)->get(route('seller.properties.index'))->assertOk()->assertSee('Shela holding');
+        $this->actingAs($other)->get(route('seller.properties.index'))->assertOk()->assertDontSee('Shela holding');
 
         $before = Property::query()->count();
         $this->actingAs($staff)
@@ -60,16 +62,24 @@ class SellerPortalTest extends FoundationTestCase
 
     public function test_seller_instructions_do_not_sell_the_property_or_pay_commission(): void
     {
+        Storage::fake('local');
         [$seller, $staff, $property] = $this->verifiedProperty();
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'staff.buyers')->create();
 
         $this->actingAs($seller)
-            ->post(route('seller.properties.documents.store', $property), [
-                'document' => UploadedFile::fake()->create('title-deed.pdf', 20, 'application/pdf'),
-            ])
+            ->post(route('seller.properties.photos.store', $property), ['photo' => UploadedFile::fake()->image('plot.jpg')])
             ->assertRedirect();
 
-        $document = $property->ownershipDocuments()->first();
+        foreach (['national_id' => 'national-id.pdf', 'title_deed' => 'title-deed.pdf'] as $type => $name) {
+            $this->actingAs($seller)
+                ->post(route('seller.properties.documents.store', $property), [
+                    'document_type' => $type,
+                    'document' => UploadedFile::fake()->create($name, 20, 'application/pdf'),
+                ])
+                ->assertRedirect();
+        }
+
+        $document = $property->ownershipDocuments()->where('document_type', 'title_deed')->first();
         $this->actingAs(User::factory()->withRoles('seller')->create())
             ->get(route('seller.documents.download', $document))
             ->assertForbidden();
@@ -77,11 +87,13 @@ class SellerPortalTest extends FoundationTestCase
         $this->actingAs($seller)
             ->post(route('seller.properties.authority', $property), [
                 'terms' => 'I authorise Lamu Acres to market this land on the stated terms.',
+                'scope' => 'sale',
                 'status' => AuthorityStatus::Active->value,
             ])
             ->assertRedirect();
 
-        $this->assertSame(AuthorityStatus::Submitted, MarketingAuthority::query()->first()->status);
+        $authority = MarketingAuthority::query()->firstOrFail();
+        $this->assertSame(AuthorityStatus::Submitted, $authority->status);
 
         $this->actingAs($seller)
             ->post(route('seller.properties.instructions', $property), [
@@ -100,18 +112,12 @@ class SellerPortalTest extends FoundationTestCase
             ])
             ->assertSessionHasErrors('requested_availability');
 
-        foreach (VerificationCategory::cases() as $category) {
-            if (! $category->critical()) {
-                continue;
-            }
+        $this->actingAs($seller)->post(route('seller.properties.submission', $property))->assertSessionHasNoErrors();
+        $this->assertSame(PropertyStatus::Review, $property->refresh()->status);
 
-            app(VerificationDesk::class)->review($property->verificationItems()->where('category', $category)->first(), $staff, [
-                'state' => VerificationItemState::NotApplicable->value,
-                'evidence_note' => 'Not applicable for this listing.',
-            ]);
-        }
-
-        $this->actingAs($staff)->post(route('staff.properties.listing', $property))->assertRedirect();
+        $this->clearCriticalVerification($property, $staff);
+        $this->actingAs($staff)->put(route('staff.authorities.update', $authority), ['status' => 'active'])->assertRedirect();
+        $this->actingAs($staff)->post(route('staff.properties.listing', $property))->assertSessionHasNoErrors();
         $this->assertSame(PropertyStatus::Published, $property->refresh()->status);
 
         $buyer = User::factory()->withRoles('buyer')->create();
@@ -164,8 +170,27 @@ class SellerPortalTest extends FoundationTestCase
         $seller = User::factory()->withRoles('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
 
-        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Hindi block']);
-        $property = Property::query()->where('title', 'Hindi block')->first();
+        $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
+        $locality = Locality::query()->create(['county_id' => $county->id, 'name' => 'Hindi', 'slug' => 'hindi', 'kind' => 'place', 'is_active' => true]);
+
+        $this->actingAs($seller)->post(route('seller.properties.store'), [
+            'purpose' => 'sale',
+            'relationship' => 'owner',
+            'title' => 'Hindi block',
+            'summary' => 'Four acres of level farmland near Hindi.',
+            'description' => 'Fenced farmland with a seasonal stream.',
+            'property_type' => 'agricultural',
+            'land_use' => 'agricultural',
+            'county_id' => $county->id,
+            'locality_id' => $locality->id,
+            'parcel_identifier' => 'LAMU/HINDI/101',
+            'parcel_reference_type' => 'title_number',
+            'acreage' => 4,
+            'tenure' => 'freehold',
+            'ownership_structure' => 'individual',
+            'sale' => ['price_basis' => 'total', 'amount' => 2_400_000],
+        ])->assertSessionHasNoErrors();
+        $property = Property::query()->where('title', 'Hindi block')->firstOrFail();
         $this->actingAs($staff)->post(route('staff.owners.verify', $property->owners()->first()));
 
         return [$seller, $staff, $property->refresh()];

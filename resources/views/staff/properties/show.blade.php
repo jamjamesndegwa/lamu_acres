@@ -7,7 +7,28 @@
             <a href="{{ route('staff.properties.edit', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Edit details</a>
             <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'status']) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Change status</a>
             <a href="{{ route('staff.properties.show', [$property, 'dialog' => 'portion']) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Partial sale</a>
+            @if (in_array(\App\Enums\PropertyStatus::Published, $property->allowedTransitions(), true))
+                <form method="POST" action="{{ route('staff.properties.listing', $property) }}" data-turbo-frame="_top" data-confirm="Publish this listing? Every verification and listing check must be clear.">
+                    @csrf
+                    <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Approve and publish</button>
+                </form>
+            @endif
         </div>
+        <section class="mt-6 max-w-4xl rounded-2xl border border-sand-200 bg-white p-5">
+            <h2 class="font-semibold text-lamu-900">Publication checks</h2>
+            @if ($blockers === [])
+                <p class="mt-2 text-sm text-stone-600">No blocking issue. Publication still needs a staff decision.</p>
+            @else
+                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-stone-700">
+                    @foreach ($blockers as $blocker)
+                        <li>{{ $blocker }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            @error('listing')
+                <p class="mt-2 text-sm text-red-700" role="alert">{{ $message }}</p>
+            @enderror
+        </section>
         <dl class="mt-6 grid max-w-4xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
             <div><dt class="text-sm text-stone-500">Type</dt><dd>{{ $property->property_type?->label() ?? 'Not recorded' }}</dd></div>
             <div><dt class="text-sm text-stone-500">Land use</dt><dd>{{ $property->land_use?->label() ?? 'Not recorded' }}</dd></div>
@@ -21,9 +42,13 @@
         <div class="mt-6 max-w-4xl">
             <x-map-viewer :latitude="$property->public_latitude" :longitude="$property->public_longitude" empty="No map point has been recorded for this property." />
         </div>
+        @if ($property->summary)
+            <p class="mt-4 max-w-3xl font-medium text-stone-800">{{ $property->summary }}</p>
+        @endif
         @if ($property->description)
             <p class="mt-4 max-w-3xl text-stone-700">{{ $property->description }}</p>
         @endif
+        @include('staff.properties.partials.listing-details')
         @if ($property->parent)
             <p class="mt-4 text-sm">Portion of <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', $property->parent) }}">{{ $property->parent->reference }}</a>@if ($property->portion_label) · {{ $property->portion_label }}@endif</p>
         @endif
@@ -71,6 +96,7 @@
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Link owner</button>
         </form>
         <p class="mt-2 text-sm text-stone-600">The account must already be a seller. This does not create a new user.</p>
+        @include('staff.properties.partials.ownership-documents')
     @elseif ($tab === 'verification')
         <dl class="mt-6 grid max-w-3xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
             <div><dt class="text-sm text-stone-500">Public review level</dt><dd>{{ $property->verification_level?->label() ?? 'Not reviewed' }}</dd></div>
@@ -115,7 +141,8 @@
         <ul class="mt-3 max-w-3xl space-y-3">
             @forelse ($property->authorities as $authority)
                 <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
-                    <p class="font-medium">{{ $authority->seller?->name ?? 'Seller' }} · {{ $authority->status->label() }}</p>
+                    <p class="font-medium">{{ $authority->seller?->name ?? 'Seller' }} · {{ $authority->status->label() }} · {{ $authority->scope?->label() ?? 'Sale and lease' }}</p>
+                    <p class="text-stone-600">{{ $authority->valid_until ? 'Valid until '.$authority->valid_until->format('j M Y') : 'No expiry stated' }}@if ($authority->isExpired()) · Expired @endif</p>
                     @if ($authority->terms)
                         <p class="mt-2 text-stone-700">{{ $authority->terms }}</p>
                     @endif
@@ -133,6 +160,21 @@
                 </li>
             @empty
                 <li class="text-sm text-stone-600">No marketing authority has been submitted.</li>
+            @endforelse
+        </ul>
+        <h2 class="mt-8 font-semibold text-lamu-900">Seller instructions</h2>
+        <p class="mt-1 text-sm text-stone-600">Price, availability and withdrawal requests. Apply approved changes through Edit details or Change status.</p>
+        <ul class="mt-3 max-w-3xl space-y-3">
+            @forelse ($property->saleInstructions as $instruction)
+                <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                    <p class="font-medium">{{ $instruction->kind->label() }} · {{ $instruction->seller?->name ?? 'Seller' }} · {{ $instruction->created_at?->format('j M Y') }}</p>
+                    <p class="mt-1 text-stone-700">{{ $instruction->body }}</p>
+                    @if ($instruction->requested_availability)
+                        <p class="mt-1 text-stone-600">Requested availability: {{ $instruction->requested_availability }}</p>
+                    @endif
+                </li>
+            @empty
+                <li class="text-sm text-stone-600">No seller instruction has been recorded.</li>
             @endforelse
         </ul>
         @include('staff.properties.partials.attributes')
@@ -154,11 +196,63 @@
         <h2 class="mt-6 font-semibold text-lamu-900">Statements</h2>
         <ul class="mt-3 space-y-2 text-sm">
             @forelse ($property->transactions as $transaction)
-                <li>{{ $transaction->reference }} · {{ $transaction->status->label() }} @if ($transaction->amount !== null) · KSh {{ number_format($transaction->amount) }} @endif</li>
+                <li>{{ $transaction->reference }} · {{ $transaction->kind?->label() ?? 'Sale' }} · {{ $transaction->status->label() }} @if ($transaction->amount !== null) · KSh {{ number_format($transaction->amount) }} @endif</li>
             @empty
                 <li class="text-stone-600">No transaction statement has been recorded.</li>
             @endforelse
         </ul>
+        @if ($property->isLease())
+            @php($canLease = auth()->user()->hasPermission('staff.properties') || auth()->user()->hasPermission('staff.sales'))
+            <h2 class="mt-8 font-semibold text-lamu-900">Leases</h2>
+            <ul class="mt-3 max-w-3xl space-y-3">
+                @forelse ($property->transactions->filter(fn ($transaction) => $transaction->isLease()) as $lease)
+                    <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
+                        <p class="font-medium text-lamu-900">{{ $lease->reference }} · {{ $lease->ended_at ? 'Ended '.$lease->ended_at->format('j M Y') : 'Active' }}</p>
+                        <p class="text-stone-600">{{ $lease->starts_on?->format('j M Y') }} to {{ $lease->ends_on?->format('j M Y') ?? 'open end' }} · {{ number_format((float) $lease->acreage, 2) }} acres · KSh {{ number_format((int) $lease->amount) }} agreed rent · confirmed by {{ $lease->confirmer?->name ?? 'staff' }}</p>
+                        @if ($lease->ends_on && ! $lease->ended_at && $lease->ends_on->lte(now()->addDays(60)))
+                            <p class="mt-1 text-amber-800">Lease {{ $lease->ends_on->isPast() ? 'end date has passed' : 'ends soon' }}. Confirm the position before re-advertising.</p>
+                        @endif
+                        @if ($lease->terms)
+                            <p class="mt-1 text-stone-700">{{ $lease->terms }}</p>
+                        @endif
+                        @if ($canLease && $lease->isActiveLease())
+                            <form method="POST" action="{{ route('staff.leases.end', $lease) }}" data-turbo-frame="_top" data-confirm="Record that this lease has ended? The land returns to review before it is advertised again." class="mt-3 flex flex-wrap items-end gap-2">
+                                @csrf
+                                @method('PUT')
+                                <label class="text-sm">Reason
+                                    <input name="reason" required minlength="8" class="mt-1 block w-72 rounded-lg border border-sand-200 px-3 py-2">
+                                </label>
+                                <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">End lease</button>
+                            </form>
+                        @endif
+                    </li>
+                @empty
+                    <li class="text-sm text-stone-600">No lease has been recorded.</li>
+                @endforelse
+            </ul>
+            @if ($canLease && in_array(\App\Enums\PropertyStatus::Leased, $property->allowedTransitions(), true))
+                <form method="POST" action="{{ route('staff.properties.leases.store', $property) }}" data-turbo-frame="_top" data-confirm="Record this confirmed lease? The listing will stop being advertised." class="mt-6 grid max-w-3xl gap-3 sm:grid-cols-2">
+                    @csrf
+                    <h3 class="font-medium text-lamu-900 sm:col-span-2">Record a confirmed lease</h3>
+                    <label class="block text-sm">Commencement date
+                        <input type="date" name="starts_on" required value="{{ old('starts_on') }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                    </label>
+                    <label class="block text-sm">Agreed end date
+                        <input type="date" name="ends_on" value="{{ old('ends_on') }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                    </label>
+                    <x-measure-field name="acreage" label="Leased area" unit="acres" :value="old('acreage', $property->offeredAcreage())" required />
+                    <x-measure-field name="amount" label="Agreed rent" unit="KSh" :value="old('amount', $property->price_amount)" inputmode="numeric" required />
+                    <label class="block text-sm sm:col-span-2">Term and renewal information
+                        <textarea name="terms" rows="2" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('terms') }}</textarea>
+                    </label>
+                    @if ($errors->hasAny(['lease', 'acreage', 'starts_on', 'ends_on', 'amount']))
+                        <p class="text-sm text-red-700 sm:col-span-2" role="alert">{{ $errors->first() }}</p>
+                    @endif
+                    <p class="text-sm text-stone-600 sm:col-span-2">Only record a lease once it has been executed and confirmed. Registration and legal completion remain with the legal team.</p>
+                    <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white sm:col-span-2 sm:justify-self-start">Record lease</button>
+                </form>
+            @endif
+        @endif
         <h2 class="mt-8 font-semibold text-lamu-900">Sales</h2>
         <ul class="mt-3 space-y-2 text-sm">
             @forelse ($property->salesTransactions as $sale)

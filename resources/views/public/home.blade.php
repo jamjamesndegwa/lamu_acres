@@ -44,6 +44,9 @@
 
             return str_contains($haystack, $slot['needle']);
         });
+        if (! $listing) {
+            $listing = $featured->first(fn ($property) => ! in_array($property->id, $usedListingIds, true));
+        }
         if ($listing) {
             $usedListingIds[] = $listing->id;
         }

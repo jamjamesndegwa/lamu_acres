@@ -8,6 +8,7 @@ use App\Enums\PropertyType;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,13 +22,12 @@ class PublicLandTest extends TestCase
             ->assertOk()
             ->assertSee('Lamu Acres')
             ->assertSee('Explore Land')
-            ->assertSee('Featured land')
-            ->assertSee('No featured land is published yet.')
-            ->assertSee('Explore Lamu by location')
+            ->assertSee('Explore Land by Location')
+            ->assertSee('Explore by Location')
             ->assertSee('Find Land for Me')
-            ->assertSee('Premium Investor Intelligence')
-            ->assertSee('Verification and trust')
-            ->assertSee('Brokers and sellers')
+            ->assertSee('Investor Intelligence')
+            ->assertSee('Why Choose Lamu Acres')
+            ->assertSee('Are You a Broker or Land Owner?')
             ->assertSee('name="q"', false)
             ->assertSee(route('land.index'), false);
     }
@@ -52,10 +52,8 @@ class PublicLandTest extends TestCase
             ->assertSee('Featured Shela acreage')
             ->assertDontSee('Ordinary Hindi acreage')
             ->assertDontSee('Sold Shela acreage')
-            ->assertDontSee('No featured land is published yet.')
-            ->assertSee('Shela (1)')
-            ->assertSee('Hindi (1)')
-            ->assertSee('Lamu (2)');
+            ->assertSee('Shela')
+            ->assertSee('Hindi');
     }
 
     public function test_directory_is_public_and_lists_only_available_published_land(): void
@@ -78,7 +76,7 @@ class PublicLandTest extends TestCase
             ->assertOk()
             ->assertSee('Land in Lamu')
             ->assertSee('Visible Shela plot')
-            ->assertSee('Shela (1)')
+            ->assertSeeInOrder(['<span class="flex-1">Shela</span>', '1 <span class="sr-only">published listing</span>'], false)
             ->assertDontSee('Hidden draft plot')
             ->assertDontSee('Hidden sold plot')
             ->assertDontSee('Hidden archived plot')
@@ -184,6 +182,83 @@ class PublicLandTest extends TestCase
 
         $this->get(route('land.show', ['lamu', 'shela', $draft]))->assertNotFound();
         $this->get(route('land.show', ['lamu', 'manda', $listing]))->assertNotFound();
+    }
+
+    public function test_public_sale_and_lease_terms_display_and_absence_of_restricted_data(): void
+    {
+        $shela = $this->locality('lamu', 'Lamu', 'shela', 'Shela');
+        $seller = User::factory()->create(['name' => 'Secret Landowner', 'email' => 'private@seller.test']);
+
+        $saleListing = Property::factory()->published()->listedIn($shela)->create([
+            'title' => 'Prime Shela Sand Dunes',
+            'summary' => 'Beautiful dunes for development.',
+            'purpose' => ListingPurpose::Sale,
+            'price_basis' => \App\Enums\PriceBasis::PerAcre,
+            'price_rate' => 2_500_000,
+            'price_amount' => 10_000_000,
+            'acreage' => 4,
+            'offered_acreage' => 4,
+            'price_negotiable' => true,
+            'tenure' => \App\Enums\LandTenure::Freehold,
+            'landmark' => 'Near Peponi Hotel',
+            'parcel_identifier' => 'SECRET-PARCEL-999',
+            'restricted_latitude' => -2.2981,
+            'restricted_longitude' => 40.9134,
+            'submitted_by' => $seller->id,
+            'listing_terms' => [
+                'possession_timing' => 'Immediate upon final settlement',
+                'current_use' => 'Undeveloped beachfront',
+            ],
+        ]);
+        $saleListing->owners()->create([
+            'user_id' => $seller->id,
+            'relationship' => \App\Enums\OwnerRelationship::Owner,
+            'status' => \App\Enums\OwnerLinkStatus::Verified,
+        ]);
+
+        $this->get(route('land.show', ['lamu', 'shela', $saleListing]))
+            ->assertOk()
+            ->assertSee('Prime Shela Sand Dunes')
+            ->assertSee('Sale')
+            ->assertSee('Asking price')
+            ->assertSee('Negotiable')
+            ->assertSee('Freehold')
+            ->assertSee('Near Peponi Hotel')
+            ->assertSee('Immediate upon final settlement')
+            ->assertDontSee('SECRET-PARCEL-999')
+            ->assertDontSee('-2.2981')
+            ->assertDontSee('40.9134')
+            ->assertDontSee('Secret Landowner')
+            ->assertDontSee('private@seller.test');
+
+        $leaseListing = Property::factory()->published()->listedIn($shela)->lease(\App\Enums\PriceBasis::ParcelMonth)->create([
+            'title' => 'Shela Beachfront Lease',
+            'summary' => 'Long-term residential lease.',
+            'acreage' => 2,
+            'price_rate' => 150_000,
+            'price_amount' => 150_000,
+            'lease_min_months' => 24,
+            'lease_max_months' => 60,
+            'parcel_identifier' => 'SECRET-LEASE-777',
+            'restricted_latitude' => -2.2985,
+            'restricted_longitude' => 40.9140,
+            'listing_terms' => [
+                'permitted_use' => 'Eco-lodge or private villa',
+                'payment_frequency' => 'Quarterly in advance',
+            ],
+        ]);
+
+        $this->get(route('land.show', ['lamu', 'shela', $leaseListing]))
+            ->assertOk()
+            ->assertSee('Shela Beachfront Lease')
+            ->assertSee('Lease')
+            ->assertSee('Asking rent')
+            ->assertSee('24 to 60 months')
+            ->assertSee('Eco-lodge or private villa')
+            ->assertSee('Quarterly in advance')
+            ->assertDontSee('SECRET-LEASE-777')
+            ->assertDontSee('-2.2985')
+            ->assertDontSee('40.9140');
     }
 
     public function test_empty_directory_does_not_invent_listings(): void

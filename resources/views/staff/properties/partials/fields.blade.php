@@ -64,10 +64,22 @@
                 @endforeach
             </select>
         </label>
-        <x-measure-field name="acreage" label="Acreage" unit="acres" :value="old('acreage', $property->acreage)" required />
-        <x-measure-field name="price_amount" label="Asking price" unit="KSh" :value="old('price_amount', $property->price_amount)" inputmode="numeric" required />
+        <x-measure-field name="acreage" label="Registered acreage" unit="acres" :value="old('acreage', $property->acreage)" required />
+        <x-measure-field name="offered_acreage" label="Offered acreage (optional)" unit="acres" :value="old('offered_acreage', $property->offered_acreage)" />
+        <label class="block text-sm font-medium">Price basis
+            <select name="price_basis" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                @foreach (\App\Enums\PriceBasis::cases() as $basis)
+                    <option value="{{ $basis->value }}" @selected(old('price_basis', $property->price_basis?->value ?? 'total') === $basis->value)>{{ $basis->label() }}</option>
+                @endforeach
+            </select>
+            @error('price_basis')
+                <span class="mt-1 block text-sm text-red-700">{{ $message }}</span>
+            @enderror
+        </label>
+        <x-measure-field name="price_rate" label="Rate per acre (per-acre bases)" unit="KSh" :value="old('price_rate', $property->priceBasis()->isPerAcre() ? $property->price_rate : null)" inputmode="numeric" />
+        <x-measure-field name="price_amount" label="Asking price or rent" unit="KSh" :value="old('price_amount', $property->price_amount)" inputmode="numeric" />
     </div>
-    <p class="text-sm text-stone-600">Price per acre: {{ $property->exists && $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : 'Calculated when acreage and price are saved.' }}</p>
+    <p class="text-sm text-stone-600">Per-acre bases calculate the total from the rate and the offered (or registered) acreage. {{ $property->exists && $property->price_amount !== null ? 'Current: '.$property->formattedPrice() : '' }}</p>
     <div class="grid grid-cols-2 gap-3">
         <label class="block text-sm font-medium">Public latitude
             <input name="public_latitude" value="{{ old('public_latitude', $property->public_latitude) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">

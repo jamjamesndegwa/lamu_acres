@@ -2,12 +2,18 @@
 
 namespace App\Services\Inventory;
 
+use App\Enums\ListingPurpose;
+use App\Enums\PriceBasis;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
+use App\Enums\TransactionStatus;
 use App\Events\PropertyInventoryChanged;
 use App\Models\Locality;
 use App\Models\Property;
+use App\Models\PropertyTransaction;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use App\Services\Verification\VerificationOperations;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -59,10 +65,16 @@ class PropertyInventory
     {
         $from = $property->status;
 
-        if (! in_array($status, $from->transitions(), true)) {
+        if (! in_array($status, $property->allowedTransitions(), true)) {
             throw ValidationException::withMessages([
-                'status' => 'That status change is not available from '.$from->label().'.',
+                'status' => in_array($status, $from->transitions(), true)
+                    ? 'A '.strtolower($property->purpose?->label() ?? 'listing').' listing cannot be marked '.strtolower($status->label()).'.'
+                    : 'That status change is not available from '.$from->label().'.',
             ]);
+        }
+
+        if ($status === PropertyStatus::Published) {
+            app(VerificationOperations::class)->assertClear($property);
         }
 
         $this->applyStatus($property, $status);
@@ -72,6 +84,92 @@ class PropertyInventory
         event(new PropertyInventoryChanged($property, $actor->id, 'status_changed', $from->value, $status->value));
 
         return $property;
+    }
+
+    /**
+     * The single publication path: allowed transition plus the full verification and listing gate.
+     */
+    public function publish(User $actor, Property $property): Property
+    {
+        return $this->transition($actor, $property, PropertyStatus::Published);
+    }
+
+    /**
+     * Record a staff-confirmed lease and take the land off the market. This does not
+     * execute or register the lease; that stays with staff and legal advisers.
+     *
+     * @param  array{starts_on: string, ends_on?: string|null, acreage: float|string, amount: int|string, terms?: string|null, statement?: string|null}  $data
+     */
+    public function recordLease(User $actor, Property $property, array $data): PropertyTransaction
+    {
+        if (! $property->isLease()) {
+            throw ValidationException::withMessages([
+                'lease' => 'Only a lease listing can have a lease recorded. Sales close through the sales desk.',
+            ]);
+        }
+
+        if (! in_array(PropertyStatus::Leased, $property->allowedTransitions(), true)) {
+            throw ValidationException::withMessages([
+                'lease' => 'A lease can only be recorded for a published or reserved listing.',
+            ]);
+        }
+
+        $acreage = round((float) $data['acreage'], 4);
+
+        if ($acreage <= 0 || $acreage > round($property->offeredAcreage(), 4) + 0.0001) {
+            throw ValidationException::withMessages([
+                'acreage' => 'The leased area cannot be larger than the acreage offered.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($actor, $property, $data, $acreage): PropertyTransaction {
+            $lease = $property->transactions()->create([
+                'reference' => 'TX-'.strtoupper(Str::random(8)),
+                'kind' => ListingPurpose::Lease,
+                'status' => TransactionStatus::Completed,
+                'amount' => (int) $data['amount'],
+                'acreage' => $acreage,
+                'starts_on' => $data['starts_on'],
+                'ends_on' => $data['ends_on'] ?? null,
+                'terms' => $data['terms'] ?? null,
+                'statement' => $data['statement'] ?? 'Lease confirmed by staff.',
+                'confirmed_by' => $actor->id,
+                'confirmed_at' => now(),
+            ]);
+
+            $this->transition($actor, $property, PropertyStatus::Leased);
+
+            return $lease;
+        });
+    }
+
+    /**
+     * Record that a lease has ended. The land returns to review so staff confirm it
+     * before it is advertised again.
+     */
+    public function endLease(User $actor, PropertyTransaction $lease, string $reason): PropertyTransaction
+    {
+        if (! $lease->isActiveLease()) {
+            throw ValidationException::withMessages(['lease' => 'This lease has already ended.']);
+        }
+
+        if (strlen(trim($reason)) < 8) {
+            throw ValidationException::withMessages(['reason' => 'Record why the lease ended.']);
+        }
+
+        return DB::transaction(function () use ($actor, $lease, $reason): PropertyTransaction {
+            $lease->ended_at = now();
+            $lease->statement = trim(($lease->statement ? $lease->statement."\n" : '').'Lease ended: '.trim($reason));
+            $lease->save();
+
+            $property = $lease->property;
+
+            if ($property->status === PropertyStatus::Leased) {
+                $this->transition($actor, $property, PropertyStatus::Review);
+            }
+
+            return $lease;
+        });
     }
 
     public function sellPortion(User $actor, Property $portion): Property
@@ -86,7 +184,7 @@ class PropertyInventory
 
         $parent = $portion->parent()->first();
 
-        if ($parent !== null && $parent->remainingAcreage() <= 0 && in_array(PropertyStatus::Sold, $parent->status->transitions(), true)) {
+        if ($parent !== null && $parent->remainingAcreage() <= 0 && in_array(PropertyStatus::Sold, $parent->allowedTransitions(), true)) {
             $this->transition($actor, $parent, PropertyStatus::Sold);
         }
 
@@ -162,6 +260,13 @@ class PropertyInventory
         }
 
         $title = (string) $data['title'];
+        $basis = PriceBasis::tryFrom((string) ($data['price_basis'] ?? '')) ?? $property->price_basis ?? PriceBasis::Total;
+        $offered = filled($data['offered_acreage'] ?? null) ? (float) $data['offered_acreage'] : null;
+        $rate = filled($data['price_rate'] ?? null) ? (int) $data['price_rate'] : null;
+        $priceAmount = $basis->isPerAcre() && $rate !== null
+            ? Property::computePriceAmount($basis, $rate, $offered ?? (float) $data['acreage'])
+            : (filled($data['price_amount'] ?? null) ? (int) $data['price_amount'] : $rate);
+
         $property->fill([
             'reference' => $data['reference'] ?? $property->reference ?? $this->reference(),
             'slug' => $property->slug ?? Str::slug($title).'-'.Str::lower(Str::random(5)),
@@ -176,7 +281,10 @@ class PropertyInventory
             'land_use' => $data['land_use'],
             'purpose' => $data['purpose'],
             'acreage' => $data['acreage'],
-            'price_amount' => $data['price_amount'],
+            'offered_acreage' => $offered,
+            'price_basis' => $basis,
+            'price_rate' => $basis->isPerAcre() ? $rate : ($rate ?? $priceAmount),
+            'price_amount' => $priceAmount,
             'price_currency' => 'KES',
             'public_latitude' => $data['public_latitude'] ?? null,
             'public_longitude' => $data['public_longitude'] ?? null,
@@ -202,6 +310,7 @@ class PropertyInventory
         if (in_array($status, [
             PropertyStatus::Reserved,
             PropertyStatus::Sold,
+            PropertyStatus::Leased,
             PropertyStatus::Withdrawn,
             PropertyStatus::Suspended,
             PropertyStatus::Archived,

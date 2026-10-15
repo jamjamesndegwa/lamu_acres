@@ -5,26 +5,32 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\AuthorityStatus;
 use App\Enums\MessageEvent;
 use App\Enums\OwnerRelationship;
+use App\Enums\OwnershipDocumentType;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Enums\TransactionStatus;
+use App\Enums\VerificationItemState;
 use App\Http\Controllers\Controller;
 use App\Models\Enquiry;
 use App\Models\MarketingAuthority;
 use App\Models\Offer;
+use App\Models\OwnershipDocument;
 use App\Models\Property;
+use App\Models\PropertyAudit;
 use App\Models\PropertyOwner;
 use App\Models\PropertyTransaction;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
+use App\Services\Inventory\PropertyInventory;
 use App\Services\Seller\SellerPortal;
-use App\Services\Verification\VerificationOperations;
 use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SellerDeskController extends Controller
 {
@@ -73,15 +79,20 @@ class SellerDeskController extends Controller
         return ApprovalsReturn::back($request, 'authorities', 'Marketing authority updated.');
     }
 
-    public function approveListing(Request $request, Property $property): RedirectResponse
+    public function approveListing(Request $request, Property $property, PropertyInventory $inventory): RedirectResponse
     {
         abort_unless($request->user()->hasPermission('staff.properties'), 403);
-        app(VerificationOperations::class)->assertClear($property);
 
-        $property->status = PropertyStatus::Published;
-        $property->published_at = now();
-        $property->availability = PropertyAvailability::Available;
-        $property->save();
+        $from = $property->status;
+        $inventory->publish($request->user(), $property);
+
+        PropertyAudit::query()->create([
+            'property_id' => $property->id,
+            'actor_id' => $request->user()->id,
+            'action' => 'approved',
+            'from_status' => $from->value,
+            'to_status' => PropertyStatus::Published->value,
+        ]);
 
         if ($property->submitter !== null) {
             app(MessageDesk::class)->send($property->submitter, MessageEvent::PropertyApproved, [
@@ -89,11 +100,84 @@ class SellerDeskController extends Controller
                 'title' => $property->title,
                 'reference' => $property->reference,
                 'summary' => $property->title.' is approved for listing.',
-                'url' => route('home'),
+                'url' => $property->submitterUrl(),
             ], 'property:'.$property->id);
         }
 
         return back()->with('status', 'Listing approved.');
+    }
+
+    public function reviewDocument(Request $request, OwnershipDocument $ownershipDocument, SellerPortal $portal): RedirectResponse
+    {
+        $data = $request->validate([
+            'state' => ['required', Rule::in([
+                VerificationItemState::UnderReview->value,
+                VerificationItemState::Verified->value,
+                VerificationItemState::Failed->value,
+                VerificationItemState::Expired->value,
+                VerificationItemState::NotApplicable->value,
+            ])],
+            'reason' => ['required', 'string', 'min:8', 'max:2000'],
+            'expires_at' => ['nullable', 'date'],
+        ]);
+
+        $portal->reviewDocument($ownershipDocument, $request->user(), VerificationItemState::from($data['state']), $data['reason'], $data['expires_at'] ?? null);
+
+        return back()->with('status', 'Document review recorded.');
+    }
+
+    public function documentNotApplicable(Request $request, Property $property, SellerPortal $portal): RedirectResponse
+    {
+        $data = $request->validate([
+            'document_type' => ['required', Rule::enum(OwnershipDocumentType::class)],
+            'reason' => ['required', 'string', 'min:8', 'max:2000'],
+        ]);
+
+        $portal->markDocumentNotApplicable($property, OwnershipDocumentType::from($data['document_type']), $request->user(), $data['reason']);
+
+        return back()->with('status', 'Document recorded as not applicable.');
+    }
+
+    public function downloadDocument(Request $request, OwnershipDocument $ownershipDocument): StreamedResponse
+    {
+        abort_unless($ownershipDocument->hasFile(), 404);
+
+        PropertyAudit::query()->create([
+            'property_id' => $ownershipDocument->property_id,
+            'actor_id' => $request->user()->id,
+            'action' => 'ownership_document_opened',
+            'changes' => ['document' => $ownershipDocument->id, 'type' => $ownershipDocument->document_type?->value],
+        ]);
+
+        return Storage::disk($ownershipDocument->disk)->download($ownershipDocument->path, $ownershipDocument->original_name);
+    }
+
+    public function recordLease(Request $request, Property $property, PropertyInventory $inventory): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('staff.properties') || $request->user()->hasPermission('staff.sales'), 403);
+
+        $data = $request->validate([
+            'starts_on' => ['required', 'date'],
+            'ends_on' => ['nullable', 'date', 'after:starts_on'],
+            'acreage' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'terms' => ['nullable', 'string', 'max:2000'],
+            'statement' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $inventory->recordLease($request->user(), $property, $data);
+
+        return back()->with('status', 'Lease recorded. The land is no longer advertised as available.');
+    }
+
+    public function endLease(Request $request, PropertyTransaction $propertyTransaction, PropertyInventory $inventory): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('staff.properties') || $request->user()->hasPermission('staff.sales'), 403);
+
+        $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:2000']]);
+        $inventory->endLease($request->user(), $propertyTransaction, $data['reason']);
+
+        return back()->with('status', 'Lease ended. The land is back in review before it is advertised again.');
     }
 
     public function applyAvailability(Request $request, Property $property): RedirectResponse

@@ -68,9 +68,19 @@ class PublicListing
             'location' => $property->locationLabel(),
             'purpose' => $property->purpose?->label(),
             'type' => $property->property_type?->label(),
+            'is_lease' => $property->isLease(),
             'acreage' => $this->acreage($property),
+            'minimum_acreage' => $property->minimum_acreage !== null ? rtrim(rtrim(number_format((float) $property->minimum_acreage, 2), '0'), '.') : null,
+            'price_label' => $property->isLease() ? 'Asking rent' : 'Asking price',
             'price' => $property->formattedPrice(),
+            'price_basis' => $property->price_amount !== null ? $property->priceBasis()->label() : null,
+            'price_negotiable' => (bool) $property->price_negotiable,
             'price_per_acre' => $property->pricePerAcre(),
+            'available_from' => $property->available_from?->format('j M Y'),
+            'lease_term' => $this->leaseTerm($property),
+            'tenure' => $property->tenure?->label(),
+            'landmark' => $property->landmark,
+            'terms' => $property->publicListingTerms(),
             'availability' => $property->availability?->label() ?? 'Available',
             'status' => $property->status?->label(),
             'road' => $property->road_access?->label() ?? 'Unknown',
@@ -91,9 +101,46 @@ class PublicListing
         ];
     }
 
+    /**
+     * Directory card data. Expects photos eager-loaded on the media relation.
+     *
+     * @return array{title: string, location: string, is_lease: bool, price: ?int, price_suffix: string, price_per_acre: ?int, acres: float, image: string, url: string}
+     */
+    public function card(Property $property): array
+    {
+        $cover = $property->areaCounty !== null && $property->areaLocality !== null
+            ? $property->media->first(fn (PropertyMedia $media): bool => $media->kind === 'photo' && PropertyMediaLibrary::isPublicDerivative($property, $media))
+            : null;
+
+        return [
+            'title' => $property->title,
+            'location' => $property->locationLabel(),
+            'is_lease' => $property->isLease(),
+            'price' => $property->price_amount !== null ? (int) $property->price_amount : null,
+            'price_suffix' => $property->price_amount !== null ? $property->priceBasis()->periodSuffix() : '',
+            'price_per_acre' => $property->pricePerAcre(),
+            'acres' => $property->offeredAcreage(),
+            'image' => $cover !== null
+                ? route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $cover])
+                : 'images/default_land_image.jpg',
+            'url' => $property->publicUrl(),
+        ];
+    }
+
+    private function leaseTerm(Property $property): ?string
+    {
+        if (! $property->isLease() || $property->lease_min_months === null) {
+            return null;
+        }
+
+        return $property->lease_max_months !== null && $property->lease_max_months > $property->lease_min_months
+            ? $property->lease_min_months.' to '.$property->lease_max_months.' months'
+            : 'From '.$property->lease_min_months.' months';
+    }
+
     private function acreage(Property $property): string
     {
-        $acres = $property->remainingAcreage();
+        $acres = $property->offeredAcreage();
 
         if ($acres <= 0) {
             return 'Not stated';
@@ -204,7 +251,21 @@ class PublicListing
                 'price' => (int) $property->price_amount,
                 'priceCurrency' => $property->price_currency ?: 'KES',
                 'availability' => 'https://schema.org/InStock',
+                'businessFunction' => $property->isLease()
+                    ? 'http://purl.org/goodrelations/v1#LeaseOut'
+                    : 'http://purl.org/goodrelations/v1#Sell',
             ];
+
+            $period = $property->priceBasis()->periodSuffix();
+
+            if ($property->isLease() && $period !== '') {
+                $schema['offers']['priceSpecification'] = [
+                    '@type' => 'UnitPriceSpecification',
+                    'price' => (int) $property->price_amount,
+                    'priceCurrency' => $property->price_currency ?: 'KES',
+                    'unitText' => $period === 'per month' ? 'MONTH' : 'ANN',
+                ];
+            }
         }
 
         return $schema;

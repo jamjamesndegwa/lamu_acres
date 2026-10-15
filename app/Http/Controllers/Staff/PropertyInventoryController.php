@@ -12,6 +12,8 @@ use App\Models\County;
 use App\Models\InfrastructureFeature;
 use App\Models\Property;
 use App\Services\Inventory\PropertyInventory;
+use App\Services\Seller\SellerPortal;
+use App\Services\Verification\VerificationOperations;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,8 +99,10 @@ class PropertyInventoryController extends Controller
             'owners.user:id,name,email',
             'authorities.seller:id,name',
             'enquiries.buyer:id,name',
-            'transactions',
+            'transactions.confirmer:id,name',
             'salesTransactions',
+            'saleInstructions.seller:id,name',
+            'ownershipDocuments' => fn ($query) => $query->with('reviewer:id,name')->latest(),
             'audits.actor:id,name',
             'priceChanges',
             'availabilityEvents',
@@ -129,6 +133,8 @@ class PropertyInventoryController extends Controller
             'amenities' => Amenity::cases(),
             'roads' => RoadAccess::cases(),
             'documentStates' => DocumentCheckState::cases(),
+            'blockers' => app(VerificationOperations::class)->blockers($property),
+            'requirements' => app(SellerPortal::class)->documentRequirements($property),
             'infrastructure' => $property->county_id
                 ? InfrastructureFeature::query()->active()->where('county_id', $property->county_id)->orderBy('name')->get()
                 : collect(),

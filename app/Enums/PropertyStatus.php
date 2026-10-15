@@ -9,6 +9,7 @@ enum PropertyStatus: string
     case Published = 'published';
     case Reserved = 'reserved';
     case Sold = 'sold';
+    case Leased = 'leased';
     case Withdrawn = 'withdrawn';
     case Suspended = 'suspended';
     case Archived = 'archived';
@@ -21,6 +22,7 @@ enum PropertyStatus: string
             self::Published => 'Published',
             self::Reserved => 'Reserved',
             self::Sold => 'Sold',
+            self::Leased => 'Leased',
             self::Withdrawn => 'Withdrawn',
             self::Suspended => 'Suspended',
             self::Archived => 'Archived',
@@ -35,8 +37,9 @@ enum PropertyStatus: string
         return match ($this) {
             self::Draft => [self::Review],
             self::Review => [self::Draft, self::Published],
-            self::Published => [self::Reserved, self::Sold, self::Withdrawn, self::Suspended],
-            self::Reserved => [self::Published, self::Sold, self::Withdrawn],
+            self::Published => [self::Reserved, self::Sold, self::Leased, self::Withdrawn, self::Suspended],
+            self::Reserved => [self::Published, self::Sold, self::Leased, self::Withdrawn],
+            self::Leased => [self::Review, self::Withdrawn],
             self::Withdrawn => [self::Draft],
             self::Suspended => [self::Review, self::Withdrawn],
             self::Sold, self::Archived => [],
