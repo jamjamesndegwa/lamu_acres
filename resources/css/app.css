@@ -76,8 +76,19 @@ turbo-frame#modal:empty {
     display: none;
 }
 
+:root,
 .home-shell {
     --home-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+}
+
+.land-hero-fade {
+    background: linear-gradient(90deg, rgba(23, 63, 59, 0.96) 0%, rgba(23, 63, 59, 0.88) 45%, rgba(23, 63, 59, 0.55) 75%, rgba(23, 63, 59, 0.35) 100%);
+}
+
+@media (min-width: 1280px) {
+    .land-hero-fade {
+        background: linear-gradient(90deg, rgba(23, 63, 59, 0.96) 0%, rgba(23, 63, 59, 0.82) 22%, rgba(23, 63, 59, 0.38) 34%, rgba(23, 63, 59, 0) 52%);
+    }
 }
 
 .home-serif {
@@ -168,13 +179,13 @@ body:has(.public-mobile-menu[open]) {
 }
 
 @media (width >= 64rem) {
-    .home-shell .home-header > div {
+    .home-header > div {
         width: 90%;
         height: 48px;
     }
 
     .home-shell #content > section:not(.home-hero),
-    .home-shell .home-footer > div > div {
+    .home-footer > div > div {
         width: 90%;
         max-width: 1440px;
     }
@@ -322,7 +333,7 @@ body:has(.public-mobile-menu[open]) {
         font-size: 10px;
     }
 
-    .home-shell .home-footer > div:first-child {
+    .home-footer > div:first-child {
         width: 90%;
         max-width: 1440px;
         padding-block: 10px;
@@ -331,24 +342,13 @@ body:has(.public-mobile-menu[open]) {
         line-height: 1.25;
     }
 
-    .home-shell .home-footer nav a,
-    .home-shell .home-footer nav p {
+    .home-footer nav a,
+    .home-footer nav p {
         margin-top: 3px;
     }
 
-    .home-shell .home-footer > div:last-child p {
+    .home-footer > div:last-child p {
         padding-block: 5px;
         font-size: 9px;
     }
-}
-
-.home-card-fade {
-    background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0) 35%,
-        rgba(255, 255, 255, 0.12) 45%,
-        rgba(255, 255, 255, 0.8) 65%,
-        rgba(255, 255, 255, 0.97) 82%,
-        #fff 100%
-    );
 }

@@ -23,7 +23,7 @@
         ])
     >
         <div class="border-b border-white/10 px-5 py-6">
-            <p class="text-lg font-semibold">Lamu Acres</p>
+            <x-brand-logo tone="dark" />
             @if ($workspace)
                 <p class="mt-1 text-sm text-sand-200">{{ $eyebrow ?: $workspace->label() }}</p>
             @endif

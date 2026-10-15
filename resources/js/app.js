@@ -32,6 +32,41 @@ window.matchMedia('(min-width: 1280px)').addEventListener('change', (event) => {
     if (event.matches) document.getElementById('public-mobile-menu')?.close()
 })
 
+document.addEventListener('click', (event) => {
+    const opener = event.target.closest('[data-dialog-open]')
+    if (opener) {
+        const dialog = document.getElementById(opener.dataset.dialogOpen)
+        if (dialog instanceof HTMLDialogElement) {
+            dialog.showModal()
+            opener.setAttribute('aria-expanded', 'true')
+        }
+        return
+    }
+
+    const dialog = event.target.closest('dialog[open]')
+    if (!dialog || dialog.id === 'public-mobile-menu') return
+
+    if (event.target.closest('[data-dialog-close]') || event.target === dialog) {
+        dialog.close()
+    }
+})
+
+document.addEventListener('close', (event) => {
+    if (event.target instanceof HTMLDialogElement && event.target.id) {
+        document.querySelector(`[data-dialog-open="${event.target.id}"]`)?.setAttribute('aria-expanded', 'false')
+    }
+}, true)
+
+window.matchMedia('(min-width: 1024px)').addEventListener('change', (event) => {
+    if (event.matches) document.getElementById('land-filters-dialog')?.close()
+})
+
+document.addEventListener('change', (event) => {
+    if (event.target instanceof HTMLSelectElement && event.target.matches('[data-auto-submit]')) {
+        event.target.form?.requestSubmit()
+    }
+})
+
 const swalDefaults = {
     confirmButtonColor: '#143028',
     cancelButtonColor: '#78716c',

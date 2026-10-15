@@ -7,23 +7,34 @@ use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\SavedProperty;
-use App\Services\Verification\VerificationDesk;
+use App\Services\Catalog\AppliedLandFilters;
+use App\Services\Catalog\PreviewLandListings;
 use App\Services\Catalog\PropertyCatalog;
 use App\Services\Catalog\PublicListing;
+use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LandDirectoryController extends Controller
 {
-    public function index(Request $request, PropertyCatalog $catalog, ?string $county = null, ?string $locality = null): View
-    {
+    public function index(
+        Request $request,
+        PropertyCatalog $catalog,
+        PreviewLandListings $previewListings,
+        AppliedLandFilters $appliedFilters,
+        ?string $county = null,
+        ?string $locality = null,
+    ): View {
         $countyModel = $this->county($county);
         $localityModel = $this->locality($countyModel, $locality);
+        $filters = $catalog->filters($request);
 
         return view('public.land.index', [
-            'listings' => $catalog->listings($catalog->filters($request), $countyModel, $localityModel),
-            'filters' => $catalog->filters($request),
+            'previewListings' => $previewListings->paginate($filters, $countyModel, $localityModel),
+            'filterChips' => $appliedFilters->chips($request, $filters, $countyModel, $localityModel),
+            'clearFiltersUrl' => $appliedFilters->clearUrl($request),
+            'filters' => $filters,
             'counties' => $catalog->counties(),
             'county' => $countyModel,
             'locality' => $localityModel,
