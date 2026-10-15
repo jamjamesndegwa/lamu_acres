@@ -31,7 +31,7 @@ class PropertyInformationRequestedNotification extends Notification
             'property_id' => $this->request->property_id,
             'title' => 'Staff asked for more information',
             'message' => $this->request->question,
-            'url' => route('broker.listings.show', $this->request->property),
+            'url' => $this->request->property->submitterUrl(),
         ];
     }
 }

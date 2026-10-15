@@ -119,7 +119,7 @@ class VerificationPassportTest extends FoundationTestCase
         $seller = User::factory()->withRoles('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
 
-        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Mokowe plot']);
+        $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Mokowe plot', 'purpose' => 'sale', 'relationship' => 'owner']);
         $property = Property::query()->where('title', 'Mokowe plot')->first();
 
         return [$staff, $property, $property->verificationItems()->where('category', VerificationCategory::TitleOwnership)->first()];

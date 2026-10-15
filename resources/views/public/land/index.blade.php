@@ -27,7 +27,7 @@
     $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('home').'#find-land';
     $mapImage = collect(['images/lamu_area_overview.jpg', 'images/lamu_map.jpg', 'images/lamu_map.png'])
         ->first(fn (string $path) => is_file(public_path($path)));
-    $resultCount = $previewListings->total();
+    $resultCount = $listings->total();
     $breadcrumbs = [['label' => 'Home', 'href' => route('home')]];
     $breadcrumbs[] = $areaName
         ? ['label' => 'Explore Land', 'href' => route('land.index')]
@@ -61,7 +61,7 @@
                         <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-lamu-800 px-1.5 text-xs text-white">{{ count($filterChips) }}<span class="sr-only"> applied</span></span>
                     @endif
                 </button>
-                <p class="text-sm text-stone-600">{{ $resultCount }} preview {{ \Illuminate\Support\Str::plural('listing', $resultCount) }}</p>
+                <p class="text-sm text-stone-600">{{ $resultCount }} available {{ \Illuminate\Support\Str::plural('listing', $resultCount) }}</p>
             </div>
             <dialog id="land-filters-dialog" class="public-mobile-menu lg:hidden" aria-labelledby="land-filters-dialog-title">
                 <div class="flex items-center justify-between border-b border-sand-200 px-4 py-3">
@@ -84,8 +84,8 @@
             <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                 <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                     <div>
-                        <h2 id="land-results-heading" class="home-serif text-lg font-semibold leading-tight text-stone-900">{{ $resultCount }} preview {{ \Illuminate\Support\Str::plural('listing', $resultCount) }}</h2>
-                        <p class="text-xs text-stone-500">Preview listings — sample cards, not live offers.</p>
+                        <h2 id="land-results-heading" class="home-serif text-lg font-semibold leading-tight text-stone-900">{{ $resultCount }} available {{ \Illuminate\Support\Str::plural('listing', $resultCount) }}</h2>
+                        <p class="text-xs text-stone-500">Sale and lease listings published after staff review.</p>
                     </div>
                     @if ($filterChips !== [])
                         <h3 class="sr-only">Applied filters</h3>
@@ -140,28 +140,33 @@
                 </div>
             </div>
 
-            @if ($previewListings->isEmpty())
+            @if ($listings->isEmpty())
                 <div class="mt-3 rounded-lg border border-sand-200 bg-white p-5 text-sm text-stone-600">
-                    <p class="font-medium text-stone-900">No preview listings match these filters.</p>
-                    <p class="mt-1">Try widening the price or acreage range, or <a href="{{ $clearFiltersUrl }}" class="font-medium text-lamu-800 hover:underline">clear all filters</a>.</p>
+                    @if ($filterChips === [] && $county === null)
+                        <p class="font-medium text-stone-900">No land has been published yet.</p>
+                        <p class="mt-1">Listings appear here once staff have reviewed and approved them.</p>
+                    @else
+                        <p class="font-medium text-stone-900">No published land matches these filters.</p>
+                        <p class="mt-1">Try widening the price or acreage range, or <a href="{{ $clearFiltersUrl }}" class="font-medium text-lamu-800 hover:underline">clear all filters</a>.</p>
+                    @endif
                 </div>
             @elseif ($filters['view'] === 'list')
                 <div class="mt-3 space-y-3">
-                    @foreach ($previewListings as $listing)
+                    @foreach ($listings as $listing)
                         <x-land-preview-card :listing="$listing" layout="list" />
                     @endforeach
                 </div>
             @else
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    @foreach ($previewListings as $listing)
+                    @foreach ($listings as $listing)
                         <x-land-preview-card :listing="$listing" />
                     @endforeach
                 </div>
             @endif
 
-            @if ($previewListings->hasPages())
+            @if ($listings->hasPages())
                 <div class="mt-4 rounded-lg border border-sand-200 bg-white px-3 py-2">
-                    {{ $previewListings->links() }}
+                    {{ $listings->links() }}
                 </div>
             @endif
         </section>

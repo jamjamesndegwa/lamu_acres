@@ -2,12 +2,28 @@
     <p class="mt-3 text-sm text-stone-600">{{ $listing->reference }} · {{ $listing->status->label() }} · submitted by {{ $listing->submitter?->name }}@if ($listing->submitter?->email) · {{ $listing->submitter->email }}@endif</p>
     <p class="mt-2 text-sm"><a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', $listing) }}">Open property workspace</a></p>
     <dl class="mt-6 grid max-w-3xl gap-4 rounded-2xl border border-sand-200 bg-white p-5 sm:grid-cols-2">
-        <div><dt class="text-sm text-stone-500">Seller</dt><dd>{{ $listing->seller_name }}</dd></div>
-        <div><dt class="text-sm text-stone-500">Contact</dt><dd>{{ $listing->seller_contact }}</dd></div>
+        <div><dt class="text-sm text-stone-500">Seller</dt><dd>{{ $listing->seller_name ?? $listing->submitter?->name }}</dd></div>
+        <div><dt class="text-sm text-stone-500">Contact</dt><dd>{{ $listing->seller_contact ?? $listing->submitter?->email }}</dd></div>
         <div><dt class="text-sm text-stone-500">Relationship</dt><dd>{{ $listing->marketing_role?->label() }}</dd></div>
         <div><dt class="text-sm text-stone-500">Parcel</dt><dd>{{ $listing->parcel_identifier ?: 'Not supplied' }}</dd></div>
         <div class="sm:col-span-2"><dt class="text-sm text-stone-500">Location</dt><dd>{{ $listing->locationLabel() }} · {{ $listing->acreage }} acres</dd></div>
+        @foreach ($listing->owners as $owner)
+            <div class="sm:col-span-2"><dt class="text-sm text-stone-500">Declared relationship</dt><dd>{{ $owner->user?->name ?? 'Account' }} · {{ $owner->relationship->label() }} · {{ $owner->status->label() }}@if ($owner->status !== \App\Enums\OwnerLinkStatus::Verified) · <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', [$listing, 'tab' => 'owners']) }}">verify on the owners tab</a>@endif</dd></div>
+        @endforeach
+        @foreach ($listing->authorities as $authority)
+            <div class="sm:col-span-2"><dt class="text-sm text-stone-500">Marketing authority</dt><dd>{{ $authority->status->label() }} · {{ $authority->scope?->label() ?? 'Sale and lease' }}@if ($authority->valid_until) · until {{ $authority->valid_until->format('j M Y') }}@endif · <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', [$listing, 'tab' => 'marketing']) }}">decide on the marketing tab</a></dd></div>
+        @endforeach
     </dl>
+    @if ($listing->summary)
+        <p class="mt-4 max-w-3xl font-medium text-stone-800">{{ $listing->summary }}</p>
+    @endif
+    @if ($listing->description)
+        <p class="mt-2 max-w-3xl text-stone-700">{{ $listing->description }}</p>
+    @endif
+    @include('staff.properties.partials.listing-details', ['property' => $listing])
+    @if ($listing->owners->isNotEmpty())
+        @include('staff.properties.partials.ownership-documents', ['property' => $listing])
+    @endif
     @if ($matches->isNotEmpty())
         <h2 class="mt-8 font-semibold text-lamu-900">Possible duplicates</h2>
         <ul class="mt-3 space-y-1 text-sm">
@@ -25,11 +41,17 @@
     @endif
     <h2 class="mt-8 font-semibold text-lamu-900">Files</h2>
     <ul class="mt-3 text-sm">
-        @foreach ($listing->media as $file)
+        @forelse ($listing->media as $file)
             <li>
-                <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.listings.media', [$listing, $file]) }}">{{ $file->kind === 'authority' ? 'Marketing authority' : 'Photograph' }}: {{ $file->original_name }}</a>
+                @if (str_starts_with((string) $file->path, 'broker-listings/'.$listing->id.'/'))
+                    <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.listings.media', [$listing, $file]) }}">{{ $file->kind === 'authority' ? 'Marketing authority' : 'Photograph' }}: {{ $file->original_name }}</a>
+                @elseif (\App\Services\Media\PropertyMediaLibrary::isPublicDerivative($listing, $file))
+                    <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.media.preview', [$listing, $file]) }}">Photograph{{ $file->is_cover ? ' (cover)' : '' }}: {{ $file->original_name }}</a>
+                @endif
             </li>
-        @endforeach
+        @empty
+            <li class="text-stone-600">No files uploaded.</li>
+        @endforelse
     </ul>
     <h2 class="mt-8 font-semibold text-lamu-900">Information requests</h2>
     <div class="mt-3 max-w-3xl space-y-3">
@@ -37,7 +59,7 @@
             <article class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
                 <p>{{ $item->question }}</p>
                 @if ($item->response)
-                    <p class="mt-2 text-stone-600">Broker reply: {{ $item->response }}</p>
+                    <p class="mt-2 text-stone-600">Reply: {{ $item->response }}</p>
                 @else
                     <p class="mt-2 text-stone-500">Waiting for a reply.</p>
                 @endif

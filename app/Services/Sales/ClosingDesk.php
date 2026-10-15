@@ -117,6 +117,12 @@ class ClosingDesk
                 throw ValidationException::withMessages(['agreed_price' => 'Record the agreed price and acreage before completion.']);
             }
 
+            if ($locked->property->isLease()) {
+                throw ValidationException::withMessages([
+                    'stage' => 'This is a lease listing. Record the confirmed lease on the property instead of closing a sale.',
+                ]);
+            }
+
             $this->inventory->closeSale($actor, $locked->property, (float) $locked->acreage, (int) $locked->agreed_price);
 
             $locked->stage = SalesStage::Completed;

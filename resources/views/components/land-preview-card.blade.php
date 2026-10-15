@@ -2,7 +2,10 @@
 
 @php
     $acres = rtrim(rtrim(number_format($listing['acres'], 2), '0'), '.');
-    $pricePerAcre = $listing['acres'] > 0 ? 'KES '.number_format($listing['price'] / $listing['acres']).' /acre' : null;
+    $perAcre = array_key_exists('price_per_acre', $listing)
+        ? $listing['price_per_acre']
+        : ($listing['acres'] > 0 && $listing['price'] !== null ? $listing['price'] / $listing['acres'] : null);
+    $pricePerAcre = $perAcre !== null ? 'KES '.number_format($perAcre).' /acre' : null;
     $isList = $layout === 'list';
 @endphp
 
@@ -22,7 +25,16 @@
             </svg>
             <span><span class="sr-only">Location: </span>{{ $listing['location'] }}</span>
         </p>
-        <p class="home-serif mt-0.5 text-lg font-semibold leading-tight text-gold-500">KES {{ number_format($listing['price']) }}</p>
+        <p class="home-serif mt-0.5 text-lg font-semibold leading-tight text-gold-500">
+            @if ($listing['price'] !== null)
+                KES {{ number_format($listing['price']) }}@if (filled($listing['price_suffix'] ?? null)) <span class="text-sm font-medium">{{ $listing['price_suffix'] }}</span>@endif
+            @else
+                {{ ($listing['is_lease'] ?? false) ? 'Rent on request' : 'Price on request' }}
+            @endif
+        </p>
+        @if ($listing['is_lease'] ?? false)
+            <p class="text-xs font-medium text-lamu-800">For lease</p>
+        @endif
         <div class="flex flex-wrap items-center gap-x-1.5 text-xs text-stone-700">
             <span>{{ $acres }} {{ $listing['acres'] == 1 ? 'acre' : 'acres' }} available</span>
             @if ($pricePerAcre)

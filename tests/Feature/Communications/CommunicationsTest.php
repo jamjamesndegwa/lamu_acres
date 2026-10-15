@@ -7,11 +7,12 @@ use App\Enums\CapabilityApplicationStatus;
 use App\Enums\MessageChannel;
 use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
-use App\Enums\VerificationCategory;
-use App\Enums\VerificationItemState;
+use App\Enums\PropertyStatus;
 use App\Events\EnquirySubmitted;
 use App\Models\CapabilityApplication;
+use App\Models\County;
 use App\Models\Enquiry;
+use App\Models\Locality;
 use App\Models\MessageDelivery;
 use App\Models\MessageTemplate;
 use App\Models\NotificationPreference;
@@ -21,7 +22,6 @@ use App\Notifications\TemplatedDeskNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Communications\MessageDesk;
-use App\Services\Verification\VerificationDesk;
 use RuntimeException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -101,26 +101,17 @@ class CommunicationsTest extends FoundationTestCase
     {
         $broker = User::factory()->withRoles('broker')->create(['notify_by_email' => false]);
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
-        $property = Property::factory()->create([
+        $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
+        $locality = Locality::query()->create(['county_id' => $county->id, 'name' => 'Mokowe', 'slug' => 'mokowe', 'kind' => 'place', 'is_active' => true]);
+        $property = Property::factory()->listedIn($locality)->create([
             'title' => 'Mokowe acres',
+            'status' => PropertyStatus::Review,
             'submitted_by' => $broker->id,
             'restricted_latitude' => -2.27123456,
             'restricted_longitude' => 40.90123456,
         ]);
-
-        $desk = app(VerificationDesk::class);
-        $desk->seed($property);
-
-        foreach (VerificationCategory::cases() as $category) {
-            if (! $category->critical()) {
-                continue;
-            }
-
-            $desk->review($property->verificationItems()->where('category', $category)->first(), $staff, [
-                'state' => VerificationItemState::NotApplicable->value,
-                'evidence_note' => 'Not applicable for this listing.',
-            ]);
-        }
+        $this->attachPublicPhoto($property, $broker);
+        $this->clearCriticalVerification($property, $staff);
 
         app(PropertySubmission::class)->approve($staff, $property);
         app(PropertySubmission::class)->approve($staff, $property->fresh());

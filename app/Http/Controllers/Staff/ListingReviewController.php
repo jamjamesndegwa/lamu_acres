@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\PropertyMedia;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
+use App\Services\Seller\SellerPortal;
 use App\Services\Verification\VerificationOperations;
 use App\Support\ApprovalsReturn;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +28,7 @@ class ListingReviewController extends Controller
             'queue' => in_array($queue, ['pending', 'returned'], true) ? $queue : 'all',
             'listings' => Property::query()
                 ->whereNotNull('submitted_by')
-                ->where('status', '!=', PropertyStatus::Published)
+                ->whereNotIn('status', [PropertyStatus::Published, PropertyStatus::Draft])
                 ->with('submitter:id,name')
                 ->withExists(['informationRequests as returned' => fn ($query) => $query->whereNull('responded_at')])
                 ->when($queue === 'pending', fn ($query) => $query->whereDoesntHave('informationRequests', fn ($inner) => $inner->whereNull('responded_at')))
@@ -38,16 +39,25 @@ class ListingReviewController extends Controller
         ]);
     }
 
-    public function show(Property $property, DuplicateListingDetector $duplicates): View
+    public function show(Property $property, DuplicateListingDetector $duplicates, SellerPortal $portal): View
     {
         $this->authorize('reviewSubmission', $property);
 
-        $property->load(['submitter', 'media', 'informationRequests.staff', 'audits']);
+        $property->load([
+            'submitter',
+            'media',
+            'informationRequests.staff',
+            'audits',
+            'owners.user',
+            'authorities',
+            'ownershipDocuments' => fn ($query) => $query->with('reviewer:id,name')->latest(),
+        ]);
 
         return view('staff.listings.show', [
             'listing' => $property,
             'matches' => $duplicates->staffMatches($property),
             'blockers' => app(VerificationOperations::class)->blockers($property),
+            'requirements' => $portal->documentRequirements($property),
         ]);
     }
 
@@ -61,7 +71,7 @@ class ListingReviewController extends Controller
 
         $submissions->requestInformation($request->user(), $property, $data['question']);
 
-        return ApprovalsReturn::back($request, 'listings', 'The broker was asked for more information.');
+        return ApprovalsReturn::back($request, 'listings', 'The submitter was asked for more information.');
     }
 
     public function approve(Request $request, Property $property, PropertySubmission $submissions): RedirectResponse

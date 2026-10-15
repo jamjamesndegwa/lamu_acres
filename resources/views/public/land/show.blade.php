@@ -27,13 +27,43 @@
                 <dd class="mt-1"><x-status-badge :label="$listing['status']" /></dd>
             </div>
             <div>
-                <dt class="text-sm text-stone-500">Asking price</dt>
-                <dd class="font-medium text-lamu-900">{{ $listing['price'] ?? 'Price on request' }}</dd>
+                <dt class="text-sm text-stone-500">{{ $listing['price_label'] }}</dt>
+                <dd class="font-medium text-lamu-900">{{ $listing['price'] ?? ($listing['is_lease'] ? 'Rent on request' : 'Price on request') }}</dd>
+                @if ($listing['price_basis'] || $listing['price_negotiable'])
+                    <dd class="text-sm text-stone-600">{{ collect([$listing['price_basis'], $listing['price_negotiable'] ? 'Negotiable' : null])->filter()->implode(' · ') }}</dd>
+                @endif
             </div>
             <div>
-                <dt class="text-sm text-stone-500">Acreage</dt>
+                <dt class="text-sm text-stone-500">{{ $listing['is_lease'] ? 'Area offered for lease' : 'Area offered' }}</dt>
                 <dd class="font-medium text-lamu-900">{{ $listing['acreage'] === 'Not stated' ? 'Not stated' : $listing['acreage'].' acres' }}</dd>
+                @if ($listing['minimum_acreage'])
+                    <dd class="text-sm text-stone-600">Portions from {{ $listing['minimum_acreage'] }} acres considered</dd>
+                @endif
             </div>
+            @if ($listing['lease_term'])
+                <div>
+                    <dt class="text-sm text-stone-500">Lease term</dt>
+                    <dd class="font-medium text-lamu-900">{{ $listing['lease_term'] }}</dd>
+                </div>
+            @endif
+            @if ($listing['available_from'])
+                <div>
+                    <dt class="text-sm text-stone-500">Available from</dt>
+                    <dd class="font-medium text-lamu-900">{{ $listing['available_from'] }}</dd>
+                </div>
+            @endif
+            @if ($listing['tenure'])
+                <div>
+                    <dt class="text-sm text-stone-500">Tenure</dt>
+                    <dd class="font-medium text-lamu-900">{{ $listing['tenure'] }}</dd>
+                </div>
+            @endif
+            @if ($listing['landmark'])
+                <div>
+                    <dt class="text-sm text-stone-500">Nearest landmark</dt>
+                    <dd class="font-medium text-lamu-900">{{ $listing['landmark'] }}</dd>
+                </div>
+            @endif
             @if ($listing['price_per_acre'])
                 <div>
                     <dt class="text-sm text-stone-500">Price per acre</dt>
@@ -100,6 +130,21 @@
             <section class="mt-10">
                 <h2 class="text-xl font-semibold text-lamu-900">Summary</h2>
                 <p class="mt-3 text-stone-700">{{ $listing['summary'] }}</p>
+            </section>
+        @endif
+
+        @if ($listing['terms'] !== [])
+            <section class="mt-10">
+                <h2 class="text-xl font-semibold text-lamu-900">{{ $listing['is_lease'] ? 'Lease terms and land details' : 'Sale terms and land details' }}</h2>
+                <p class="mt-2 text-sm text-stone-600">As declared by the landowner. Confirm all terms with the Lamu Acres desk before relying on them.</p>
+                <dl class="mt-4 space-y-3">
+                    @foreach ($listing['terms'] as $label => $value)
+                        <div class="rounded-2xl border border-sand-200 bg-white px-4 py-3">
+                            <dt class="text-sm text-stone-500">{{ $label }}</dt>
+                            <dd class="whitespace-pre-line text-stone-800">{{ $value }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
             </section>
         @endif
 

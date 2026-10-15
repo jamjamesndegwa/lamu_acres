@@ -2,12 +2,18 @@
 
 namespace App\Services\Verification;
 
+use App\Enums\OwnerLinkStatus;
+use App\Enums\PriceBasis;
+use App\Enums\PropertyStatus;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationItemState;
 use App\Enums\VerificationLevel;
 use App\Enums\VerificationOverride;
 use App\Enums\VerificationQueue;
+use App\Models\MarketingAuthority;
 use App\Models\Property;
+use App\Models\PropertyMedia;
+use App\Services\Media\PropertyMediaLibrary;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
@@ -159,9 +165,103 @@ class VerificationOperations
     }
 
     /**
+     * Everything that stops a property from being published: passport checks plus
+     * listing completeness, ownership, marketing authority and parcel conflicts.
+     *
      * @return array<int, string>
      */
     public function blockers(Property $property): array
+    {
+        return array_merge($this->passportBlockers($property), $this->listingBlockers($property));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function listingBlockers(Property $property): array
+    {
+        $property->loadMissing(['media', 'owners', 'authorities']);
+        $blockers = [];
+
+        if ($property->purpose === null) {
+            $blockers[] = 'Listing purpose (sale or lease) is not set.';
+        } elseif ($property->priceBasis() !== PriceBasis::Total && $property->priceBasis()->purpose() !== $property->purpose) {
+            $blockers[] = 'The price basis does not match a '.strtolower($property->purpose->label()).' listing.';
+        }
+
+        if (blank($property->title) || (blank($property->summary) && blank($property->description))) {
+            $blockers[] = 'Title and a summary or description are required.';
+        }
+
+        if ($property->county_id === null || $property->locality_id === null) {
+            $blockers[] = 'County and locality are not set.';
+        }
+
+        if ((float) $property->acreage <= 0) {
+            $blockers[] = 'Acreage is not recorded.';
+        } elseif ($property->offered_acreage !== null && (float) $property->offered_acreage > $property->remainingAcreage() + 0.0001) {
+            $blockers[] = 'The acreage offered is larger than the land still held.';
+        }
+
+        if ($property->price_amount === null) {
+            $blockers[] = $property->isLease() ? 'Asking rent is not recorded.' : 'Asking price is not recorded.';
+        }
+
+        $hasPublicPhoto = $property->media->contains(
+            fn (PropertyMedia $media): bool => PropertyMediaLibrary::isPublicDerivative($property, $media),
+        );
+
+        if (! $hasPublicPhoto) {
+            $blockers[] = 'At least one public photograph is required.';
+        }
+
+        if ($property->owners->isNotEmpty()) {
+            if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
+                $blockers[] = 'No ownership or authority relationship has been verified.';
+            }
+
+            $authorised = $property->purpose !== null && $property->authorities->contains(
+                fn (MarketingAuthority $authority): bool => $authority->permitsMarketing($property->purpose),
+            );
+
+            if (! $authorised) {
+                $blockers[] = 'No active marketing authority covers this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+            }
+        }
+
+        $conflict = $this->parcelConflict($property);
+
+        if ($conflict !== null) {
+            $blockers[] = 'Parcel '.$property->parcel_identifier.' is already marketed as '.$conflict->reference.'.';
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * Another live listing for the same registered parcel, outside this parcel's own portions.
+     */
+    public function parcelConflict(Property $property): ?Property
+    {
+        if (blank($property->parcel_identifier)) {
+            return null;
+        }
+
+        $family = array_filter([$property->id, $property->parent_id]);
+
+        return Property::query()
+            ->whereKeyNot($property->id)
+            ->where('parcel_identifier', $property->parcel_identifier)
+            ->whereIn('status', [PropertyStatus::Published, PropertyStatus::Reserved, PropertyStatus::Leased])
+            ->whereNotIn('id', $family)
+            ->where(fn (Builder $query) => $query->whereNull('parent_id')->orWhereNotIn('parent_id', $family))
+            ->first(['id', 'reference']);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function passportBlockers(Property $property): array
     {
         $property->loadMissing(['passport', 'verificationItems']);
         $blockers = [];

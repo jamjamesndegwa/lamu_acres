@@ -226,8 +226,8 @@ return [
                     ['label' => 'Seller profile', 'route' => 'seller.holding.edit', 'active' => 'seller.holding.*'],
                     ['label' => 'My Properties', 'route' => 'seller.properties.index', 'active' => 'seller.properties.*'],
                     ['label' => 'List Property', 'route' => 'seller.properties.create', 'active' => 'seller.properties.create'],
-                    ['label' => 'Documents', 'route' => 'seller.properties.index'],
-                    ['label' => 'Verification', 'route' => 'seller.properties.index'],
+                    ['label' => 'Documents', 'route' => 'seller.properties.index', 'fragment' => 'returned'],
+                    ['label' => 'Verification', 'route' => 'seller.properties.index', 'fragment' => 'review'],
                 ],
             ],
             [
