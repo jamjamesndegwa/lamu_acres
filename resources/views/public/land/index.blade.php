@@ -26,8 +26,12 @@
     $findLandModal = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
     $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('find-land.index');
     $buyerWorkspace = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
-    $mapImage = collect(['images/lamu_area_overview.jpg', 'images/lamu_map.jpg', 'images/lamu_map.png'])
-        ->first(fn (string $path) => is_file(public_path($path)));
+    $mapPlace = $locality ?? $county ?? $counties->firstWhere('slug', 'lamu');
+    $hasAreaPoint = $mapPlace?->latitude !== null && $mapPlace?->longitude !== null
+        && abs((float) $mapPlace->latitude) <= 90 && abs((float) $mapPlace->longitude) <= 180;
+    $mapLatitude = $hasAreaPoint ? (float) $mapPlace->latitude : -2.27;
+    $mapLongitude = $hasAreaPoint ? (float) $mapPlace->longitude : 40.90;
+    $mapLabel = $hasAreaPoint ? $mapPlace->name.' area overview' : 'Lamu area overview';
     $resultCount = $listings->total();
     $breadcrumbs = [['label' => 'Home', 'href' => route('home')]];
     $breadcrumbs[] = $areaName
@@ -177,14 +181,13 @@
         </section>
 
         <aside class="order-3 grid content-start gap-3 sm:grid-cols-2 lg:order-none lg:col-start-2 xl:sticky xl:top-[60px] xl:col-start-3 xl:max-h-[calc(100dvh-72px)] xl:grid-cols-1 xl:self-start xl:overflow-y-auto xl:[scrollbar-width:thin]" aria-label="Area overview and assistance">
-            @if ($mapImage)
-                <figure class="overflow-hidden rounded-lg border border-sand-200 bg-white shadow-sm shadow-stone-900/5">
-                    <img src="{{ asset($mapImage) }}" alt="Overview map of the Lamu area" width="188" height="222" class="block h-auto w-full">
-                    <figcaption class="border-t border-sand-200 px-3 py-1.5 text-xs font-medium text-lamu-900">Lamu area overview</figcaption>
-                </figure>
-            @endif
+            <section class="relative z-0 overflow-hidden rounded-lg border border-sand-200 bg-white p-3 shadow-sm shadow-stone-900/5" aria-label="Interactive area overview">
+                <h2 class="text-xs font-semibold text-lamu-900">{{ $mapLabel }}</h2>
+                <x-map-viewer :latitude="$mapLatitude" :longitude="$mapLongitude" :zoom="$locality && $hasAreaPoint ? 12 : 9" />
+                <p class="mt-2 text-xs text-stone-600">Pan or zoom to explore. This is an area guide, not a parcel boundary.</p>
+            </section>
 
-            <div @class(['flex gap-3 rounded-lg border border-gold-500/30 bg-[#f8f1e4] p-3', 'sm:col-span-2 xl:col-span-1' => ! $mapImage])>
+            <div class="flex gap-3 rounded-lg border border-gold-500/30 bg-[#f8f1e4] p-3">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gold-500/50 text-gold-500" aria-hidden="true">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" stroke-linejoin="round" /></svg>
                 </span>

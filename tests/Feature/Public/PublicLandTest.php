@@ -2,7 +2,11 @@
 
 namespace Tests\Feature\Public;
 
+use App\Enums\LandTenure;
 use App\Enums\ListingPurpose;
+use App\Enums\OwnerLinkStatus;
+use App\Enums\OwnerRelationship;
+use App\Enums\PriceBasis;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Models\County;
@@ -75,6 +79,10 @@ class PublicLandTest extends TestCase
         $this->get('/land')
             ->assertOk()
             ->assertSee('Land in Lamu')
+            ->assertSee('Interactive area overview')
+            ->assertSee('data-shared-map', false)
+            ->assertSee('data-zoom="9"', false)
+            ->assertDontSee('Overview map of the Lamu area')
             ->assertSee('Visible Shela plot')
             ->assertSeeInOrder(['<span class="flex-1">Shela</span>', '1 <span class="sr-only">published listing</span>'], false)
             ->assertDontSee('Hidden draft plot')
@@ -193,13 +201,13 @@ class PublicLandTest extends TestCase
             'title' => 'Prime Shela Sand Dunes',
             'summary' => 'Beautiful dunes for development.',
             'purpose' => ListingPurpose::Sale,
-            'price_basis' => \App\Enums\PriceBasis::PerAcre,
+            'price_basis' => PriceBasis::PerAcre,
             'price_rate' => 2_500_000,
             'price_amount' => 10_000_000,
             'acreage' => 4,
             'offered_acreage' => 4,
             'price_negotiable' => true,
-            'tenure' => \App\Enums\LandTenure::Freehold,
+            'tenure' => LandTenure::Freehold,
             'landmark' => 'Near Peponi Hotel',
             'parcel_identifier' => 'SECRET-PARCEL-999',
             'restricted_latitude' => -2.2981,
@@ -212,8 +220,8 @@ class PublicLandTest extends TestCase
         ]);
         $saleListing->owners()->create([
             'user_id' => $seller->id,
-            'relationship' => \App\Enums\OwnerRelationship::Owner,
-            'status' => \App\Enums\OwnerLinkStatus::Verified,
+            'relationship' => OwnerRelationship::Owner,
+            'status' => OwnerLinkStatus::Verified,
         ]);
 
         $this->get(route('land.show', ['lamu', 'shela', $saleListing]))
@@ -231,7 +239,7 @@ class PublicLandTest extends TestCase
             ->assertDontSee('Secret Landowner')
             ->assertDontSee('private@seller.test');
 
-        $leaseListing = Property::factory()->published()->listedIn($shela)->lease(\App\Enums\PriceBasis::ParcelMonth)->create([
+        $leaseListing = Property::factory()->published()->listedIn($shela)->lease(PriceBasis::ParcelMonth)->create([
             'title' => 'Shela Beachfront Lease',
             'summary' => 'Long-term residential lease.',
             'acreage' => 2,

@@ -2,6 +2,7 @@
     'embed' => null,
     'latitude' => null,
     'longitude' => null,
+    'zoom' => 13,
     'empty' => 'No public coordinates have been recorded.',
 ])
 
@@ -18,6 +19,7 @@
         data-shared-map
         data-point-a="{{ $latitude }}"
         data-point-b="{{ $longitude }}"
+        data-zoom="{{ $zoom }}"
         class="mt-3 h-64 overflow-hidden rounded-2xl border border-sand-200"
         role="img"
         aria-label="Map of the published location"
@@ -31,7 +33,7 @@
 
                 const north = Number(node.dataset.pointA)
                 const east = Number(node.dataset.pointB)
-                const map = L.map(node, { scrollWheelZoom: false }).setView([north, east], 13)
+                const map = L.map(node, { scrollWheelZoom: false }).setView([north, east], Number(node.dataset.zoom) || 13)
                 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     referrerPolicy: 'origin',
