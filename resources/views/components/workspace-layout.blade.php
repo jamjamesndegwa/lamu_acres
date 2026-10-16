@@ -33,7 +33,7 @@
                     </div>
                     <div class="ml-auto flex items-center gap-3 sm:gap-4">
                         @if ($currentWorkspace?->value === 'buyer')
-                            <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="modal" class="inline-flex min-h-10 items-center gap-2 rounded-full bg-lamu-900 px-4 text-sm font-medium text-white transition hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
+                            <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" class="inline-flex min-h-10 items-center gap-2 rounded-full bg-lamu-900 px-4 text-sm font-medium text-white transition hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
                                 <span aria-hidden="true" class="text-lg leading-none">+</span>
                                 <span class="hidden sm:inline">New land search</span>
                                 <span class="sm:hidden">New search</span>

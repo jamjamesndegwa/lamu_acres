@@ -17,6 +17,19 @@ use Tests\Feature\Foundation\FoundationTestCase;
 
 class SourcingRequestTest extends FoundationTestCase
 {
+    public function test_buyer_staff_assistance_opens_a_full_page_with_the_existing_request_form(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->get(route('buyer.sourcing.create'))->assertOk()
+            ->assertSee('Request staff assistance')
+            ->assertSee('View your requests')
+            ->assertSee('name="location_label"', false)
+            ->assertSee('name="notes"', false)
+            ->assertSee('action="'.route('buyer.sourcing.store').'"', false)
+            ->assertDontSee('data-modal-overlay', false);
+    }
+
     public function test_a_buyer_search_stores_spatial_criteria_and_stays_private(): void
     {
         $buyer = User::factory()->withRoles('buyer')->create();

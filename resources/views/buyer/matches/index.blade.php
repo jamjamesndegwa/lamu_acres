@@ -5,7 +5,7 @@
         <x-buyer.next-step
             label="Find land for me"
             :href="route('buyer.sourcing.create')"
-            frame="modal"
+            frame="_top"
             detail="No approved match is ready. Record a search on the map, or explore published land while matching continues."
         />
         <p class="mt-4 text-sm">

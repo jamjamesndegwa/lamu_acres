@@ -48,7 +48,7 @@ class SourcingRequestController extends Controller
 
         return redirect()
             ->route('buyer.sourcing.show', $sourcingRequest)
-            ->with('status', 'Your search has been submitted.');
+            ->with('status', 'Your staff assistance request has been submitted.');
     }
 
     public function show(Request $request, SourcingRequest $sourcingRequest): View

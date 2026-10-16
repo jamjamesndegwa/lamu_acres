@@ -1,21 +1,28 @@
 <p class="mt-4 max-w-3xl text-sm text-stone-600">Figures below are asking prices from published listings. They are not achieved sale prices, and they are not a forecast. Seller identity and parcel numbers are not part of this observatory.</p>
-<x-filter-bar :action="url()->current()" class="mt-6 flex flex-wrap items-end gap-3">
+<x-filter-bar :action="url()->current()" class="mt-4 grid gap-3 rounded-lg border border-sand-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
     <div>
-        <label for="price-locality" class="block text-sm font-medium">Location</label>
-        <select id="price-locality" name="locality" class="mt-1 rounded-lg border border-sand-200 bg-white px-3 py-2">
+        <label for="price-locality" class="block text-xs font-medium text-stone-700">Location</label>
+        <select id="price-locality" name="locality" class="mt-1 min-h-10 w-full rounded-md border border-sand-200 bg-white px-3 py-2 text-sm">
             <option value="">All locations</option>
             @foreach ($localities as $locality)
                 <option value="{{ $locality->id }}" @selected((string) request('locality') === (string) $locality->id)>{{ $locality->name }}</option>
             @endforeach
         </select>
     </div>
-    <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Filter</button>
+    <div class="flex items-end gap-3">
+        <button type="submit" class="min-h-10 rounded-md bg-lamu-900 px-4 py-2 text-xs font-semibold text-white">Apply filters</button>
+        <a href="{{ url()->current() }}" class="inline-flex min-h-10 items-center text-xs font-medium text-lamu-800 underline">Reset</a>
+    </div>
 </x-filter-bar>
-<div class="mt-6 grid gap-4">
+<div class="mt-5 flex flex-wrap items-baseline justify-between gap-2">
+    <h2 class="home-serif text-lg font-semibold text-lamu-900">Asking prices by location</h2>
+    <p class="text-xs text-stone-600">{{ $rows->count() }} locations matching your selection</p>
+</div>
+<div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     @forelse ($rows as $row)
-        <article class="rounded-2xl border border-sand-200 bg-white p-5">
-            <h2 class="font-semibold text-lamu-900">{{ $row['locality']->name }}</h2>
-            <p class="mt-2 text-sm text-stone-600">Sample size: {{ $row['sample'] }} published asking {{ $row['sample'] === 1 ? 'price' : 'prices' }}. Freshness: {{ $row['fresh_at'] ? \Illuminate\Support\Carbon::parse($row['fresh_at'])->toFormattedDateString() : 'not recorded' }}.</p>
+        <article class="flex flex-col rounded-lg border border-sand-200 bg-white p-4">
+            <h3 class="home-serif text-base font-semibold text-lamu-900">{{ $row['locality']->name }}</h3>
+            <p class="mt-2 text-xs leading-relaxed text-stone-600">Sample size: {{ $row['sample'] }} published asking {{ $row['sample'] === 1 ? 'price' : 'prices' }}. Freshness: {{ $row['fresh_at'] ? \Illuminate\Support\Carbon::parse($row['fresh_at'])->toFormattedDateString() : 'not recorded' }}.</p>
             @if ($premium)
                 <p class="mt-2">Median asking price per acre: KSh {{ number_format($row['median']) }}</p>
                 <h3 class="mt-4 text-sm font-medium text-lamu-900">Asking-price trend</h3>
@@ -37,7 +44,7 @@
             @endif
         </article>
     @empty
-        <p class="text-stone-600">No published asking prices are available. No median has been calculated.</p>
+        <p class="rounded-lg border border-sand-200 bg-white p-5 text-sm text-stone-600 sm:col-span-2 lg:col-span-3">No published asking prices are available. No median has been calculated.</p>
     @endforelse
 </div>
 @if ($premium)

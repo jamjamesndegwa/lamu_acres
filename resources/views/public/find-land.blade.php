@@ -132,7 +132,7 @@
         <section class="mt-8 rounded-2xl bg-lamu-900 p-6 text-white">
             <h2 class="home-serif text-xl font-semibold">Can't find suitable land? Let us find it for you</h2>
             <p class="mt-2 text-sm text-sand-50">Send the Lamu Acres desk your requirements through the existing buyer sourcing service.</p>
-            <a href="{{ route('buyer.sourcing.create') }}" class="mt-4 inline-flex min-h-11 items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-lamu-900">Request staff assistance</a>
+            <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" class="mt-4 inline-flex min-h-11 items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-lamu-900">Request staff assistance</a>
         </section>
     </div>
     @include('public.find-land-controls')

@@ -1,7 +1,7 @@
 <x-workspace-layout heading="Find Land for Me">
     <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p class="max-w-3xl text-stone-700">Tell us where and what you want. Matching uses the map, size, budget, use, and amenities you record.</p>
-        <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">New search</a>
+        <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">New search</a>
     </div>
 
     @if ($requests->isNotEmpty())
@@ -35,7 +35,7 @@
             @empty
                 <tr>
                     <td colspan="7" class="px-4 py-8">
-                        <x-workspace.empty title="No searches yet" message="No matching land can be found until you record what you want." action="Start a search" :href="route('buyer.sourcing.create')" frame="modal" />
+                        <x-workspace.empty title="No searches yet" message="No matching land can be found until you record what you want." action="Start a search" :href="route('buyer.sourcing.create')" frame="_top" />
                     </td>
                 </tr>
             @endforelse
