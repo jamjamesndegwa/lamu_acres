@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\CapabilityApplicationStatus;
 use App\Models\CapabilityApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -46,7 +47,7 @@ class ApplicationOutcomeNotification extends Notification
             'status' => $this->application->status->value,
             'title' => $this->application->capability->label().' application '.$this->application->status->label(),
             'message' => 'Your application is '.$this->application->status->label().'. Open your application for the staff decision.',
-            'url' => ($this->application->status === \App\Enums\CapabilityApplicationStatus::InformationRequired
+            'url' => ($this->application->status === CapabilityApplicationStatus::InformationRequired
                 ? route('account.applications.create', ['capability' => $this->application->capability->value])
                 : route('account.applications.index')),
         ];

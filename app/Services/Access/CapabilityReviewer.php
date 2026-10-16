@@ -3,15 +3,15 @@
 namespace App\Services\Access;
 
 use App\Enums\CapabilityApplicationStatus;
-use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Events\ApplicationDecided;
 use App\Models\CapabilityApplication;
 use App\Models\User;
-use App\Services\Communications\MessageDesk;
+use App\Notifications\ApplicationSubmittedNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -87,9 +87,9 @@ class CapabilityReviewer
                     'verification_history' => $history,
                 ])->save();
 
-                \Illuminate\Support\Facades\Notification::send(
+                Notification::send(
                     User::permission('staff.brokerage')->whereKeyNot($user->id)->get(),
-                    new \App\Notifications\ApplicationSubmittedNotification($application),
+                    new ApplicationSubmittedNotification($application),
                 );
 
                 return $application;

@@ -18,6 +18,7 @@ use App\Models\PropertyMedia;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
+use App\Notifications\WorkAssignedNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Media\PropertyMediaLibrary;
@@ -143,7 +144,7 @@ class VerificationOperations
         ]);
 
         if ($changed) {
-            $assignee->notify(new \App\Notifications\WorkAssignedNotification('Verification review', $passport->id, route('staff.verification.show', $passport->property)));
+            $assignee->notify(new WorkAssignedNotification('Verification review', $passport->id, route('staff.verification.show', $passport->property)));
         }
 
         return $passport;

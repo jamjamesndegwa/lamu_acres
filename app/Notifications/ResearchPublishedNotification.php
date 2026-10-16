@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\ResearchAssignment;
+use App\Models\ResearchReport;
 use Illuminate\Bus\Queueable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification;
@@ -31,7 +32,7 @@ class ResearchPublishedNotification extends Notification
         return [
             'title' => $this->assignment->commitment->label(),
             'message' => (string) $title,
-            'url' => $this->subject instanceof \App\Models\ResearchReport ? route('investor.reports.show', $this->subject) : route('investor.archive.index'),
+            'url' => $this->subject instanceof ResearchReport ? route('investor.reports.show', $this->subject) : route('investor.archive.index'),
         ];
     }
 }

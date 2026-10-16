@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Enums\AuthorityStatus;
-use App\Enums\MessageEvent;
 use App\Enums\OwnerRelationship;
 use App\Enums\OwnershipDocumentType;
 use App\Enums\PropertyAvailability;
@@ -20,7 +19,6 @@ use App\Models\PropertyAudit;
 use App\Models\PropertyOwner;
 use App\Models\PropertyTransaction;
 use App\Models\User;
-use App\Services\Communications\MessageDesk;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Seller\SellerPortal;
 use App\Support\ApprovalsReturn;
@@ -94,8 +92,6 @@ class SellerDeskController extends Controller
             'from_status' => $from->value,
             'to_status' => PropertyStatus::Published->value,
         ]);
-
-
 
         return back()->with('status', 'Listing approved.');
     }

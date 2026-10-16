@@ -6,6 +6,7 @@ use App\Enums\SourcingRequestStatus;
 use App\Models\SourcingRequest;
 use App\Models\User;
 use App\Notifications\SourcingAssignedNotification;
+use App\Notifications\SourcingUpdatedNotification;
 
 class SourcingDesk
 {
@@ -45,7 +46,7 @@ class SourcingDesk
             'visible_to_buyer' => true,
         ]);
 
-        $request->buyer?->notify(new \App\Notifications\SourcingUpdatedNotification($request));
+        $request->buyer?->notify(new SourcingUpdatedNotification($request));
 
         return $request;
     }

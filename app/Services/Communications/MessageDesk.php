@@ -69,15 +69,16 @@ class MessageDesk
                         try {
                             DeliverMessage::dispatch($delivery->idempotency_key);
                         } catch (\Throwable $exception) {
-                            $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed; retry from the communications desk.'])->save();
+                            $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
                         }
                     });
+
                     continue;
                 }
                 try {
                     DeliverMessage::dispatchSync($delivery->idempotency_key, $channel === MessageChannel::InApp ? $inAppNotification : null);
                 } catch (\Throwable $exception) {
-                    $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed; retry from the communications desk.'])->save();
+                    $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
                 }
             }
         }

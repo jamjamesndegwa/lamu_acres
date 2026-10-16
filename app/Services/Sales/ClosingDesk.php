@@ -3,11 +3,12 @@
 namespace App\Services\Sales;
 
 use App\Enums\ClosingEvidenceState;
-use App\Enums\MessageEvent;
 use App\Enums\CommissionStatus;
+use App\Enums\MessageEvent;
 use App\Enums\PaymentReconciliation;
 use App\Enums\SalesStage;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPayment;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Notifications\CommissionSettlementNotification;
@@ -263,15 +264,15 @@ class ClosingDesk
             ->unique('id');
 
         foreach ($recipients as $user) {
+            $notification = new SaleCompletedNotification($transaction);
+            $data = $notification->toArray($user);
             app(MessageDesk::class)->send($user, $event, [
                 'name' => $user->name,
                 'title' => $transaction->property->title,
                 'reference' => $transaction->reference,
                 'summary' => $summary,
-                'url' => $user->hasPermission('workspace.broker') ? route('broker.deals.index')
-                    : ($user->hasPermission('workspace.seller') ? $transaction->property->submitterUrl()
-                        : ($transaction->enquiry_id ? route('buyer.enquiries.show', $transaction->enquiry_id) : route('buyer.matches.index'))),
-            ], $key, new SaleCompletedNotification($transaction));
+                'url' => $data['url'],
+            ], $key, $notification);
         }
     }
 
@@ -296,7 +297,7 @@ class ClosingDesk
     {
         do {
             $reference = 'CP-'.strtoupper(Str::random(8));
-        } while (\App\Models\CommissionPayment::query()->where('reference', $reference)->exists());
+        } while (CommissionPayment::query()->where('reference', $reference)->exists());
 
         return $reference;
     }

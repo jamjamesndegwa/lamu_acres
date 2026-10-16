@@ -4,11 +4,11 @@ namespace App\Providers;
 
 use App\Contracts\Auth\OtpSender;
 use App\Contracts\Communications\SmsSender;
-use App\Services\Communications\HttpSmsSender;
-use App\Services\Communications\UnconfiguredSmsSender;
 use App\Contracts\Payments\MpesaGateway;
 use App\Enums\Workspace;
 use App\Services\Auth\UnconfiguredOtpSender;
+use App\Services\Communications\HttpSmsSender;
+use App\Services\Communications\UnconfiguredSmsSender;
 use App\Services\Payments\DarajaMpesaGateway;
 use App\Services\Payments\UnconfiguredMpesaGateway;
 use Illuminate\Cache\RateLimiting\Limit;

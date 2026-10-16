@@ -7,7 +7,6 @@ use App\Events\EnquirySubmitted;
 use App\Models\User;
 use App\Notifications\EnquirySubmittedNotification;
 use App\Services\Communications\MessageDesk;
-use Illuminate\Support\Facades\Notification;
 
 class NotifyEnquiryDesk
 {
@@ -16,7 +15,6 @@ class NotifyEnquiryDesk
         $staff = $event->enquiry->assignee?->can('respond', $event->enquiry)
             ? collect([$event->enquiry->assignee]) : User::permission('staff.buyers')->get();
         $event->enquiry->loadMissing('property');
-
 
         foreach ($staff as $user) {
             app(MessageDesk::class)->send($user, MessageEvent::BuyerEnquiry, [

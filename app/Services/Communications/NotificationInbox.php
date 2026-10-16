@@ -2,9 +2,26 @@
 
 namespace App\Services\Communications;
 
+use App\Enums\VerificationCategory;
 use App\Enums\Workspace;
-use App\Models\{CapabilityApplication, DocumentAccessRequest, Enquiry, Offer, Property, PropertyInformationRequest, SiteVisit, SourcingRequest, User};
-use Illuminate\Database\Eloquent\{Builder, Model, ModelNotFoundException};
+use App\Models\CapabilityApplication;
+use App\Models\CommissionAgreement;
+use App\Models\DevelopmentProject;
+use App\Models\DocumentAccessRequest;
+use App\Models\Enquiry;
+use App\Models\Offer;
+use App\Models\Property;
+use App\Models\PropertyInformationRequest;
+use App\Models\ResearchReport;
+use App\Models\SalesTransaction;
+use App\Models\SiteVisit;
+use App\Models\SourcingRequest;
+use App\Models\User;
+use App\Models\VerificationItem;
+use App\Models\VerificationPassport;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Gate;
@@ -41,12 +58,12 @@ class NotificationInbox
                 $rules[] = ['OfferSubmittedNotification', 'offer_id', Offer::query()->whereIn('status', ['submitted', 'under_review'])];
             }
             if ($user->hasPermission('staff.sales')) {
-                $query->orWhere(fn (Builder $q) => $q->where('type', 'App\\Notifications\\WorkAssignedNotification')->where('data->kind', 'Sales case')->whereIn('data->record_id', \App\Models\SalesTransaction::query()->select('id')->where('assigned_to', $user->id)->whereNull('outcome')->where('stage', '!=', 'completed')));
+                $query->orWhere(fn (Builder $q) => $q->where('type', 'App\\Notifications\\WorkAssignedNotification')->where('data->kind', 'Sales case')->whereIn('data->record_id', SalesTransaction::query()->select('id')->where('assigned_to', $user->id)->whereNull('outcome')->where('stage', '!=', 'completed')));
             }
             if ($user->hasPermission('staff.verification')) {
-                $critical = array_map(fn ($category) => $category->value, array_filter(\App\Enums\VerificationCategory::cases(), fn ($category) => $category->critical()));
-                $query->orWhere(fn (Builder $q) => $q->where('type', 'App\\Notifications\\WorkAssignedNotification')->where('data->kind', 'Verification review')->whereIn('data->record_id', \App\Models\VerificationPassport::query()->select('id')->where('assigned_to', $user->id)->whereHas('property.verificationItems', fn (Builder $items) => $items->whereIn('category', $critical)->whereIn('state', ['not_supplied', 'received', 'under_review', 'failed', 'expired']))));
-                $rules[] = ['ReverificationDueNotification', 'verification_item_id', \App\Models\VerificationItem::query()->where(function (Builder $q): void {
+                $critical = array_map(fn ($category) => $category->value, array_filter(VerificationCategory::cases(), fn ($category) => $category->critical()));
+                $query->orWhere(fn (Builder $q) => $q->where('type', 'App\\Notifications\\WorkAssignedNotification')->where('data->kind', 'Verification review')->whereIn('data->record_id', VerificationPassport::query()->select('id')->where('assigned_to', $user->id)->whereHas('property.verificationItems', fn (Builder $items) => $items->whereIn('category', $critical)->whereIn('state', ['not_supplied', 'received', 'under_review', 'failed', 'expired']))));
+                $rules[] = ['ReverificationDueNotification', 'verification_item_id', VerificationItem::query()->where(function (Builder $q): void {
                     $q->where('state', 'expired')->orWhere(fn (Builder $due) => $due->where('state', 'verified')->where(fn (Builder $dates) => $dates->where('expires_at', '<=', now())->orWhere('review_due_at', '<=', now())));
                 })];
             }
@@ -79,7 +96,7 @@ class NotificationInbox
                 return null;
             }
             $path = (int) $record->buyer_id === (int) $user->id
-                ? route('buyer.matches.show', $record->property_match_id, false)
+                ? ($record->property_match_id ? route('buyer.matches.show', $record->property_match_id, false) : route('buyer.matches.index', [], false))
                 : route('staff.documents.index', ['record' => $record->id], false).'#document-'.$record->id;
         } elseif (str_ends_with($notification->type, '\\SiteVisitUpdatedNotification')) {
             $record = SiteVisit::query()->find($data['site_visit_id'] ?? null);
@@ -139,28 +156,40 @@ class NotificationInbox
                 if ($record instanceof CapabilityApplication && str_starts_with($name, 'staff.')) {
                     $ability = 'decide';
                 }
-                if ($record instanceof \App\Models\SalesTransaction && $name === 'staff.sales.show') {
+                if ($record instanceof SalesTransaction && $name === 'staff.sales.show') {
                     if (! $user->hasPermission('staff.sales')) {
                         return null;
                     }
+
                     continue;
                 }
-                if (($record instanceof \App\Models\ResearchReport || $record instanceof \App\Models\DevelopmentProject) && str_starts_with($name, 'investor.')) {
+                if ($record instanceof SalesTransaction && $name === 'broker.deals.show') {
+                    $introduction = $record->introduction;
+                    if ($introduction === null || (int) $introduction->broker_id !== (int) $user->id || ! in_array($introduction->status->value, ['accepted', 'active'], true)) {
+                        return null;
+                    }
+
+                    continue;
+                }
+                if (($record instanceof ResearchReport || $record instanceof DevelopmentProject) && str_starts_with($name, 'investor.')) {
                     if (! $user->hasActiveInvestorPass() || ! $record->isReleased()) {
                         return null;
                     }
+
                     continue;
                 }
-                if ($record instanceof \App\Models\CommissionAgreement && $name === 'broker.agreements.show') {
+                if ($record instanceof CommissionAgreement && $name === 'broker.agreements.show') {
                     if ((int) $record->broker_id !== (int) $user->id || ! in_array($record->status->value, ['accepted', 'earned', 'payable', 'paid', 'disputed'], true)) {
                         return null;
                     }
+
                     continue;
                 }
                 if ($record instanceof Property && str_starts_with($name, 'staff.verification.')) {
                     if (! $user->hasPermission('staff.verification')) {
                         return null;
                     }
+
                     continue;
                 }
                 if (! Gate::forUser($user)->allows($ability, $record)) {
@@ -175,7 +204,7 @@ class NotificationInbox
             };
 
             return $permission ? $path : null;
-        } catch (HttpExceptionInterface|ModelNotFoundException $exception) {
+        } catch (HttpExceptionInterface|ModelNotFoundException|\InvalidArgumentException|\ValueError $exception) {
             return null;
         }
     }

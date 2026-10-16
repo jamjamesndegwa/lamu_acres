@@ -2,15 +2,40 @@
 
 namespace Tests\Feature;
 
-use App\Enums\{CapabilityApplicationStatus, DocumentAccessStatus, MessageEvent, OfferStatus, PartnerCapability, SourcingRequestStatus};
+use App\Enums\CapabilityApplicationStatus;
+use App\Enums\DocumentAccessStatus;
+use App\Enums\MessageEvent;
+use App\Enums\OfferStatus;
+use App\Enums\PropertyStatus;
+use App\Enums\SalesStage;
+use App\Enums\SourcingRequestStatus;
 use App\Events\EnquirySubmitted;
 use App\Jobs\DeliverMessage;
-use App\Models\{CapabilityApplication, Enquiry, MessageDelivery, Offer, Property, PropertyMatch, SourcingRequest, User};
-use App\Notifications\{ApplicationOutcomeNotification, DocumentAccessDecidedNotification, EnquiryAssignedNotification, EnquiryResponseNotification, EnquirySubmittedNotification, TemplatedDeskNotification};
+use App\Models\County;
+use App\Models\Enquiry;
+use App\Models\Locality;
+use App\Models\MessageDelivery;
+use App\Models\Property;
+use App\Models\PropertyMatch;
+use App\Models\SourcingRequest;
+use App\Models\User;
+use App\Notifications\ApplicationOutcomeNotification;
+use App\Notifications\EnquiryAssignedNotification;
+use App\Notifications\EnquiryResponseNotification;
+use App\Notifications\EnquirySubmittedNotification;
+use App\Notifications\PropertyApprovedNotification;
+use App\Notifications\TemplatedDeskNotification;
 use App\Services\Buyer\InterestWorkflow;
 use App\Services\Communications\MessageDesk;
+use App\Services\Inventory\PropertyInventory;
+use App\Services\Sales\SalesPipeline;
+use App\Services\Seller\SellerPortal;
 use App\Services\Staff\SourcingDesk;
+use App\Services\Verification\VerificationDesk;
+use App\Services\Verification\VerificationOperations;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\TestWith;
 use Tests\Feature\Foundation\FoundationTestCase;
@@ -221,24 +246,24 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create(['notify_by_email' => false]);
         $other = User::factory()->withRoles('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
-        $county = \App\Models\County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
-        $locality = \App\Models\Locality::query()->create(['county_id' => $county->id, 'name' => 'Shela', 'slug' => 'shela', 'kind' => 'place', 'is_active' => true]);
+        $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
+        $locality = Locality::query()->create(['county_id' => $county->id, 'name' => 'Shela', 'slug' => 'shela', 'kind' => 'place', 'is_active' => true]);
         $property = Property::factory()->listedIn($locality)->create(['submitted_by' => $seller->id, 'status' => 'review']);
         $owner = $property->owners()->create(['user_id' => $seller->id, 'relationship' => 'owner', 'status' => 'pending']);
-        app(\App\Services\Seller\SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
+        app(SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
         $property->authorities()->create(['seller_id' => $seller->id, 'scope' => 'sale', 'status' => 'active', 'terms' => 'Test-only current marketing instruction.']);
         $this->attachPublicPhoto($property, $seller);
         $this->clearCriticalVerification($property, $staff);
-        $inventory = app(\App\Services\Inventory\PropertyInventory::class);
-        $inventory->transition($staff, $property, \App\Enums\PropertyStatus::Draft);
+        $inventory = app(PropertyInventory::class);
+        $inventory->transition($staff, $property, PropertyStatus::Draft);
         $this->assertCount(1, $this->actingAs($seller)->get(route('seller.notifications.index', ['filter' => 'attention']))->viewData('notifications')->items());
-        $inventory->transition($seller, $property, \App\Enums\PropertyStatus::Review);
+        $inventory->transition($seller, $property, PropertyStatus::Review);
         $this->assertCount(0, $this->get(route('seller.notifications.index', ['filter' => 'attention']))->viewData('notifications')->items());
         $this->actingAs($staff)->post(route('staff.properties.listing', $property))->assertSessionHasNoErrors();
         $this->assertSame('published', $property->fresh()->status->value);
         $this->assertSame(2, $seller->notifications()->count());
         $this->assertSame(0, $other->notifications()->count());
-        $notice = $seller->notifications()->where('type', \App\Notifications\PropertyApprovedNotification::class)->firstOrFail();
+        $notice = $seller->notifications()->where('type', PropertyApprovedNotification::class)->firstOrFail();
         $this->actingAs($seller)->get(route('seller.notifications.open', $notice->id))->assertRedirect($property->submitterUrl());
     }
 
@@ -247,10 +272,10 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
         $other = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
         $property = Property::factory()->create();
-        app(\App\Services\Verification\VerificationDesk::class)->seed($property);
+        app(VerificationDesk::class)->seed($property);
         $passport = $property->passport()->firstOrFail();
         $deadline = now()->addDays(5);
-        $operations = app(\App\Services\Verification\VerificationOperations::class);
+        $operations = app(VerificationOperations::class);
         $operations->assign($passport, $staff, $other, $deadline);
         $operations->assign($passport, $staff, $other, $deadline);
         $this->assertSame(1, $staff->notifications()->count());
@@ -265,12 +290,37 @@ class UnifiedNotificationsTest extends FoundationTestCase
     public function test_rolled_back_work_does_not_leave_an_inbox_alert_or_send_external_messages(): void
     {
         $user = User::factory()->withRoles('buyer')->create(['notify_by_email' => true]);
-        \Illuminate\Support\Facades\Mail::fake();
-        \Illuminate\Support\Facades\DB::beginTransaction();
+        Mail::fake();
+        DB::beginTransaction();
         app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, ['summary' => 'Welcome', 'url' => route('buyer.dashboard')], 'rollback-test');
-        \Illuminate\Support\Facades\DB::rollBack();
+        DB::rollBack();
         $this->assertSame(0, $user->notifications()->count());
         $this->assertSame(0, MessageDelivery::query()->where('user_id', $user->id)->count());
-        \Illuminate\Support\Facades\Mail::assertNothingSent();
+        Mail::assertNothingSent();
+    }
+
+    public function test_sales_assignment_and_progress_open_authorized_records_and_ignore_repeat_assignment(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $agent = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $enquiry = Enquiry::factory()->create(['buyer_id' => $buyer->id]);
+        $pipeline = app(SalesPipeline::class);
+        $sale = $pipeline->open($staff, ['origin' => 'enquiry', 'property_id' => $enquiry->property_id, 'enquiry_id' => $enquiry->id, 'acreage' => 1]);
+        $sale = $pipeline->assign($sale, $agent, $staff, $sale->lock_version);
+        $sale = $pipeline->assign($sale, $agent, $staff, $sale->lock_version);
+        $this->assertSame(1, $agent->notifications()->count());
+        $this->actingAs($agent)->get(route('staff.notifications.open', $agent->notifications()->first()->id))->assertRedirect(route('staff.sales.show', $sale));
+        $pipeline->advance($sale, SalesStage::Viewing, $staff, $sale->lock_version);
+        $this->assertSame(1, $buyer->notifications()->count());
+        $this->actingAs($buyer)->get(route('buyer.notifications.open', $buyer->notifications()->first()->id))->assertRedirect(route('buyer.enquiries.show', $enquiry));
+    }
+
+    public function test_safe_query_parameters_survive_but_redirect_parameters_are_removed(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $enquiry = Enquiry::factory()->create(['buyer_id' => $buyer->id]);
+        $buyer->notify(new TemplatedDeskNotification('Update', 'News', route('buyer.enquiries.show', $enquiry).'?tab=overview&redirect=https://evil.example'));
+        $this->actingAs($buyer)->get(route('buyer.notifications.open', $buyer->notifications()->first()->id))->assertRedirect(route('buyer.enquiries.show', $enquiry).'?tab=overview');
     }
 }

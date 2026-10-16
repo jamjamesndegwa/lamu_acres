@@ -9,6 +9,7 @@ use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Enums\PropertyStatus;
 use App\Events\EnquirySubmitted;
+use App\Jobs\DeliverMessage;
 use App\Models\CapabilityApplication;
 use App\Models\County;
 use App\Models\Enquiry;
@@ -22,6 +23,8 @@ use App\Notifications\TemplatedDeskNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Communications\MessageDesk;
+use App\Services\Seller\SellerPortal;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -51,14 +54,14 @@ class CommunicationsTest extends FoundationTestCase
         ]);
 
         $desk = User::factory()->withRoles('staff')->withPermissions('staff.brokerage')->create();
-        \Illuminate\Support\Facades\Storage::fake('local');
+        Storage::fake('local');
         $fixture = User::factory()->withVerifiedCapability('broker')->create();
         $profile = $fixture->capabilityApplications()->firstOrFail()->verification;
         $profile['identity']['contact_fingerprint'] = hash('sha256', $buyer->email);
         $profile['licence']['contact_fingerprint'] = hash('sha256', $buyer->email);
         foreach ($profile['evidence'] as &$file) {
             $file['path'] = str_replace('partner-evidence/'.$fixture->id.'/', 'partner-evidence/'.$buyer->id.'/', $file['path']);
-            \Illuminate\Support\Facades\Storage::disk($file['disk'])->put($file['path'], 'Test evidence');
+            Storage::disk($file['disk'])->put($file['path'], 'Test evidence');
         }
         unset($file);
         $buyer->forceFill(['email_verified_at' => now()])->save();
@@ -124,7 +127,7 @@ class CommunicationsTest extends FoundationTestCase
         ]);
         $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $owner = $property->owners()->create(['user_id' => $seller->id, 'relationship' => 'owner', 'status' => 'verified']);
-        app(\App\Services\Seller\SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
+        app(SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
         $property->authorities()->create(['seller_id' => $seller->id, 'scope' => 'sale', 'status' => 'active', 'terms' => 'Test-only current marketing instruction.']);
         $this->attachPublicPhoto($property, $broker);
         $this->clearCriticalVerification($property, $staff);
@@ -176,6 +179,7 @@ class CommunicationsTest extends FoundationTestCase
             $this->assertStringNotContainsString('LAMU/BLOCK/9', $stored);
         }
 
+        $this->assertSame(1, $user->notifications()->count());
         $link = $deliveries->firstWhere('channel', MessageChannel::Whatsapp);
         $this->assertStringStartsWith('https://wa.me/254712000111?text=', (string) $link->destination);
         $this->assertTrue($user->notifications()->get()->contains(
@@ -218,7 +222,7 @@ class CommunicationsTest extends FoundationTestCase
             ->firstOrFail();
 
         try {
-            app()->call([new \App\Jobs\DeliverMessage($sms->idempotency_key), 'handle']);
+            app()->call([new DeliverMessage($sms->idempotency_key), 'handle']);
             $this->fail('The job must throw so its worker can retry the gateway failure.');
         } catch (RuntimeException $exception) {
             $this->assertSame('gateway down', $exception->getMessage());
@@ -226,7 +230,7 @@ class CommunicationsTest extends FoundationTestCase
         $sms->refresh();
         $this->assertSame('failed', $sms->status);
         $this->assertGreaterThanOrEqual(1, $sms->attempts);
-        $this->assertSame(3, (new \App\Jobs\DeliverMessage($sms->idempotency_key))->tries);
+        $this->assertSame(3, (new DeliverMessage($sms->idempotency_key))->tries);
 
         app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, [
             'name' => $user->name,

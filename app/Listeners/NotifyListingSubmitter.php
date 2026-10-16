@@ -2,10 +2,10 @@
 
 namespace App\Listeners;
 
-use App\Events\PropertyInventoryChanged;
 use App\Enums\MessageEvent;
-use App\Notifications\PropertyApprovedNotification;
+use App\Events\PropertyInventoryChanged;
 use App\Notifications\ListingStatusNotification;
+use App\Notifications\PropertyApprovedNotification;
 use App\Services\Communications\MessageDesk;
 
 class NotifyListingSubmitter
@@ -21,7 +21,7 @@ class NotifyListingSubmitter
                 'name' => $property->submitter->name, 'title' => $property->title,
                 'reference' => $property->reference, 'summary' => $property->title.' is approved for listing.',
                 'url' => $property->submitterUrl(),
-            ], 'property:'.$property->id, new PropertyApprovedNotification($property));
+            ], 'property:'.$property->id.':'.$property->published_at?->getTimestamp(), new PropertyApprovedNotification($property));
         } elseif ($event->fromStatus === 'review' && $event->toStatus === 'draft') {
             $property->submitter->notify(new ListingStatusNotification($property));
         }

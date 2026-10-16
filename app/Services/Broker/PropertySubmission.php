@@ -2,7 +2,6 @@
 
 namespace App\Services\Broker;
 
-use App\Enums\MessageEvent;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Models\Locality;
@@ -11,11 +10,9 @@ use App\Models\PropertyAudit;
 use App\Models\PropertyInformationRequest;
 use App\Models\PropertyMedia;
 use App\Models\User;
-use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Access\CapabilityReviewer;
-use App\Services\Communications\MessageDesk;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Http\UploadedFile;
@@ -114,6 +111,9 @@ class PropertySubmission
 
     public function respond(User $broker, PropertyInformationRequest $request, string $response, string $message = 'A broker replied to a request for information.'): void
     {
+        if ($request->responded_at !== null && $request->response === trim($response)) {
+            return;
+        }
         $request->load('property');
 
         $request->update([
@@ -152,9 +152,6 @@ class PropertySubmission
             'from_status' => $from->value,
             'to_status' => PropertyStatus::Published->value,
         ]);
-
-
-
 
         return $property;
     }
