@@ -28,7 +28,7 @@ class CommissionSettlementNotification extends Notification
         return [
             'title' => 'Commission paid',
             'message' => $this->agreement->reference.' has been paid.',
-            'url' => route('staff.settlements.index'),
+            'url' => route('broker.agreements.show', $this->agreement),
         ];
     }
 }

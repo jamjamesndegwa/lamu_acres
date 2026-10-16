@@ -54,7 +54,13 @@ class SalesPipeline
     {
         return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($agent, $actor): void {
             $this->guardOpen($locked);
+            if ((int) $locked->assigned_to === (int) $agent->id) {
+                return;
+            }
             $locked->assigned_to = $agent->id;
+            if ($agent->hasPermission('staff.sales')) {
+                $agent->notify(new \App\Notifications\WorkAssignedNotification('Sales case', $locked->id, route('staff.sales.show', $locked)));
+            }
             $this->timeline($locked, $actor, 'Assigned to '.$agent->name.'.');
             $this->audit($locked, $actor, 'assigned', ['agent_id' => $agent->id]);
         });
@@ -81,6 +87,11 @@ class SalesPipeline
             $locked->stage = $stage;
             $this->timeline($locked, $actor, 'Stage moved from '.$from->label().' to '.$stage->label().'.');
             $this->audit($locked, $actor, 'stage_changed', ['from' => $from->value, 'to' => $stage->value]);
+            $locked->buyer?->notify(new \App\Notifications\TemplatedDeskNotification(
+                'Sale progress updated',
+                'Your sale is now '.$stage->label().'. Open the related record for progress.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
         });
     }
 

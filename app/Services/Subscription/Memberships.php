@@ -176,7 +176,7 @@ class Memberships
             'name' => $member->name,
             'title' => $subscription->plan->name ?? 'Investor Pass',
             'summary' => $summary,
-            'url' => route('home'),
+            'url' => route('buyer.subscription.show'),
         ], 'subscription:'.$subscription->id.':'.$event->value.':'.$stamp);
     }
 

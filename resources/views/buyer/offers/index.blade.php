@@ -11,7 +11,7 @@
     <div class="mt-6">
         <x-workspace.table :columns="['Property', 'Amount', 'Notes', 'Status', '']">
             @forelse ($offers as $offer)
-                <tr class="border-b border-sand-200 last:border-b-0">
+                <tr id="offer-{{ $offer->id }}" class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4 text-sm">
                         @if ($offer->property_match_id)
                             <a href="{{ route('buyer.matches.show', $offer->property_match_id) }}" class="font-medium text-lamu-900 hover:underline">{{ $offer->property->title }}</a>

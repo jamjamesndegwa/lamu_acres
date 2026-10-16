@@ -127,7 +127,7 @@ class PartnerVerificationTest extends FoundationTestCase
 
         $this->actingAs($staff)->post(route('staff.applications.email-verification', $application))->assertSessionHasErrors('email_delivery');
         $this->assertNull($buyer->fresh()->email_verified_at);
-        Notification::assertNothingSent();
+        Notification::assertNotSentTo($buyer, AccountEmailChanged::class);
     }
 
     public function test_applicant_can_request_their_own_verification_email_without_self_verifying(): void

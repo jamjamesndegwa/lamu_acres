@@ -95,15 +95,7 @@ class SellerDeskController extends Controller
             'to_status' => PropertyStatus::Published->value,
         ]);
 
-        if ($property->submitter !== null) {
-            app(MessageDesk::class)->send($property->submitter, MessageEvent::PropertyApproved, [
-                'name' => $property->submitter->name,
-                'title' => $property->title,
-                'reference' => $property->reference,
-                'summary' => $property->title.' is approved for listing.',
-                'url' => $property->submitterUrl(),
-            ], 'property:'.$property->id);
-        }
+
 
         return back()->with('status', 'Listing approved.');
     }

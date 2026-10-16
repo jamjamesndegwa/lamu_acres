@@ -31,7 +31,7 @@ class OfferStatusNotification extends Notification
             'offer_id' => $this->offer->id,
             'title' => 'Offer '.$this->offer->status->label(),
             'message' => $this->offer->property->title,
-            'url' => route('buyer.offers.index'),
+            'url' => route((int) $notifiable->id === (int) $this->offer->buyer_id ? 'buyer.offers.index' : 'staff.offers.index', ['record' => $this->offer->id]).'#offer-'.$this->offer->id,
         ];
     }
 }

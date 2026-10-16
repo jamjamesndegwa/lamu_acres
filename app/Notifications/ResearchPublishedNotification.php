@@ -31,7 +31,7 @@ class ResearchPublishedNotification extends Notification
         return [
             'title' => $this->assignment->commitment->label(),
             'message' => (string) $title,
-            'url' => route('investor.archive.index'),
+            'url' => $this->subject instanceof \App\Models\ResearchReport ? route('investor.reports.show', $this->subject) : route('investor.archive.index'),
         ];
     }
 }

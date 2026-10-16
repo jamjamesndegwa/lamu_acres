@@ -45,8 +45,10 @@ class ApplicationOutcomeNotification extends Notification
             'capability' => $this->application->capability->value,
             'status' => $this->application->status->value,
             'title' => $this->application->capability->label().' application '.$this->application->status->label(),
-            'message' => $this->application->decision_reason,
-            'url' => route('account.applications.index'),
+            'message' => 'Your application is '.$this->application->status->label().'. Open your application for the staff decision.',
+            'url' => ($this->application->status === \App\Enums\CapabilityApplicationStatus::InformationRequired
+                ? route('account.applications.create', ['capability' => $this->application->capability->value])
+                : route('account.applications.index')),
         ];
     }
 }

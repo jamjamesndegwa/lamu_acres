@@ -2,69 +2,58 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Communications\NotificationInbox;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class WorkspaceNotificationController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, NotificationInbox $inbox): View
     {
-        $name = (string) $request->route()?->getName();
-        $prefix = strstr($name, '.', true);
-        $prefix = in_array($prefix, ['buyer', 'broker', 'seller', 'investor', 'staff', 'admin'], true) ? $prefix : 'buyer';
-
-        $buyer = $prefix === 'buyer';
+        $data = $request->validate(['filter' => ['nullable', Rule::in(['all', 'unread', 'attention'])]]);
+        $filter = $data['filter'] ?? 'all';
+        $query = $request->user()->notifications()->getQuery();
+        if ($filter === 'unread') {
+            $query->whereNull('read_at');
+        } elseif ($filter === 'attention') {
+            $inbox->attention($query, $request->user());
+        }
+        $prefix = $this->prefix($request);
+        $notifications = $query->latest()->paginate(20)->withQueryString();
 
         return view('workspace.notifications.index', [
-            'notifications' => $request->user()->notifications()->latest()->paginate(20),
+            'notifications' => $notifications,
+            'attentionIds' => $inbox->attention($request->user()->notifications()->getQuery(), $request->user())->whereKey($notifications->getCollection()->modelKeys())->pluck('id')->all(),
             'openRoute' => $prefix.'.notifications.open',
-            'intro' => $buyer
-                ? 'Matching properties, enquiry replies, site visits, offers, document decisions, and Investor Pass payments appear here. Opening one marks it as read and opens the related record.'
-                : 'Updates about your listings and referrals. Opening one marks it as read.',
-            'empty' => $buyer
-                ? 'Messages about matches, enquiries, visits, offers, and your Investor Pass will appear here.'
-                : 'Staff questions, listing decisions, and referral reviews will appear here.',
+            'indexRoute' => $prefix.'.notifications.index',
+            'readRoute' => $prefix.'.notifications.read-all',
+            'filter' => $filter,
+            'inbox' => $inbox,
         ]);
     }
 
-    public function open(Request $request, string $notification): RedirectResponse
+    public function markAllRead(Request $request): RedirectResponse
+    {
+        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+
+        return redirect()->route($this->prefix($request).'.notifications.index')->with('status', 'All your notifications are marked as read.');
+    }
+
+    public function open(Request $request, string $notification, NotificationInbox $inbox): RedirectResponse
     {
         $item = $request->user()->notifications()->whereKey($notification)->firstOrFail();
         $item->markAsRead();
+        $path = $inbox->destination($item, $request->user());
 
-        $path = $this->safePath($item->data['url'] ?? null);
-
-        return $path === null ? back() : redirect()->to($path);
+        return $path === null
+            ? redirect()->route($this->prefix($request).'.notifications.index')->with('status', 'This update is saved, but its record is no longer available to your account.')
+            : redirect()->to($path);
     }
 
-    private function safePath(mixed $url): ?string
+    private function prefix(Request $request): string
     {
-        if (! is_string($url) || $url === '') {
-            return null;
-        }
-
-        $parts = parse_url($url);
-
-        if (! is_array($parts)) {
-            return null;
-        }
-
-        $path = $parts['path'] ?? null;
-
-        if (! is_string($path) || ! str_starts_with($path, '/') || str_starts_with($path, '//')) {
-            return null;
-        }
-
-        $host = $parts['host'] ?? null;
-        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
-
-        if (is_string($host) && is_string($appHost) && strcasecmp($host, $appHost) !== 0) {
-            return null;
-        }
-
-        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
-
-        return $path.$query;
+        return strstr((string) $request->route()->getName(), '.', true);
     }
 }

@@ -55,13 +55,12 @@ class InterestWorkflow
 
         $summary = $match->property->title.' added to the shortlist.';
         $this->timeline($buyer, $summary, $propertyMatch, $staff);
-        $buyer->notify(new MatchApprovedNotification($propertyMatch));
         app(MessageDesk::class)->send($buyer, MessageEvent::SourcingMatch, [
             'name' => $buyer->name,
             'title' => $match->property->title,
             'summary' => $match->property->title.' matches your search.',
             'url' => route('buyer.matches.show', $propertyMatch),
-        ], 'match:'.$propertyMatch->id);
+        ], 'match:'.$propertyMatch->id, new MatchApprovedNotification($propertyMatch));
 
         $match->forceFill(['dismissed_at' => null, 'dismissed_by' => null])->save();
 
@@ -117,6 +116,9 @@ class InterestWorkflow
 
     public function assignVisit(SiteVisit $visit, User $agent, User $actor): SiteVisit
     {
+        if ((int) $visit->assigned_to === (int) $agent->id) {
+            return $visit;
+        }
         $visit->assigned_to = $agent->id;
         $visit->save();
         $visit->match?->forceFill(['assigned_to' => $agent->id])->save();
@@ -153,7 +155,7 @@ class InterestWorkflow
 
         if ($actor->is($visit->buyer)) {
             $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
-        } else {
+        } elseif ($status !== SiteVisitStatus::Confirmed) {
             $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
         }
 
@@ -164,7 +166,7 @@ class InterestWorkflow
                 'status' => $status->label(),
                 'summary' => 'Your site visit for '.$visit->property->title.' is confirmed.',
                 'url' => route('buyer.visits.index'),
-            ], 'visit:'.$visit->id);
+            ], 'visit:'.$visit->id, new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
         }
 
         return $visit;
@@ -237,14 +239,13 @@ class InterestWorkflow
         if ($actor->is($offer->buyer)) {
             $this->notifyDesk(new OfferStatusNotification($offer));
         } else {
-            $offer->buyer->notify(new OfferStatusNotification($offer));
             app(MessageDesk::class)->send($offer->buyer, MessageEvent::OfferStatus, [
                 'name' => $offer->buyer->name,
                 'title' => $offer->property->title,
                 'status' => $status->label(),
                 'summary' => 'Your offer for '.$offer->property->title.' is now '.$status->label().'.',
                 'url' => route('buyer.offers.index'),
-            ], 'offer:'.$offer->id.':'.$status->value);
+            ], 'offer:'.$offer->id.':'.$status->value, new OfferStatusNotification($offer));
         }
 
         return $offer;

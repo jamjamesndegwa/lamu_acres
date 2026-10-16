@@ -76,7 +76,9 @@ class CommitmentDesk
                 continue;
             }
 
-            $this->deliver($watch->user, $subject, null, 'project:'.$subject->id.':user:'.$watch->user_id);
+            if (! $this->deliver($watch->user, $subject, null, 'project:'.$subject->id.':user:'.$watch->user_id)) {
+                continue;
+            }
             $watch->user->notify(new DevelopmentAlertNotification($subject));
         }
     }
@@ -135,8 +137,12 @@ class CommitmentDesk
                 return;
             }
 
-            $this->deliver($user, $subject, $assignment, 'assignment:'.$assignment->id.':user:'.$user->id);
-            $user->notify(new ResearchPublishedNotification($assignment, $subject));
+            if (! $this->deliver($user, $subject, $assignment, 'assignment:'.$assignment->id.':user:'.$user->id)) {
+                return;
+            }
+            if (! $subject instanceof ResearchReport) {
+                $user->notify(new ResearchPublishedNotification($assignment, $subject));
+            }
 
             if ($subject instanceof ResearchReport) {
                 app(MessageDesk::class)->send($user, MessageEvent::ReportPublished, [
@@ -144,15 +150,15 @@ class CommitmentDesk
                     'title' => $subject->title,
                     'reference' => $subject->reference,
                     'summary' => $subject->title.' is now available.',
-                    'url' => route('intelligence.reports.show', $subject),
-                ], 'report:'.$subject->id);
+                    'url' => route('investor.reports.show', $subject),
+                ], 'report:'.$subject->id, new ResearchPublishedNotification($assignment, $subject));
             }
         });
     }
 
-    private function deliver(User $user, Model $subject, ?ResearchAssignment $assignment, string $key): void
+    private function deliver(User $user, Model $subject, ?ResearchAssignment $assignment, string $key): bool
     {
-        PublicationDelivery::query()->firstOrCreate(
+        return PublicationDelivery::query()->firstOrCreate(
             ['delivery_key' => $key],
             [
                 'user_id' => $user->id,
@@ -161,7 +167,7 @@ class CommitmentDesk
                 'research_assignment_id' => $assignment?->id,
                 'delivered_at' => now(),
             ],
-        );
+        )->wasRecentlyCreated;
     }
 
     private function usable(ImageryComparison $comparison, ResearchAssignment $assignment): bool

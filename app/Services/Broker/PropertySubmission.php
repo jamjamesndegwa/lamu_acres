@@ -153,17 +153,8 @@ class PropertySubmission
             'to_status' => PropertyStatus::Published->value,
         ]);
 
-        $property->submitter?->notify(new PropertyApprovedNotification($property));
 
-        if ($property->submitter !== null) {
-            app(MessageDesk::class)->send($property->submitter, MessageEvent::PropertyApproved, [
-                'name' => $property->submitter->name,
-                'title' => $property->title,
-                'reference' => $property->reference,
-                'summary' => $property->title.' is approved for listing.',
-                'url' => $property->submitterUrl(),
-            ], 'property:'.$property->id);
-        }
+
 
         return $property;
     }

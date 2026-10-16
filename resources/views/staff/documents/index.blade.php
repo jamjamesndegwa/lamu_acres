@@ -2,7 +2,7 @@
     <p class="mt-3 max-w-3xl text-stone-700">Approving documents does not release exact property directions.</p>
     <div class="mt-6 space-y-4">
         @forelse ($requests as $accessRequest)
-            <article class="rounded-2xl border border-sand-200 bg-white p-5">
+            <article id="document-{{ $accessRequest->id }}" class="rounded-2xl border border-sand-200 bg-white p-5">
                 <p class="font-medium text-lamu-900">{{ $accessRequest->property->title }}</p>
                 <p class="mt-1 text-sm text-stone-600">{{ $accessRequest->buyer->name }} · {{ $accessRequest->status->label() }}</p>
                 @if ($accessRequest->note)

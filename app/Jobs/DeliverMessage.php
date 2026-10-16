@@ -9,6 +9,7 @@ use App\Notifications\TemplatedDeskNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Notifications\Notification;
 use Throwable;
 
 class DeliverMessage implements ShouldQueue
@@ -25,7 +26,7 @@ class DeliverMessage implements ShouldQueue
         return [15, 60];
     }
 
-    public function __construct(public string $idempotencyKey) {}
+    public function __construct(public string $idempotencyKey, public ?Notification $notification = null) {}
 
     public function handle(SmsSender $sms): void
     {
@@ -47,7 +48,7 @@ class DeliverMessage implements ShouldQueue
             $delivery->forceFill([
                 'status' => 'failed',
                 'attempts' => $this->attempts(),
-                'error' => $exception->getMessage(),
+                'error' => class_basename($exception).': delivery failed; retry from the communications desk.',
             ])->save();
 
             throw $exception;
@@ -63,11 +64,7 @@ class DeliverMessage implements ShouldQueue
         }
 
         match ($delivery->channel) {
-            MessageChannel::InApp => $user->notify(new TemplatedDeskNotification(
-                (string) $delivery->subject,
-                $delivery->body,
-                $delivery->destination,
-            )),
+            MessageChannel::InApp => $this->inApp($delivery),
             MessageChannel::Email => Mail::raw($delivery->body, function ($message) use ($user, $delivery): void {
                 $message->to($user->email)->subject((string) $delivery->subject);
             }),
@@ -78,5 +75,17 @@ class DeliverMessage implements ShouldQueue
                 null,
             )),
         };
+    }
+
+    private function inApp(MessageDelivery $delivery): void
+    {
+        $id = hash('md5', $delivery->idempotency_key);
+        $id = substr($id, 0, 8).'-'.substr($id, 8, 4).'-'.substr($id, 12, 4).'-'.substr($id, 16, 4).'-'.substr($id, 20);
+        if ($delivery->recipient->notifications()->whereKey($id)->exists()) {
+            return;
+        }
+        $notification = $this->notification ?? new TemplatedDeskNotification((string) $delivery->subject, $delivery->body, $delivery->destination);
+        $notification->id = $id;
+        $delivery->recipient->notifyNow($notification, ['database']);
     }
 }

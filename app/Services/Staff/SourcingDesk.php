@@ -11,6 +11,9 @@ class SourcingDesk
 {
     public function assign(SourcingRequest $request, User $assignee, User $actor): SourcingRequest
     {
+        if ((int) $request->assigned_to === (int) $assignee->id) {
+            return $request;
+        }
         $request->assigned_to = $assignee->id;
 
         if ($request->status === SourcingRequestStatus::Submitted) {
@@ -30,6 +33,9 @@ class SourcingDesk
 
     public function updateStatus(SourcingRequest $request, SourcingRequestStatus $status, User $actor): SourcingRequest
     {
+        if ($request->status === $status) {
+            return $request;
+        }
         $request->status = $status;
         $request->closed_at = $status === SourcingRequestStatus::Closed ? ($request->closed_at ?? now()) : null;
         $request->save();
@@ -38,6 +44,8 @@ class SourcingDesk
             'summary' => 'Status set to '.$status->label().'.',
             'visible_to_buyer' => true,
         ]);
+
+        $request->buyer?->notify(new \App\Notifications\SourcingUpdatedNotification($request));
 
         return $request;
     }

@@ -28,7 +28,9 @@ class SaleCompletedNotification extends Notification
         return [
             'title' => 'Sale completed',
             'message' => $this->transaction->reference.' has completed. Commission earning is a separate step.',
-            'url' => route('staff.sales.show', $this->transaction),
+            'url' => $notifiable->hasPermission('workspace.broker') ? route('broker.deals.index')
+                : ($notifiable->hasPermission('workspace.seller') ? $this->transaction->property->submitterUrl()
+                    : ($this->transaction->enquiry_id ? route('buyer.enquiries.show', $this->transaction->enquiry_id) : route('buyer.matches.index'))),
         ];
     }
 }

@@ -1,4 +1,4 @@
-<article class="rounded-2xl border border-sand-200 bg-white p-5">
+<article id="visit-{{ $visit->id }}" class="rounded-2xl border border-sand-200 bg-white p-5">
     <p class="font-medium text-lamu-900">{{ $visit->property->title }}</p>
     <p class="mt-1 text-sm text-stone-600">
         {{ $visit->buyer->name }} · {{ $visit->status->label() }} · {{ $visit->assignee->name ?? 'Unassigned' }}

@@ -95,7 +95,7 @@ class PublicationDesk
                 'title' => $report->title,
                 'reference' => $report->reference,
                 'summary' => $report->title.' is now available.',
-                'url' => route('intelligence.reports.show', $report),
+                'url' => route('investor.reports.show', $report),
             ], 'report:'.$report->id);
         });
     }

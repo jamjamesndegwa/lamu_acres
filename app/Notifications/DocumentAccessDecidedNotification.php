@@ -29,7 +29,9 @@ class DocumentAccessDecidedNotification extends Notification
             'document_access_request_id' => $this->accessRequest->id,
             'title' => 'Document access',
             'message' => $this->message,
-            'url' => route('buyer.matches.show', $this->accessRequest->property_match_id),
+            'url' => ((int) $this->accessRequest->buyer_id === (int) $notifiable->id
+                ? route('buyer.matches.show', $this->accessRequest->property_match_id)
+                : route('staff.documents.index', ['record' => $this->accessRequest->id]).'#document-'.$this->accessRequest->id),
         ];
     }
 }

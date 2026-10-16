@@ -27,6 +27,7 @@ class SiteVisitController extends Controller
         $calendar = $request->query('view') === 'calendar';
         $query = SiteVisit::query()
             ->visibleToStaff($request->user())
+            ->when($request->filled('record'), fn ($query) => $query->whereKey((int) $request->query('record')))
             ->with(['buyer', 'property', 'assignee']);
 
         $visits = $calendar

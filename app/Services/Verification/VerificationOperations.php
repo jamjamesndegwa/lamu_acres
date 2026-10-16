@@ -130,6 +130,7 @@ class VerificationOperations
             ]);
         }
 
+        $changed = (int) $passport->assigned_to !== (int) $assignee->id || $passport->deadline_at?->getTimestamp() !== $deadline->getTimestamp();
         $passport->assigned_to = $assignee->id;
         $passport->assigned_by = $actor->id;
         $passport->deadline_at = $deadline;
@@ -140,6 +141,10 @@ class VerificationOperations
             'decision' => 'assigned',
             'reason' => 'Assigned to '.$assignee->name.' with a deadline of '.$deadline->toDayDateTimeString().'.',
         ]);
+
+        if ($changed) {
+            $assignee->notify(new \App\Notifications\WorkAssignedNotification('Verification review', $passport->id, route('staff.verification.show', $passport->property)));
+        }
 
         return $passport;
     }

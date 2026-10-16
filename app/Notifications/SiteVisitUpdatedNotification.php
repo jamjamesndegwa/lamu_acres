@@ -29,7 +29,9 @@ class SiteVisitUpdatedNotification extends Notification
             'site_visit_id' => $this->visit->id,
             'title' => 'Site visit update',
             'message' => $this->message,
-            'url' => route('buyer.matches.show', $this->visit->property_match_id),
+            'url' => ((int) $this->visit->buyer_id === (int) $notifiable->id
+                ? route('buyer.matches.show', $this->visit->property_match_id)
+                : route('staff.visits.index', ['record' => $this->visit->id]).'#visit-'.$this->visit->id),
         ];
     }
 }

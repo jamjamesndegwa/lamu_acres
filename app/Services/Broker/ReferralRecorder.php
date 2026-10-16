@@ -86,7 +86,10 @@ class ReferralRecorder
 
     public function decide(User $staff, BrokerIntroduction $introduction, BrokerIntroductionStatus $status, ?string $note): BrokerIntroduction
     {
-        $from = $introduction->status;
+        $from = $introduction->fresh()->status;
+        if ($from === $status) {
+            return $introduction;
+        }
 
         $introduction->update([
             'status' => $status,
@@ -96,7 +99,9 @@ class ReferralRecorder
 
         $this->audit($introduction, $staff, 'reviewed', $from, $status, $note);
 
-        $introduction->broker?->notify(new ReferralDecidedNotification($introduction));
+        if ($status !== BrokerIntroductionStatus::Accepted) {
+            $introduction->broker?->notify(new ReferralDecidedNotification($introduction));
+        }
 
         if ($status === BrokerIntroductionStatus::Accepted && $introduction->broker !== null) {
             app(MessageDesk::class)->send($introduction->broker, MessageEvent::ReferralAccepted, [
@@ -104,7 +109,7 @@ class ReferralRecorder
                 'title' => 'Referral accepted',
                 'summary' => 'Your referral was accepted.',
                 'url' => route('broker.dashboard'),
-            ], 'referral:'.$introduction->id);
+            ], 'referral:'.$introduction->id, new ReferralDecidedNotification($introduction));
         }
 
         return $introduction;

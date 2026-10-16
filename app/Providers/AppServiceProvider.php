@@ -66,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
 
             $unreadNotifications = 0;
 
-            if ($user && in_array($workspace, [Workspace::Broker, Workspace::Staff], true)) {
+            if ($user && $workspace) {
                 $unreadNotifications = $user->unreadNotifications()->count();
             }
 
