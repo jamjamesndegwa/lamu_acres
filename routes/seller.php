@@ -40,6 +40,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:seller'])
         Route::get('/transactions', [SalesController::class, 'transactions'])->name('transactions.index');
         Route::get('/transactions/{propertyTransaction}', [SalesController::class, 'statement'])->name('transactions.show');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

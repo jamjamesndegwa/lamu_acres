@@ -18,6 +18,7 @@ use App\Models\PropertyMedia;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
+use App\Notifications\WorkAssignedNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Media\PropertyMediaLibrary;
@@ -130,6 +131,7 @@ class VerificationOperations
             ]);
         }
 
+        $changed = (int) $passport->assigned_to !== (int) $assignee->id || $passport->deadline_at?->getTimestamp() !== $deadline->getTimestamp();
         $passport->assigned_to = $assignee->id;
         $passport->assigned_by = $actor->id;
         $passport->deadline_at = $deadline;
@@ -140,6 +142,10 @@ class VerificationOperations
             'decision' => 'assigned',
             'reason' => 'Assigned to '.$assignee->name.' with a deadline of '.$deadline->toDayDateTimeString().'.',
         ]);
+
+        if ($changed) {
+            $assignee->notify(new WorkAssignedNotification('Verification review', $passport->id, route('staff.verification.show', $passport->property)));
+        }
 
         return $passport;
     }

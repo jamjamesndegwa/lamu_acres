@@ -6,6 +6,7 @@ enum MessageEvent: string
 {
     case AccountRegistered = 'account_registered';
     case BrokerApproved = 'broker_approved';
+    case ApplicationDecision = 'application_decision';
     case PropertyApproved = 'property_approved';
     case BuyerEnquiry = 'buyer_enquiry';
     case SourcingMatch = 'sourcing_match';
@@ -24,6 +25,7 @@ enum MessageEvent: string
         return match ($this) {
             self::AccountRegistered => 'Account registration',
             self::BrokerApproved => 'Broker approval',
+            self::ApplicationDecision => 'Partner application update',
             self::PropertyApproved => 'Property approval',
             self::BuyerEnquiry => 'Buyer enquiry',
             self::SourcingMatch => 'Buyer sourcing match',

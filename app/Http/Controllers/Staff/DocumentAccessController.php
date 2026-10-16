@@ -20,6 +20,7 @@ class DocumentAccessController extends Controller
 
         $requests = DocumentAccessRequest::query()
             ->with(['buyer', 'property'])
+            ->when($request->filled('record'), fn ($query) => $query->whereKey((int) $request->query('record')))
             ->latest()
             ->paginate(20);
 

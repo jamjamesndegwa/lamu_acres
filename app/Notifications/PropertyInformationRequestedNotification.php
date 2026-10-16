@@ -28,9 +28,10 @@ class PropertyInformationRequestedNotification extends Notification
         $this->request->loadMissing('property');
 
         return [
+            'information_request_id' => $this->request->id,
             'property_id' => $this->request->property_id,
             'title' => 'Staff asked for more information',
-            'message' => $this->request->question,
+            'message' => 'Staff requested additional information about your listing. Open it to review the request.',
             'url' => $this->request->property->submitterUrl(),
         ];
     }

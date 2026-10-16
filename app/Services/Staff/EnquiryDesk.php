@@ -14,6 +14,9 @@ class EnquiryDesk
 {
     public function assign(Enquiry $enquiry, User $assignee): Enquiry
     {
+        if ((int) $enquiry->assigned_to === (int) $assignee->id) {
+            return $enquiry;
+        }
         $enquiry->assigned_to = $assignee->id;
 
         if ($enquiry->status === EnquiryStatus::New) {

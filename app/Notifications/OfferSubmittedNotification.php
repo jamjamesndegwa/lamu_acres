@@ -31,7 +31,7 @@ class OfferSubmittedNotification extends Notification
             'offer_id' => $this->offer->id,
             'title' => 'Buyer offer submitted',
             'message' => $this->offer->property->title,
-            'url' => route('staff.offers.index'),
+            'url' => route('staff.offers.index', ['record' => $this->offer->id]).'#offer-'.$this->offer->id,
         ];
     }
 }

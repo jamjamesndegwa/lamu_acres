@@ -40,6 +40,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:broker'])
         Route::get('/agreements/{commissionAgreement}', [PartnershipController::class, 'agreement'])->name('agreements.show');
         Route::get('/earnings', [PartnershipController::class, 'earnings'])->name('earnings.index');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
         Route::post('/subscription', [MembershipController::class, 'store'])->name('subscription.store');

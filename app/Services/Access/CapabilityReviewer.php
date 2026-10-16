@@ -3,15 +3,15 @@
 namespace App\Services\Access;
 
 use App\Enums\CapabilityApplicationStatus;
-use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Events\ApplicationDecided;
 use App\Models\CapabilityApplication;
 use App\Models\User;
-use App\Services\Communications\MessageDesk;
+use App\Notifications\ApplicationSubmittedNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -87,6 +87,11 @@ class CapabilityReviewer
                     'verification_history' => $history,
                 ])->save();
 
+                Notification::send(
+                    User::permission('staff.brokerage')->whereKeyNot($user->id)->get(),
+                    new ApplicationSubmittedNotification($application),
+                );
+
                 return $application;
             });
         } catch (\Throwable $exception) {
@@ -105,6 +110,11 @@ class CapabilityReviewer
             'status' => [Rule::in(['approved', 'rejected', 'information_required', 'suspended'])],
             'decision_reason' => ['required', 'string', 'min:8', 'max:500'],
         ])->validate();
+        $previous = $application->fresh();
+        $notify = $previous->status !== $status || $previous->decision_reason !== trim($reason);
+        if (! $notify && $verification === []) {
+            return;
+        }
         $decision = DB::transaction(function () use ($actor, $application, $status, $reason, $verification): CapabilityApplication {
             $locked = CapabilityApplication::query()->whereKey($application->id)->lockForUpdate()->firstOrFail();
             $previous = $locked->status;
@@ -172,10 +182,8 @@ class CapabilityReviewer
             return $locked;
         });
         $application->refresh();
-        if ($status === CapabilityApplicationStatus::Approved && $decision->capability === PartnerCapability::Broker) {
-            app(MessageDesk::class)->send($decision->user, MessageEvent::BrokerApproved, [
-                'name' => $decision->user->name, 'title' => 'Broker workspace', 'summary' => 'Your broker application is approved.', 'url' => route('broker.dashboard'),
-            ], 'application:'.$decision->id);
+        if (! $notify) {
+            return;
         }
         event(new ApplicationDecided($decision));
     }

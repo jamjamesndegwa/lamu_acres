@@ -24,6 +24,7 @@ class OfferController extends Controller
         $offers = Offer::query()
             ->visibleToStaff($request->user())
             ->with(['buyer', 'property', 'presentations'])
+            ->when($request->filled('record'), fn ($query) => $query->whereKey((int) $request->query('record')))
             ->latest()
             ->paginate(20);
 

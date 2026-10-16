@@ -11,6 +11,8 @@ use App\Models\MessageTemplate;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
 
 class MessageDesk
 {
@@ -19,7 +21,7 @@ class MessageDesk
     /**
      * @param  array<string, mixed>  $context
      */
-    public function send(User $recipient, MessageEvent $event, array $context, string $subjectKey): void
+    public function send(User $recipient, MessageEvent $event, array $context, string $subjectKey, ?Notification $inAppNotification = null): void
     {
         $context = $this->safeContext($context);
         $template = MessageTemplate::query()->where('event', $event)->first();
@@ -62,7 +64,22 @@ class MessageDesk
             }
 
             if ($delivery->status === 'queued') {
-                DeliverMessage::dispatch($delivery->idempotency_key);
+                if (in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)) {
+                    DB::afterCommit(function () use ($delivery): void {
+                        try {
+                            DeliverMessage::dispatch($delivery->idempotency_key);
+                        } catch (\Throwable $exception) {
+                            $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
+                        }
+                    });
+
+                    continue;
+                }
+                try {
+                    DeliverMessage::dispatchSync($delivery->idempotency_key, $channel === MessageChannel::InApp ? $inAppNotification : null);
+                } catch (\Throwable $exception) {
+                    $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
+                }
             }
         }
     }

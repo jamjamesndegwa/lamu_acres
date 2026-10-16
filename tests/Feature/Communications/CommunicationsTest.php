@@ -9,6 +9,7 @@ use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Enums\PropertyStatus;
 use App\Events\EnquirySubmitted;
+use App\Jobs\DeliverMessage;
 use App\Models\CapabilityApplication;
 use App\Models\County;
 use App\Models\Enquiry;
@@ -22,6 +23,8 @@ use App\Notifications\TemplatedDeskNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Communications\MessageDesk;
+use App\Services\Seller\SellerPortal;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -51,6 +54,17 @@ class CommunicationsTest extends FoundationTestCase
         ]);
 
         $desk = User::factory()->withRoles('staff')->withPermissions('staff.brokerage')->create();
+        Storage::fake('local');
+        $fixture = User::factory()->withVerifiedCapability('broker')->create();
+        $profile = $fixture->capabilityApplications()->firstOrFail()->verification;
+        $profile['identity']['contact_fingerprint'] = hash('sha256', $buyer->email);
+        $profile['licence']['contact_fingerprint'] = hash('sha256', $buyer->email);
+        foreach ($profile['evidence'] as &$file) {
+            $file['path'] = str_replace('partner-evidence/'.$fixture->id.'/', 'partner-evidence/'.$buyer->id.'/', $file['path']);
+            Storage::disk($file['disk'])->put($file['path'], 'Test evidence');
+        }
+        unset($file);
+        $buyer->forceFill(['email_verified_at' => now()])->save();
         $application = CapabilityApplication::query()->create([
             'user_id' => $buyer->id,
             'capability' => PartnerCapability::Broker,
@@ -58,6 +72,7 @@ class CommunicationsTest extends FoundationTestCase
             'statement' => 'I introduce buyers around Shela.',
         ]);
 
+        $application->forceFill(['verification' => $profile])->save();
         app(CapabilityReviewer::class)->decide($desk, $application, CapabilityApplicationStatus::Approved, 'The brokerage desk accepted this application.');
 
         $this->assertTrue(
@@ -99,7 +114,7 @@ class CommunicationsTest extends FoundationTestCase
 
     public function test_property_approval_notifies_the_submitter_and_a_repeat_does_not_send_again(): void
     {
-        $broker = User::factory()->withRoles('broker')->create(['notify_by_email' => false]);
+        $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create(['notify_by_email' => false]);
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
         $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
         $locality = Locality::query()->create(['county_id' => $county->id, 'name' => 'Mokowe', 'slug' => 'mokowe', 'kind' => 'place', 'is_active' => true]);
@@ -110,6 +125,10 @@ class CommunicationsTest extends FoundationTestCase
             'restricted_latitude' => -2.27123456,
             'restricted_longitude' => 40.90123456,
         ]);
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $owner = $property->owners()->create(['user_id' => $seller->id, 'relationship' => 'owner', 'status' => 'verified']);
+        app(SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
+        $property->authorities()->create(['seller_id' => $seller->id, 'scope' => 'sale', 'status' => 'active', 'terms' => 'Test-only current marketing instruction.']);
         $this->attachPublicPhoto($property, $broker);
         $this->clearCriticalVerification($property, $staff);
 
@@ -160,6 +179,7 @@ class CommunicationsTest extends FoundationTestCase
             $this->assertStringNotContainsString('LAMU/BLOCK/9', $stored);
         }
 
+        $this->assertSame(1, $user->notifications()->count());
         $link = $deliveries->firstWhere('channel', MessageChannel::Whatsapp);
         $this->assertStringStartsWith('https://wa.me/254712000111?text=', (string) $link->destination);
         $this->assertTrue($user->notifications()->get()->contains(
@@ -167,7 +187,7 @@ class CommunicationsTest extends FoundationTestCase
         ));
     }
 
-    public function test_a_failed_sms_is_logged_for_retry_without_a_second_message(): void
+    public function test_a_failed_sms_is_logged_without_failing_the_business_action_or_sending_a_second_message(): void
     {
         $this->app->instance(SmsSender::class, new class implements SmsSender
         {
@@ -192,26 +212,25 @@ class CommunicationsTest extends FoundationTestCase
             'enabled' => true,
         ]);
 
-        try {
-            app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, [
-                'name' => $user->name,
-                'title' => 'Welcome',
-                'summary' => 'Your account is ready.',
-                'url' => route('home'),
-            ], 'sms:'.$user->id);
-            $this->fail('The SMS gateway failure should surface so the queue can retry.');
-        } catch (RuntimeException $exception) {
-            $this->assertSame('gateway down', $exception->getMessage());
-        }
+        app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, [
+            'name' => $user->name, 'title' => 'Welcome', 'summary' => 'Your account is ready.', 'url' => route('home'),
+        ], 'sms:'.$user->id);
 
         $sms = MessageDelivery::query()
             ->where('user_id', $user->id)
             ->where('channel', MessageChannel::Sms)
             ->firstOrFail();
 
+        try {
+            app()->call([new DeliverMessage($sms->idempotency_key), 'handle']);
+            $this->fail('The job must throw so its worker can retry the gateway failure.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('gateway down', $exception->getMessage());
+        }
+        $sms->refresh();
         $this->assertSame('failed', $sms->status);
         $this->assertGreaterThanOrEqual(1, $sms->attempts);
-        $this->assertSame(3, (new \App\Jobs\DeliverMessage($sms->idempotency_key))->tries);
+        $this->assertSame(3, (new DeliverMessage($sms->idempotency_key))->tries);
 
         app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, [
             'name' => $user->name,

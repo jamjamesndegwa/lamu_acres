@@ -5,9 +5,9 @@ namespace App\Services\Subscription;
 use App\Enums\MessageEvent;
 use App\Enums\SubscriptionStatus;
 use App\Models\Entitlement;
+use App\Models\ServiceCredit;
 use App\Models\Subscription;
 use App\Models\SubscriptionEvent;
-use App\Models\ServiceCredit;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
@@ -176,7 +176,7 @@ class Memberships
             'name' => $member->name,
             'title' => $subscription->plan->name ?? 'Investor Pass',
             'summary' => $summary,
-            'url' => route('home'),
+            'url' => route('buyer.subscription.show'),
         ], 'subscription:'.$subscription->id.':'.$event->value.':'.$stamp);
     }
 

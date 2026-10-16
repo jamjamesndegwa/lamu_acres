@@ -3,11 +3,12 @@
 namespace App\Services\Sales;
 
 use App\Enums\ClosingEvidenceState;
-use App\Enums\MessageEvent;
 use App\Enums\CommissionStatus;
+use App\Enums\MessageEvent;
 use App\Enums\PaymentReconciliation;
 use App\Enums\SalesStage;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPayment;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Notifications\CommissionSettlementNotification;
@@ -137,7 +138,6 @@ class ClosingDesk
             ]);
 
             $this->earn($locked, $actor);
-            $this->notifyParties($locked, new SaleCompletedNotification($locked));
             $this->announce($locked, MessageEvent::ClosingCompleted, 'The sale is completed.', 'sale:'.$locked->id);
 
             return $locked->refresh();
@@ -227,7 +227,6 @@ class ClosingDesk
                 'amount' => $payment->amount,
                 'reconciliation' => $reconciliation->value,
             ], $locked->id);
-            $this->notifyParties($locked->transaction, new CommissionSettlementNotification($locked));
             $this->announceBroker($locked, MessageEvent::CommissionPaid, 'Commission has been paid.');
 
             return $locked;
@@ -265,13 +264,15 @@ class ClosingDesk
             ->unique('id');
 
         foreach ($recipients as $user) {
+            $notification = new SaleCompletedNotification($transaction);
+            $data = $notification->toArray($user);
             app(MessageDesk::class)->send($user, $event, [
                 'name' => $user->name,
                 'title' => $transaction->property->title,
                 'reference' => $transaction->reference,
                 'summary' => $summary,
-                'url' => route('home'),
-            ], $key);
+                'url' => $data['url'],
+            ], $key, $notification);
         }
     }
 
@@ -288,31 +289,15 @@ class ClosingDesk
             'title' => $agreement->transaction->property->title,
             'reference' => $agreement->reference,
             'summary' => $summary,
-            'url' => route('home'),
-        ], 'commission:'.$agreement->id.':'.$event->value);
-    }
-
-    private function notifyParties(SalesTransaction $transaction, object $notification): void
-    {
-        $transaction->loadMissing(['property.owners.user', 'agreements.broker', 'buyer']);
-        $recipients = $transaction->property->owners->map(fn ($owner) => $owner->user)->filter();
-
-        foreach ($transaction->agreements as $agreement) {
-            if ($agreement->broker !== null) {
-                $recipients->push($agreement->broker);
-            }
-        }
-
-        $recipients->filter()->unique('id')->each(function (User $user) use ($notification): void {
-            $user->notify($notification);
-        });
+            'url' => route('broker.agreements.show', $agreement),
+        ], 'commission:'.$agreement->id.':'.$event->value, $event === MessageEvent::CommissionPaid ? new CommissionSettlementNotification($agreement) : null);
     }
 
     public function paymentReference(): string
     {
         do {
             $reference = 'CP-'.strtoupper(Str::random(8));
-        } while (\App\Models\CommissionPayment::query()->where('reference', $reference)->exists());
+        } while (CommissionPayment::query()->where('reference', $reference)->exists());
 
         return $reference;
     }

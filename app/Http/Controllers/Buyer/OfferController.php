@@ -19,6 +19,7 @@ class OfferController extends Controller
         $offers = Offer::query()
             ->where('buyer_id', $request->user()->id)
             ->with('property')
+            ->when($request->filled('record'), fn ($query) => $query->whereKey((int) $request->query('record')))
             ->latest()
             ->paginate(12);
 

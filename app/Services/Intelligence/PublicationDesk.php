@@ -9,6 +9,7 @@ use App\Models\IntelligenceAudit;
 use App\Models\ResearchReport;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
+use App\Services\Research\CommitmentDesk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -74,7 +75,7 @@ class PublicationDesk
             $this->announceReport($subject);
         }
 
-        app(\App\Services\Research\CommitmentDesk::class)->afterPublication($subject->refresh());
+        app(CommitmentDesk::class)->afterPublication($subject->refresh());
     }
 
     private function announceReport(ResearchReport $report): void
@@ -95,7 +96,7 @@ class PublicationDesk
                 'title' => $report->title,
                 'reference' => $report->reference,
                 'summary' => $report->title.' is now available.',
-                'url' => route('intelligence.reports.show', $report),
+                'url' => route('investor.reports.show', $report),
             ], 'report:'.$report->id);
         });
     }

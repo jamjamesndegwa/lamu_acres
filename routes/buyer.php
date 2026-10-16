@@ -47,6 +47,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
         Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');
         Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
         Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
         Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');

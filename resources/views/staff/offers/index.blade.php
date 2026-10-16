@@ -2,7 +2,7 @@
     <p class="mt-3 max-w-3xl text-stone-700">Changing an offer status leaves the property availability unchanged.</p>
     <div class="mt-6 space-y-4">
         @forelse ($offers as $offer)
-            <article class="rounded-2xl border border-sand-200 bg-white p-5">
+            <article id="offer-{{ $offer->id }}" class="rounded-2xl border border-sand-200 bg-white p-5">
                 <p class="font-medium text-lamu-900">{{ $offer->property->title }}</p>
                 <p class="mt-1 text-sm text-stone-600">{{ $offer->buyer->name }} · KSh {{ number_format($offer->amount) }} · {{ $offer->status->label() }}</p>
                 <h2 class="mt-4 text-sm font-medium text-lamu-900">Buyer offer</h2>

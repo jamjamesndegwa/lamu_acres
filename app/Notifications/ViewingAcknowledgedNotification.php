@@ -29,7 +29,7 @@ class ViewingAcknowledgedNotification extends Notification
             'site_visit_id' => $this->visit->id,
             'title' => 'Viewing acknowledged',
             'message' => 'The buyer confirmed they attended the viewing.',
-            'url' => route('staff.visits.index'),
+            'url' => route('staff.visits.index', ['record' => $this->visit->id]).'#visit-'.$this->visit->id,
         ];
     }
 }
