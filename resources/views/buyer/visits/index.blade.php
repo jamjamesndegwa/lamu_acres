@@ -1,10 +1,10 @@
 <x-workspace-layout heading="Site Visits">
-    <p class="mt-3 max-w-3xl text-stone-700">Visits you have requested on approved matches.</p>
+    <p class="mt-3 max-w-3xl text-stone-700">Track visit requests from property listings and approved matches.</p>
 
     @if ($visits->isNotEmpty())
         <x-buyer.next-step
-            label="Review this visit"
-            :href="$visits->first()->property_match_id ? route('buyer.matches.show', $visits->first()->property_match_id) : route('buyer.matches.index')"
+            label="Review your visit requests"
+            :href="route('buyer.visits.index')"
             detail="Cancel a visit that has not happened, acknowledge one you attended, then submit an offer if you want to proceed."
         />
     @endif
@@ -49,7 +49,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-8"><x-workspace.empty title="No visits" message="Request a visit from an approved match." action="View matches" :href="route('buyer.matches.index')" /></td>
+                    <td colspan="5" class="px-4 py-8"><x-workspace.empty title="No visits" message="Request a visit from a property listing or an approved match." action="Find land" :href="route('find-land.index')" /></td>
                 </tr>
             @endforelse
         </x-workspace.table>

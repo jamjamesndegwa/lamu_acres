@@ -12,6 +12,7 @@ use App\Models\DocumentAccessRequest;
 use App\Models\Enquiry;
 use App\Models\Offer;
 use App\Models\PropertyMatch;
+use App\Models\PropertyVisitRequest;
 use App\Models\SiteVisit;
 use App\Models\SourcingMatch;
 use App\Models\User;
@@ -25,6 +26,7 @@ use App\Services\Communications\MessageDesk;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class InterestWorkflow
 {
@@ -114,6 +116,42 @@ class InterestWorkflow
         return $visit;
     }
 
+    public function requestListingVisit(PropertyVisitRequest $request): SiteVisit
+    {
+        $requestedFor = $request->preferred_on->copy()->startOfDay();
+        $visit = SiteVisit::query()
+            ->where('buyer_id', $request->buyer_id)
+            ->where('property_id', $request->property_id)
+            ->whereDate('requested_for', $requestedFor->toDateString())
+            ->whereIn('status', [SiteVisitStatus::Requested, SiteVisitStatus::Confirmed])
+            ->first();
+
+        if ($visit !== null) {
+            return $visit;
+        }
+
+        $visit = SiteVisit::query()->create([
+            'buyer_id' => $request->buyer_id,
+            'property_id' => $request->property_id,
+            'property_visit_request_id' => $request->id,
+            'status' => SiteVisitStatus::Requested,
+            'requested_for' => $requestedFor,
+            'notes' => $request->note,
+        ]);
+
+        BuyerTimelineEntry::record($request->buyer, 'Site visit requested for '.$request->property->title.'.', [
+            'property_id' => $request->property_id,
+        ], $request->buyer);
+
+        try {
+            $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer requested a site visit.'));
+        } catch (Throwable) {
+            // The visit remains in the authorized staff queue if notification delivery fails.
+        }
+
+        return $visit;
+    }
+
     public function assignVisit(SiteVisit $visit, User $agent, User $actor): SiteVisit
     {
         if ((int) $visit->assigned_to === (int) $agent->id) {
@@ -122,7 +160,7 @@ class InterestWorkflow
         $visit->assigned_to = $agent->id;
         $visit->save();
         $visit->match?->forceFill(['assigned_to' => $agent->id])->save();
-        $this->timeline($visit->buyer, 'A site visit agent was assigned.', $visit->match, $actor);
+        $this->visitTimeline($visit, 'A site visit agent was assigned.', $actor);
         $agent->notify(new SiteVisitUpdatedNotification($visit, 'A site visit was assigned to you.'));
 
         return $visit;
@@ -151,7 +189,7 @@ class InterestWorkflow
         }
 
         $visit->save();
-        $this->timeline($visit->buyer, 'Site visit '.$status->label().' for '.$visit->property->title.'.', $visit->match, $actor);
+        $this->visitTimeline($visit, 'Site visit '.$status->label().' for '.$visit->property->title.'.', $actor);
 
         if ($actor->is($visit->buyer)) {
             $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
@@ -297,6 +335,15 @@ class InterestWorkflow
             'property_id' => $match?->property_id,
             'sourcing_request_id' => $match?->sourcing_request_id,
             'property_match_id' => $match?->id,
+        ], $actor);
+    }
+
+    private function visitTimeline(SiteVisit $visit, string $summary, User $actor): void
+    {
+        BuyerTimelineEntry::record($visit->buyer, $summary, [
+            'property_id' => $visit->property_id,
+            'sourcing_request_id' => $visit->match?->sourcing_request_id,
+            'property_match_id' => $visit->property_match_id,
         ], $actor);
     }
 

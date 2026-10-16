@@ -20,4 +20,9 @@ class PropertyVisitRequest extends Model
     {
         return $this->belongsTo(Property::class);
     }
+
+    public function buyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'buyer_id');
+    }
 }

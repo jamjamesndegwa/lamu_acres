@@ -7,8 +7,11 @@ use App\Enums\SourcingRequestStatus;
 use App\Models\BuyerTimelineEntry;
 use App\Models\SourcingRequest;
 use App\Models\User;
+use App\Notifications\TemplatedDeskNotification;
 use App\Support\Geo\Wkt;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SourcingRequestWriter
 {
@@ -29,6 +32,20 @@ class SourcingRequestWriter
 
         $this->syncAmenities($request, $data);
         $this->record($request, $buyer, 'Search '.$request->reference.' submitted.');
+
+        try {
+            Notification::send(
+                User::permission('staff.sourcing')->get(),
+                new TemplatedDeskNotification(
+                    'New sourcing request',
+                    'A buyer submitted '.$request->reference.'. Review and assign it in the sourcing desk.',
+                    route('staff.sourcing.show', $request),
+                ),
+            );
+        } catch (Throwable) {
+            // The accepted request remains saved and visible in the sourcing queue.
+        }
+
         $this->matcher->refresh($request);
 
         return $request->refresh();

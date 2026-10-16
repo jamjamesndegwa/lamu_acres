@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ListingDocumentRequest;
 use App\Models\Property;
 use App\Models\PropertyVisitRequest;
+use App\Services\Buyer\InterestWorkflow;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class ListingInterestController extends Controller
         return view('public.land.visit', ['property' => $this->publicProperty($property)]);
     }
 
-    public function storeVisit(Request $request, Property $property): RedirectResponse
+    public function storeVisit(Request $request, Property $property, InterestWorkflow $workflow): RedirectResponse
     {
         $this->guard($property);
         $data = $request->validate([
@@ -32,12 +33,13 @@ class ListingInterestController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        PropertyVisitRequest::query()->create([
+        $visitRequest = PropertyVisitRequest::query()->create([
             'property_id' => $property->id,
             'buyer_id' => $request->user()->id,
             'preferred_on' => $data['preferred_on'],
             'note' => $data['note'] ?? null,
         ]);
+        $workflow->requestListingVisit($visitRequest);
 
         return redirect()
             ->to($property->publicUrl())

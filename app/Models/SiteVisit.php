@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'property_match_id',
+    'property_visit_request_id',
     'buyer_id',
     'property_id',
     'enquiry_id',
@@ -44,6 +45,11 @@ class SiteVisit extends Model
     public function match(): BelongsTo
     {
         return $this->belongsTo(PropertyMatch::class, 'property_match_id');
+    }
+
+    public function propertyVisitRequest(): BelongsTo
+    {
+        return $this->belongsTo(PropertyVisitRequest::class);
     }
 
     public function buyer(): BelongsTo
