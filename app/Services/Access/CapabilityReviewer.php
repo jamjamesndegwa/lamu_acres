@@ -54,9 +54,8 @@ class CapabilityReviewer
             return DB::transaction(function () use ($user, $capability, $broker, $data, &$stored): CapabilityApplication {
                 User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
                 $application = CapabilityApplication::query()->where('user_id', $user->id)->where('capability', $capability)->lockForUpdate()->first();
-                if ($application !== null && ($application->status === CapabilityApplicationStatus::Suspended
-                    || ($application->status === CapabilityApplicationStatus::Approved && ! $broker))) {
-                    throw ValidationException::withMessages(['capability' => 'This seller capability is already approved, or the capability is suspended. Ask staff to reopen a suspended application. Broker credentials may be resubmitted for renewal.']);
+                if ($application !== null && ! $user->can('update', $application)) {
+                    throw ValidationException::withMessages(['capability' => 'This application cannot be resubmitted in its current status. Follow the application status page for the next step.']);
                 }
                 $application ??= new CapabilityApplication(['user_id' => $user->id, 'capability' => $capability]);
                 $privateBucket = config('filesystems.disks.r2_private.bucket');

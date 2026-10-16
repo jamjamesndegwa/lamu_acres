@@ -11,10 +11,10 @@
         $attentionIds = $inbox->attention(auth()->user()->notifications()->getQuery(), auth()->user())->whereKey($recent->modelKeys())->pluck('id')->all();
     @endphp
     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.stop="open = false; $refs.bell.focus()">
-        <button type="button" x-ref="bell" @click="open = !open" :aria-expanded="open" aria-controls="notification-dropdown" aria-label="Notifications, {{ (int) $count }} unread" class="relative flex size-11 shrink-0 items-center justify-center rounded-full {{ (int) $count > 0 ? 'text-red-700' : 'text-lamu-900' }} hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
-            <svg aria-hidden="true" class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
+        <button type="button" x-ref="bell" @click="open = !open" :aria-expanded="open" aria-controls="notification-dropdown" aria-label="Notifications, {{ (int) $count }} unread" class="relative flex size-11 shrink-0 items-center justify-center rounded-full text-stone-900 hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
+            <svg aria-hidden="true" class="size-8" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
             @if ((int) $count > 0)
-                <span data-unread-badge class="absolute -left-1 -top-1 min-w-5 rounded-full bg-red-700 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white ring-2 ring-white" aria-hidden="true">{{ (int) $count > 99 ? '99+' : (int) $count }}</span>
+                <span data-unread-badge class="absolute -right-0.5 top-0 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white ring-2 ring-white" aria-hidden="true">{{ (int) $count > 99 ? '99+' : (int) $count }}</span>
             @endif
         </button>
         <section id="notification-dropdown" x-show="open" style="display: none" x-transition.opacity aria-label="Recent notifications" class="notification-popover rounded-xl border border-sand-200 bg-white shadow-xl">

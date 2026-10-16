@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\Enums\CapabilityApplicationStatus;
 use App\Enums\PartnerCapability;
 use App\Http\Controllers\Controller;
 use App\Models\CapabilityApplication;
@@ -19,10 +20,17 @@ class CapabilityApplicationController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorize('create', CapabilityApplication::class);
+        $this->authorize('viewAny', CapabilityApplication::class);
+
+        $user = $request->user();
+        $accountTypes = collect(['buyer', 'seller', 'broker'])
+            ->filter(fn (string $workspace): bool => $user->hasPermission('workspace.'.$workspace))
+            ->values();
 
         return view('account.applications.index', [
-            'applications' => $request->user()->capabilityApplications()->orderBy('capability')->get(),
+            'applications' => $user->capabilityApplications()->orderBy('capability')->get(),
+            'canApply' => $user->can('create', CapabilityApplication::class),
+            'accountTypes' => $accountTypes,
         ]);
     }
 
@@ -35,11 +43,32 @@ class CapabilityApplicationController extends Controller
             return redirect()->route('register', ['capability' => $capability->value]);
         }
 
-        $this->authorize('create', CapabilityApplication::class);
+        if (! $request->user()->can('create', CapabilityApplication::class)) {
+            if ($request->user()->hasPermission('workspace.staff') || $request->user()->hasPermission('workspace.admin')) {
+                return redirect()->route('workspaces.index')->with('status', 'Seller and broker applications are for buyer, seller, and broker accounts. Staff and administration access is provisioned separately.');
+            }
+
+            abort(403);
+        }
+
+        $application = $request->user()->capabilityApplications()->where('capability', $capability)->first();
+        if ($application !== null && in_array($application->status, [CapabilityApplicationStatus::Pending, CapabilityApplicationStatus::Suspended], true)) {
+            return redirect()->route('account.applications.index')->with('status', 'This application cannot be resubmitted while it is under review or suspended.');
+        }
+
+        if ($application?->status === CapabilityApplicationStatus::Approved
+            && ($capability === PartnerCapability::Seller
+                || ! app(CapabilityReviewer::class)->verificationBlockers($application))) {
+            return redirect()->route('account.applications.index')->with('status', 'This capability is already approved.');
+        }
+
+        if ($application !== null && ! $request->user()->can('update', $application)) {
+            return redirect()->route('account.applications.index')->with('status', 'This application is not open for applicant changes.');
+        }
 
         return view('account.applications.form', [
             'capability' => $capability,
-            'application' => $request->user()->capabilityApplications()->where('capability', $capability)->first(),
+            'application' => $application,
             'modal' => Turbo::wantsModal($request),
         ]);
     }

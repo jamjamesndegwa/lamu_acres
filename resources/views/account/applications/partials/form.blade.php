@@ -13,6 +13,22 @@
 >
     @csrf
     <input type="hidden" name="capability" value="{{ $capability->value }}">
+    @if ($application?->status === \App\Enums\CapabilityApplicationStatus::InformationRequired)
+        <div role="status" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p class="font-semibold">Information Required</p>
+            <p class="mt-1">{{ $application->decision_reason ?: 'Please provide the requested updates and resubmit your application.' }}</p>
+        </div>
+    @elseif ($application?->status === \App\Enums\CapabilityApplicationStatus::Rejected)
+        <div role="status" class="rounded-2xl border border-sand-200 bg-sand-50 p-4 text-sm text-stone-700">
+            <p class="font-semibold">Previous decision: Rejected</p>
+            <p class="mt-1">{{ $application->decision_reason }} You may submit updated information for review.</p>
+        </div>
+    @elseif ($application?->status === \App\Enums\CapabilityApplicationStatus::Approved)
+        <div role="status" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p class="font-semibold">Broker credentials need renewal</p>
+            <p class="mt-1">Submit current verification documents. Brokerage actions remain restricted until staff review them.</p>
+        </div>
+    @endif
     @include('account.applications.partials.verification-fields')
 
     @if ($errors->any())
