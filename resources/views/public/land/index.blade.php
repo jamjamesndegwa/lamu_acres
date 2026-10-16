@@ -23,7 +23,13 @@
         'acres_asc' => 'Acreage: small to large',
         'acres_desc' => 'Acreage: large to small',
     ];
+<<<<<<< Updated upstream
     $findLandHref = rtrim(config('app.url'), '/').route('find-land.index', [], false);
+=======
+    $findLandModal = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
+    $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('home').'#find-land';
+    $buyerWorkspace = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
+>>>>>>> Stashed changes
     $mapImage = collect(['images/lamu_area_overview.jpg', 'images/lamu_map.jpg', 'images/lamu_map.png'])
         ->first(fn (string $path) => is_file(public_path($path)));
     $resultCount = $listings->total();
@@ -36,10 +42,13 @@
     }
 @endphp
 
-<x-public-layout
+<x-dynamic-component
+    :component="$buyerWorkspace ? 'workspace-layout' : 'public-layout'"
+    :heading="$buyerWorkspace ? 'Explore Land' : null"
     :title="($areaName ? 'Land in '.$areaName : 'Explore Land in Lamu').' — Lamu Acres'"
     description="Explore land in Lamu. Filter coastal plots and acreage by location, purpose, property type, price, acreage and price per acre."
 >
+    @unless ($buyerWorkspace)
     <section class="relative isolate overflow-hidden bg-lamu-900">
         <img src="{{ asset('images/explore_land_hero_section.jpg') }}" alt="" class="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_50%]" fetchpriority="high">
         <div class="land-hero-fade absolute inset-0 -z-10" aria-hidden="true"></div>
@@ -49,6 +58,7 @@
             <p class="mt-1 max-w-[30rem] text-sm text-sand-50 [text-shadow:0_1px_2px_rgba(0,0,0,.35)]">Find coastal plots, acreage and development opportunities.</p>
         </div>
     </section>
+    @endunless
 
     <div class="mx-auto grid w-full max-w-[1440px] gap-4 px-4 py-4 sm:px-6 lg:w-[90%] lg:grid-cols-[230px_minmax(0,1fr)] lg:px-0 xl:grid-cols-[230px_minmax(0,1fr)_280px]">
         <div class="contents lg:sticky lg:top-[60px] lg:row-span-2 lg:block lg:max-h-[calc(100dvh-72px)] lg:space-y-3 lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin] xl:row-span-1">
@@ -190,4 +200,4 @@
             </div>
         </aside>
     </div>
-</x-public-layout>
+</x-dynamic-component>

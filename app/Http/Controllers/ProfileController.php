@@ -18,6 +18,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends Controller
 {
+    public function index(Request $request): View
+    {
+        return view('workspaces.profile-index', [
+            'user' => $request->user(),
+        ]);
+    }
+
     public function edit(Request $request): View
     {
         return view('workspaces.profile', [

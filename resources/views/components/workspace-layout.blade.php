@@ -13,7 +13,7 @@
 <body class="h-dvh overflow-hidden bg-sand-50 text-stone-900 antialiased">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
 
-    <div class="flex h-dvh min-h-0">
+    <turbo-frame id="workspace-shell" data-turbo-action="advance" class="flex h-dvh min-h-0">
         <livewire:workspace-sidebar />
 
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -44,11 +44,9 @@
                 <p>&copy; {{ now()->year }} Lamu Acres</p>
             </footer>
         </div>
-    </div>
+    </turbo-frame>
 
-    <div data-page-loading hidden class="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit rounded-full border border-sand-200 bg-white px-4 py-2 shadow">
-        <x-state kind="loading" message="Working on that request." />
-    </div>
+    <x-page-loading />
     <x-flash />
     <turbo-frame id="modal">{{ $modal ?? '' }}</turbo-frame>
 </body>

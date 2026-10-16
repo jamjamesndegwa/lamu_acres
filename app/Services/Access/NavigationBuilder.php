@@ -32,7 +32,10 @@ class NavigationBuilder
      */
     public function shell(User $user, Workspace $workspace): array
     {
-        $currentRoute = session('workspace_route');
+        $routeName = Route::currentRouteName();
+        $currentRoute = is_string($routeName) && ! str_starts_with($routeName, 'livewire.')
+            ? $routeName
+            : session('workspace_route');
         $modules = [];
 
         foreach (config("workspaces.{$workspace->value}.groups", []) as $group) {
@@ -111,6 +114,14 @@ class NavigationBuilder
      */
     private function activeModuleKey(array $modules, Workspace $workspace): ?string
     {
+        foreach ($modules as $module) {
+            foreach ($module['items'] as $item) {
+                if ($item['active']) {
+                    return $module['key'];
+                }
+            }
+        }
+
         $pin = session('workspace_module_pin');
 
         if (
@@ -119,14 +130,6 @@ class NavigationBuilder
             && collect($modules)->contains('key', $pin['key'] ?? null)
         ) {
             return $pin['key'];
-        }
-
-        foreach ($modules as $module) {
-            foreach ($module['items'] as $item) {
-                if ($item['active']) {
-                    return $module['key'];
-                }
-            }
         }
 
         return null;

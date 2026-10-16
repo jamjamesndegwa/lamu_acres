@@ -30,9 +30,7 @@
 
     <x-public-footer />
 
-    <div data-page-loading hidden class="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit rounded-full border border-sand-200 bg-white px-4 py-2 shadow">
-        <x-state kind="loading" message="Working on that request." />
-    </div>
+    <x-page-loading />
     <x-flash />
     <turbo-frame id="modal">{{ $modal ?? '' }}</turbo-frame>
 </body>

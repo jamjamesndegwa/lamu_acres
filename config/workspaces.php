@@ -36,14 +36,9 @@ return [
                 'key' => 'sourcing',
                 'label' => 'Find Land for Me',
                 'items' => [
-                    ['label' => 'Find Land for Me', 'route' => 'buyer.sourcing.index', 'active' => 'buyer.sourcing.*'],
-                ],
-            ],
-            [
-                'key' => 'matches',
-                'label' => 'My Property Matches',
-                'items' => [
+                    ['label' => 'My Searches', 'route' => 'buyer.sourcing.index', 'active' => 'buyer.sourcing.*'],
                     ['label' => 'My Property Matches', 'route' => 'buyer.matches.index', 'active' => 'buyer.matches.*'],
+                    ['label' => 'Buying Profile', 'route' => 'buyer.buying-profile', 'active' => 'buyer.buying-profile'],
                 ],
             ],
             [
@@ -51,27 +46,8 @@ return [
                 'label' => 'My Enquiries',
                 'items' => [
                     ['label' => 'My Enquiries', 'route' => 'buyer.enquiries.index', 'active' => 'buyer.enquiries.*'],
-                ],
-            ],
-            [
-                'key' => 'visits',
-                'label' => 'Site Visits',
-                'items' => [
                     ['label' => 'Site Visits', 'route' => 'buyer.visits.index', 'active' => 'buyer.visits.*'],
-                ],
-            ],
-            [
-                'key' => 'offers',
-                'label' => 'My Offers',
-                'items' => [
                     ['label' => 'My Offers', 'route' => 'buyer.offers.index', 'active' => 'buyer.offers.*'],
-                ],
-            ],
-            [
-                'key' => 'profile',
-                'label' => 'Buying Profile',
-                'items' => [
-                    ['label' => 'Buying Profile', 'route' => 'buyer.buying-profile', 'active' => 'buyer.buying-profile'],
                 ],
             ],
             [
@@ -90,7 +66,7 @@ return [
             ],
         ],
         'account' => [
-            ['label' => 'Account', 'route' => 'buyer.profile', 'active' => 'buyer.profile'],
+            ['label' => 'Account', 'route' => 'buyer.profile', 'active' => 'buyer.profile', 'modal' => false],
             ['label' => 'Logout', 'route' => 'logout', 'method' => 'post'],
         ],
         'panels' => [

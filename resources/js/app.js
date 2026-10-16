@@ -322,6 +322,26 @@ function showFlash() {
     })
 }
 
+function showPageLoading() {
+    const indicator = document.querySelector('[data-page-loading]')
+
+    if (! indicator) return
+
+    indicator.hidden = false
+    indicator.removeAttribute('aria-hidden')
+}
+
+function hidePageLoading() {
+    const indicator = document.querySelector('[data-page-loading]')
+
+    if (! indicator) return
+
+    indicator.hidden = true
+    indicator.setAttribute('aria-hidden', 'true')
+}
+
+let livewireNavigationPending = false
+
 function clearModalFrame() {
     const frame = document.getElementById('modal')
 
@@ -334,6 +354,28 @@ document.addEventListener('turbo:load', showFlash)
 document.addEventListener('turbo:frame-load', showFlash)
 document.addEventListener('livewire:navigated', showFlash)
 document.addEventListener('DOMContentLoaded', showFlash)
+document.addEventListener('livewire:navigate', () => {
+    livewireNavigationPending = true
+    showPageLoading()
+})
+document.addEventListener('livewire:navigated', () => {
+    livewireNavigationPending = false
+    hidePageLoading()
+})
+document.addEventListener('livewire:initialized', () => {
+    window.Livewire?.interceptMessage(({ onSend, onFinish }) => {
+        onSend(showPageLoading)
+        onFinish(() => {
+            if (! livewireNavigationPending) hidePageLoading()
+        })
+    })
+})
+document.addEventListener('turbo:before-fetch-request', showPageLoading)
+document.addEventListener('turbo:load', hidePageLoading)
+document.addEventListener('turbo:frame-load', hidePageLoading)
+document.addEventListener('turbo:fetch-request-error', hidePageLoading)
+document.addEventListener('turbo:frame-missing', hidePageLoading)
+document.addEventListener('DOMContentLoaded', hidePageLoading)
 
 function sameOriginPage(url) {
     return url.origin === window.location.origin
@@ -408,9 +450,20 @@ document.addEventListener('click', (event) => {
         return
     }
 
-    if (! window.Livewire?.navigate || wantsNativeVisit(link, url)) {
+    if (wantsNativeVisit(link, url)) {
         return
     }
+
+    const workspaceFrame = document.getElementById('workspace-shell')
+
+    if (workspaceFrame && sameOriginPage(url)) {
+        event.preventDefault()
+        workspaceFrame.src = url.href
+
+        return
+    }
+
+    if (! window.Livewire?.navigate) return
 
     event.preventDefault()
     window.Livewire.navigate(url.href)
@@ -423,7 +476,7 @@ document.addEventListener('submit', (event) => {
         return
     }
 
-    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get' || ! window.Livewire?.navigate) {
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get') {
         return
     }
 
@@ -437,8 +490,30 @@ document.addEventListener('submit', (event) => {
     }
 
     action.search = params.toString()
+
+    const workspaceFrame = document.getElementById('workspace-shell')
+
+    if (workspaceFrame && sameOriginPage(action)) {
+        event.preventDefault()
+        workspaceFrame.src = action.href
+
+        return
+    }
+
+    if (! window.Livewire?.navigate) return
+
     event.preventDefault()
     window.Livewire.navigate(action.href)
+})
+
+document.addEventListener('turbo:frame-missing', (event) => {
+    const response = event.detail?.response
+
+    if (! response?.url || ! sameOriginPage(new URL(response.url, window.location.href))) return
+
+    event.preventDefault()
+    showPageLoading()
+    window.location.assign(response.url)
 })
 
 document.addEventListener('click', (event) => {
@@ -502,7 +577,9 @@ document.addEventListener('submit', (event) => {
         return
     }
 
-    document.querySelector('[data-page-loading]')?.removeAttribute('hidden')
+    if (form.dataset.confirm && form.dataset.confirmed !== 'true') return
+
+    showPageLoading()
 })
 
 document.addEventListener('submit', (event) => {

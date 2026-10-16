@@ -1,4 +1,10 @@
-<x-public-layout
+@php
+    $buyerWorkspace = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
+@endphp
+
+<x-dynamic-component
+    :component="$buyerWorkspace ? 'workspace-layout' : 'public-layout'"
+    :heading="$buyerWorkspace ? 'Explore Land' : null"
     :title="$listing['title'].' — Lamu Acres'"
     :description="\Illuminate\Support\Str::limit(trim(strip_tags((string) ($listing['summary'] ?: $listing['description'] ?: $listing['title'].' in '.$listing['location']))), 160)"
 >
@@ -298,4 +304,4 @@
             </aside>
         </div>
     </article>
-</x-public-layout>
+</x-dynamic-component>

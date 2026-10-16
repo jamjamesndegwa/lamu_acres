@@ -48,6 +48,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
         Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+        Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+        Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     });
