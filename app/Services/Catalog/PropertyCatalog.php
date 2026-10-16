@@ -92,7 +92,7 @@ class PropertyCatalog
     /**
      * @param  array<string, mixed>  $filters
      */
-    private function query(array $filters, ?County $county, ?Locality $locality): Builder
+    public function query(array $filters, ?County $county = null, ?Locality $locality = null): Builder
     {
         $query = Property::query()
             ->publiclyListed()

@@ -6,4 +6,6 @@ return [
 
     'desk_email' => env('LAMU_DESK_EMAIL'),
 
+    'find_land_max_radius_km' => 100,
+
 ];

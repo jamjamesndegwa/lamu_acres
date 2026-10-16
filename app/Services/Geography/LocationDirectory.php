@@ -86,6 +86,7 @@ class LocationDirectory
         $lngDelta = deg2rad($toLng - $fromLng);
         $a = sin($latDelta / 2) ** 2
             + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($lngDelta / 2) ** 2;
+        $a = max(0, min(1, $a));
 
         return $earth * (2 * atan2(sqrt($a), sqrt(1 - $a)));
     }

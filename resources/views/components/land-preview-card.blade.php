@@ -25,13 +25,20 @@
             </svg>
             <span><span class="sr-only">Location: </span>{{ $listing['location'] }}</span>
         </p>
+        @isset($listing['distance_km'])
+            <p class="mt-1 text-xs font-medium text-lamu-800">Approx. {{ number_format($listing['distance_km'], 1) }} km from search point</p>
+        @endisset
+        @isset($listing['type'])<p class="text-xs text-stone-600">{{ $listing['type'] }}</p>@endisset
+        @isset($listing['verification'])<p class="text-xs text-stone-600">{{ $listing['verification'] }}</p>@endisset
         <p class="home-serif mt-0.5 text-lg font-semibold leading-tight text-gold-500">
             @if ($listing['price'] !== null)
-                KES {{ number_format($listing['price']) }}@if (filled($listing['price_suffix'] ?? null)) <span class="text-sm font-medium">{{ $listing['price_suffix'] }}</span>@endif
+                {{ $listing['currency'] ?? 'KES' }} {{ number_format($listing['price']) }}@if (filled($listing['price_suffix'] ?? null)) <span class="text-sm font-medium">{{ $listing['price_suffix'] }}</span>@endif
             @else
                 {{ ($listing['is_lease'] ?? false) ? 'Rent on request' : 'Price on request' }}
             @endif
         </p>
+        @isset($listing['price_basis_label'])<p class="text-xs text-stone-500">{{ $listing['price_basis_label'] }} · {{ $listing['is_lease'] ? 'For lease' : 'For sale' }}</p>@endisset
+        @isset($listing['quoted_rate'])<p class="text-xs text-stone-600">Quoted rate: {{ $listing['quoted_rate'] }}</p>@endisset
         @if ($listing['is_lease'] ?? false)
             <p class="text-xs font-medium text-lamu-800">For lease</p>
         @endif
@@ -45,5 +52,13 @@
         @isset($listing['url'])
             <a href="{{ $listing['url'] }}" class="mt-1 inline-flex w-fit items-center self-end text-xs font-semibold text-lamu-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">View Details <span aria-hidden="true" class="ml-1">→</span></a>
         @endisset
+        @if ($listing['save_url'] ?? null)
+            <form action="{{ $listing['save_url'] }}" method="POST" class="mt-2">
+                @csrf
+                <button type="submit" class="min-h-11 rounded-full border border-sand-200 px-4 py-2 text-xs font-semibold text-lamu-800">Save property</button>
+            </form>
+        @elseif (array_key_exists('save_url', $listing) && auth()->guest())
+            <a href="{{ $listing['url'] }}" class="mt-2 min-h-11 content-center text-xs font-medium text-lamu-800 underline">Sign in to save from property details</a>
+        @endif
     </div>
 </article>

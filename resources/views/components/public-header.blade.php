@@ -7,8 +7,7 @@
 @php
     $deskEmail = config('lamu.desk_email');
     $deskEmail = is_string($deskEmail) && filter_var($deskEmail, FILTER_VALIDATE_EMAIL) ? $deskEmail : null;
-    $isBuyer = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
-    $findLandHref = $isBuyer ? route('buyer.sourcing.create') : route('home').'#find-land';
+    $findLandHref = route('find-land.index');
     $onHome = request()->routeIs('home');
     $intelligenceHref = $onHome ? '#intelligence' : route('home').'#intelligence';
     $searchHref = $onHome ? '#home-search' : route('land.index');
@@ -38,7 +37,7 @@
                     <a class="block rounded-md px-3 py-2 hover:bg-sand-50" href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease land</a>
                 </div>
             </details>
-            <a @class([$linkClass, 'border-transparent']) href="{{ $findLandHref }}" @if ($isBuyer) data-turbo-frame="modal" @endif>Find Land for Me</a>
+            <a @class([$linkClass, 'border-transparent']) href="{{ $findLandHref }}" @if (request()->routeIs('find-land.index')) aria-current="page" @endif>Find Land for Me</a>
             <a @class([$linkClass, 'border-transparent']) href="{{ $intelligenceHref }}">Investor Intelligence</a>
             <a @class([$linkClass, 'border-gold-500 font-medium text-gold-500' => $brokerPartnersActive, 'border-transparent' => ! $brokerPartnersActive]) href="{{ route('broker-partners') }}" @if ($brokerPartnersActive) aria-current="page" @endif>Broker Partners</a>
             <a @class([$linkClass, 'border-gold-500 font-medium text-gold-500' => $listPropertyActive, 'border-transparent' => ! $listPropertyActive]) href="{{ route('list-property') }}" @if ($listPropertyActive) aria-current="page" @endif>List Property</a>
@@ -77,7 +76,7 @@
                     <a href="{{ route('home') }}" @if ($onHome) aria-current="page" @endif>Home</a>
                     <a href="{{ route('land.index') }}" @if ($exploreActive) aria-current="page" @endif>Explore Land</a>
                     <a href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
-                    <a href="{{ $findLandHref }}" @if ($isBuyer) data-turbo-frame="modal" @endif>Find Land for Me</a>
+                    <a href="{{ $findLandHref }}" @if (request()->routeIs('find-land.index')) aria-current="page" @endif>Find Land for Me</a>
                     <a href="{{ $intelligenceHref }}">Investor Intelligence</a>
                     <a href="{{ route('broker-partners') }}" @if ($brokerPartnersActive) aria-current="page" @endif>Broker Partners</a>
                     <a href="{{ route('list-property') }}" @if ($listPropertyActive) aria-current="page" @endif>List Property</a>
