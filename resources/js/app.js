@@ -370,7 +370,13 @@ document.addEventListener('livewire:initialized', () => {
         })
     })
 })
-document.addEventListener('turbo:before-fetch-request', showPageLoading)
+document.addEventListener('turbo:before-fetch-request', (event) => {
+    const headers = event.detail?.fetchOptions?.headers
+
+    if (headers && new Headers(headers).get('X-Sec-Purpose') === 'prefetch') return
+
+    showPageLoading()
+})
 document.addEventListener('turbo:load', hidePageLoading)
 document.addEventListener('turbo:frame-load', hidePageLoading)
 document.addEventListener('turbo:fetch-request-error', hidePageLoading)

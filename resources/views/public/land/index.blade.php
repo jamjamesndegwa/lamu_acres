@@ -23,13 +23,9 @@
         'acres_asc' => 'Acreage: small to large',
         'acres_desc' => 'Acreage: large to small',
     ];
-<<<<<<< Updated upstream
-    $findLandHref = rtrim(config('app.url'), '/').route('find-land.index', [], false);
-=======
     $findLandModal = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
-    $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('home').'#find-land';
+    $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('find-land.index');
     $buyerWorkspace = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
->>>>>>> Stashed changes
     $mapImage = collect(['images/lamu_area_overview.jpg', 'images/lamu_map.jpg', 'images/lamu_map.png'])
         ->first(fn (string $path) => is_file(public_path($path)));
     $resultCount = $listings->total();

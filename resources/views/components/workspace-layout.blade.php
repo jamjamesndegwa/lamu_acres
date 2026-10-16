@@ -13,7 +13,7 @@
 <body class="h-dvh overflow-hidden bg-sand-50 text-stone-900 antialiased">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
 
-    <turbo-frame id="workspace-shell" data-turbo-action="advance" class="flex h-dvh min-h-0">
+    <turbo-frame id="workspace-shell" data-turbo-action="advance" data-turbo-prefetch="false" class="flex h-dvh min-h-0">
         <livewire:workspace-sidebar />
 
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
