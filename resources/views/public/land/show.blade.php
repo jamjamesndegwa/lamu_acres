@@ -8,6 +8,7 @@
     :title="$listing['title'].' — Lamu Acres'"
     :description="\Illuminate\Support\Str::limit(trim(strip_tags((string) ($listing['summary'] ?: $listing['description'] ?: $listing['title'].' in '.$listing['location']))), 160)"
 >
+    <x-smooth-section-scroll />
     <article class="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 lg:py-10">
         <script type="application/ld+json">{!! json_encode($listing['schema'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 
@@ -224,7 +225,7 @@
         </section>
 
         <section class="mt-10 rounded-2xl border border-sand-200 bg-white p-6" aria-labelledby="verification-summary">
-            <h2 id="verification-summary" class="home-serif text-2xl font-semibold text-lamu-900">Verification</h2>
+            <h2 id="verification-summary" class="home-serif scroll-mt-24 text-2xl font-semibold text-lamu-900">Verification</h2>
             <p class="mt-2 text-stone-700">{{ $passport['level'] }}</p>
             @if ($passport['override'])
                 <p class="mt-1 text-sm text-stone-600">{{ $passport['override'] }}</p>
