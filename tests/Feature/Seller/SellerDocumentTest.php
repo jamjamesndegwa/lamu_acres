@@ -83,7 +83,7 @@ class SellerDocumentTest extends FoundationTestCase
     {
         Storage::fake('local');
         [$seller, $property] = $this->createSellerDraft();
-        $otherSeller = User::factory()->withRoles('seller')->create();
+        $otherSeller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
 
         $this->actingAs($seller)->post(route('seller.properties.documents.store', $property), [
@@ -383,7 +383,7 @@ class SellerDocumentTest extends FoundationTestCase
      */
     private function createSellerDraft(): array
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $county = County::query()->firstOrCreate(['slug' => 'lamu'], ['name' => 'Lamu', 'is_active' => true]);
         $locality = Locality::query()->firstOrCreate(
             ['county_id' => $county->id, 'slug' => 'shela'],

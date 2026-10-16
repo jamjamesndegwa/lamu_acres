@@ -2,9 +2,15 @@
     <p class="text-xs font-semibold uppercase tracking-widest text-stone-500">Your Lamu Acres account</p>
     <h1 class="home-serif mt-2 text-3xl font-semibold text-lamu-900 sm:text-4xl">Welcome back</h1>
     <p class="mt-2 text-sm text-stone-600">Sign in to manage your saved properties, enquiries and next steps.</p>
+    @if ($capability ?? null)
+        <p class="mt-4 rounded-xl bg-sand-50 p-4 text-sm text-lamu-900">Sign in to continue your {{ $capability }} application. New here? <a href="{{ route('register', ['capability' => $capability]) }}" class="font-semibold underline">Register as a {{ $capability }}</a>.</p>
+    @endif
 
-    <form method="POST" action="{{ route('login') }}" class="mt-8 space-y-4">
+    <form method="POST" action="{{ route('login', array_filter(['capability' => $capability ?? null])) }}" class="mt-8 space-y-4">
         @csrf
+        @if ($capability ?? null)
+            <input type="hidden" name="capability" value="{{ $capability }}">
+        @endif
         <div>
             <label for="email" class="block text-sm font-medium">Email</label>
             <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus autocomplete="username" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
@@ -29,7 +35,12 @@
 
     <div class="mt-6 border-t border-sand-200 pt-6 text-center">
         <p class="text-sm text-stone-600">New to Lamu Acres?</p>
-        <a href="{{ route('register') }}" class="mt-3 inline-flex w-full items-center justify-center rounded-full border border-lamu-900 px-4 py-3 text-sm font-semibold text-lamu-900 hover:bg-sand-50">Create a buyer account</a>
+        <a href="{{ route('register', array_filter(['capability' => $capability ?? null])) }}" class="mt-3 inline-flex w-full items-center justify-center rounded-full border border-lamu-900 px-4 py-3 text-sm font-semibold text-lamu-900 hover:bg-sand-50">Create an account</a>
+        <p class="mt-4 text-sm text-stone-600">Already registered and want to become a seller or broker? Sign in to open your application.</p>
+        <div class="mt-3 flex flex-wrap justify-center gap-4 text-sm font-semibold text-lamu-800">
+            <a href="{{ route('account.applications.create', ['capability' => 'seller']) }}" class="underline">Apply as a seller</a>
+            <a href="{{ route('account.applications.create', ['capability' => 'broker']) }}" class="underline">Apply as a broker</a>
+        </div>
     </div>
     <details class="mt-6 border-t border-sand-200 pt-5" @if ($errors->has('phone')) open @endif>
         <summary class="cursor-pointer text-sm font-medium text-lamu-800">Use phone sign-in instead</summary>

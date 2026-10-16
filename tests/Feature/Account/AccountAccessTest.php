@@ -19,6 +19,74 @@ use Tests\Feature\Foundation\FoundationTestCase;
 
 class AccountAccessTest extends FoundationTestCase
 {
+    public function test_guests_start_partner_applications_at_registration_for_the_selected_capability(): void
+    {
+        foreach (['seller', 'broker'] as $capability) {
+            $this->get(route('account.applications.create', ['capability' => $capability]))
+                ->assertRedirect(route('register', ['capability' => $capability]));
+            $this->get(route('register', ['capability' => $capability]))
+                ->assertOk()
+                ->assertSee('Register as a '.$capability)
+                ->assertSee('name="capability" value="'.$capability.'"', false);
+        }
+
+        $this->get(route('broker-partners.apply'))->assertRedirect(route('register', ['capability' => 'broker']));
+        $this->get(route('list-property.start'))->assertRedirect(route('register', ['capability' => 'seller']));
+    }
+
+    public function test_partner_registration_continues_to_the_application_without_granting_a_partner_role(): void
+    {
+        foreach (['seller', 'broker'] as $capability) {
+            $this->post(route('register'), [
+                'name' => 'Partner Applicant',
+                'email' => $capability.'-applicant@example.test',
+                'password' => 'SecurePassword123!',
+                'password_confirmation' => 'SecurePassword123!',
+                'capability' => $capability,
+                'role' => $capability,
+            ])->assertRedirect(route('account.applications.create', ['capability' => $capability]));
+
+            $user = User::query()->where('email', $capability.'-applicant@example.test')->firstOrFail();
+            $this->assertAuthenticatedAs($user);
+            $this->assertTrue($user->hasRole('buyer'));
+            $this->assertFalse($user->hasRole($capability));
+            $this->assertSame(0, $user->capabilityApplications()->count());
+            $this->post(route('logout'));
+        }
+    }
+
+    public function test_existing_users_can_sign_in_and_continue_their_selected_partner_application(): void
+    {
+        $user = User::factory()->withRoles('buyer')->create(['password' => Hash::make('SecurePassword123!')]);
+
+        foreach (['seller', 'broker'] as $capability) {
+            $this->get(route('login', ['capability' => $capability]))
+                ->assertOk()
+                ->assertSee('name="capability" value="'.$capability.'"', false);
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'password' => 'SecurePassword123!',
+                'capability' => $capability,
+            ])->assertRedirect(route('account.applications.create', ['capability' => $capability]));
+            $this->assertAuthenticatedAs($user);
+            $this->assertFalse($user->fresh()->hasRole($capability));
+            $this->post(route('logout'));
+        }
+    }
+
+    public function test_registration_does_not_accept_an_unrecognized_partner_capability(): void
+    {
+        $this->post(route('register'), [
+            'name' => 'Invalid Applicant',
+            'email' => 'invalid-partner@example.test',
+            'password' => 'SecurePassword123!',
+            'password_confirmation' => 'SecurePassword123!',
+            'capability' => 'staff',
+        ])->assertSessionHasErrors('capability');
+
+        $this->assertDatabaseMissing('users', ['email' => 'invalid-partner@example.test']);
+    }
+
     public function test_a_buyer_profile_belongs_only_to_that_account(): void
     {
         $owner = User::factory()->withRoles('buyer')->create();
@@ -50,6 +118,7 @@ class AccountAccessTest extends FoundationTestCase
 
     public function test_a_customer_cannot_approve_or_assign_their_own_partner_role(): void
     {
+        Storage::fake('local');
         $buyer = User::factory()->withRoles('buyer')->create();
         $desk = User::factory()->withRoles('staff')->withPermissions('staff.brokerage')->create();
         $plainStaff = User::factory()->withRoles('staff')->create();
@@ -58,6 +127,11 @@ class AccountAccessTest extends FoundationTestCase
             'capability' => 'broker',
             'organization' => 'Coast Office',
             'statement' => 'I introduce buyers around Shela.',
+            'legal_name' => 'Test Broker Applicant', 'applicant_type' => 'individual',
+            'identity' => UploadedFile::fake()->create('identity.pdf', 10, 'application/pdf'),
+            'earb_registration_number' => 'TEST-EARB-123',
+            'certificate_expires_on' => now()->addYear()->toDateString(),
+            'practising_certificate' => UploadedFile::fake()->create('certificate.pdf', 10, 'application/pdf'),
         ])->assertRedirect(route('account.applications.index'));
 
         $application = CapabilityApplication::query()->where('user_id', $buyer->id)->firstOrFail();
@@ -88,19 +162,22 @@ class AccountAccessTest extends FoundationTestCase
     public function test_staff_decisions_record_a_reason_and_notify_the_applicant(): void
     {
         Notification::fake();
+        Storage::fake('local');
 
         $buyer = User::factory()->withRoles('buyer')->create(['notify_by_email' => false]);
         $desk = User::factory()->withRoles('staff')->withPermissions('staff.brokerage')->create();
-        $application = CapabilityApplication::query()->create([
-            'user_id' => $buyer->id,
-            'capability' => 'seller',
-            'status' => 'pending',
-            'statement' => 'I hold land at Mokowe.',
-        ]);
+        $this->actingAs($buyer)->post(route('account.applications.store'), [
+            'capability' => 'seller', 'statement' => 'I hold land at Mokowe and provide identity evidence.',
+            'legal_name' => 'Test Seller Applicant', 'applicant_type' => 'individual_owner',
+            'identity' => UploadedFile::fake()->create('identity.pdf', 10, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+        $application = $buyer->capabilityApplications()->firstOrFail();
 
         $this->actingAs($desk)->put(route('staff.applications.update', $application), [
             'status' => 'approved',
             'decision_reason' => 'Identity documents were accepted.',
+            'identity_outcome' => 'verified', 'identity_reference' => 'TEST identity review reference',
+            'identity_next_review_on' => now()->addYear()->toDateString(),
         ])->assertRedirect(route('staff.applications.index'));
 
         $application->refresh();

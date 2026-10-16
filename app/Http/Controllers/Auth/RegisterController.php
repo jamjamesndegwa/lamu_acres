@@ -3,20 +3,24 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Enums\MessageEvent;
+use App\Enums\PartnerCapability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Services\Access\RoleAssigner;
 use App\Services\Communications\MessageDesk;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class RegisterController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'capability' => PartnerCapability::tryFrom((string) $request->query('capability', ''))?->value,
+        ]);
     }
 
     public function store(RegisterRequest $request, RoleAssigner $roles): RedirectResponse
@@ -35,6 +39,10 @@ class RegisterController extends Controller
         ], 'user:'.$user->id);
 
         $request->session()->regenerate();
+
+        if ($capability = $request->validated('capability')) {
+            return redirect()->route('account.applications.create', ['capability' => $capability]);
+        }
 
         return redirect()->route('buyer.dashboard');
     }

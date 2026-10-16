@@ -116,6 +116,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         Route::middleware('permission:staff.properties')->group(function () {
             Route::get('/listings', [ListingReviewController::class, 'index'])->name('listings.index');
             Route::get('/listings/{property}', [ListingReviewController::class, 'show'])->name('listings.show');
+            Route::post('/listings/{property}/duplicate-review', [ListingReviewController::class, 'reviewDuplicate'])->name('listings.duplicate-review');
             Route::post('/listings/{property}/requests', [ListingReviewController::class, 'requestInformation'])->name('listings.request');
             Route::post('/listings/{property}/approval', [ListingReviewController::class, 'approve'])->name('listings.approve');
             Route::get('/listings/{property}/media/{propertyMedia}', [ListingReviewController::class, 'media'])->name('listings.media');

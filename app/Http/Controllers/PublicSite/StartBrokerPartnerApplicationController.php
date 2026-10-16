@@ -10,6 +10,10 @@ class StartBrokerPartnerApplicationController extends Controller
 {
     public function __invoke(Request $request): RedirectResponse
     {
+        if ($request->user() === null) {
+            return redirect()->route('register', ['capability' => 'broker']);
+        }
+
         if ($request->user()->hasPermission('workspace.broker')) {
             return redirect()->route('broker.listings.index');
         }

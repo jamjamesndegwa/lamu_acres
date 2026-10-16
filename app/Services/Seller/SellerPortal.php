@@ -14,6 +14,7 @@ use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
 use App\Enums\OwnershipDocumentType;
 use App\Enums\OwnershipStructure;
+use App\Enums\PartnerCapability;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
@@ -33,11 +34,13 @@ use App\Models\PropertyOwner;
 use App\Models\SaleInstruction;
 use App\Models\User;
 use App\Notifications\PropertySubmittedNotification;
+use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -333,26 +336,61 @@ class SellerPortal
         return $requirements;
     }
 
-    public function verifyLink(PropertyOwner $owner, User $staff, ?float $share = null): PropertyOwner
+    /** @return list<string> */
+    public function ownerIdentityBlockers(PropertyOwner $owner, bool $requireConfirmation = true): array
     {
-        $owner->status = OwnerLinkStatus::Verified;
-        $owner->verified_at = now();
-        $owner->verified_by = $staff->id;
-        if ($share !== null) {
-            $owner->share_percent = $share;
+        $user = $owner->user;
+        if ($user === null || ! $user->hasPermission('workspace.seller') || ! app(CapabilityReviewer::class)->hasCurrentCapability($user, PartnerCapability::Seller)) {
+            return ['Complete and approve the linked seller identity application before confirming ownership.'];
         }
-        $owner->save();
+        $application = $user->capabilityApplications()->where('capability', PartnerCapability::Seller)->firstOrFail();
+        $profile = $application->verification;
+        $issues = [];
+        if (in_array($profile['applicant_type'], ['authorized_representative', 'company_representative'], true) && $owner->relationship !== OwnerRelationship::Authorized) {
+            $issues[] = 'The verified applicant is a representative. Correct the owner relationship and check the authority evidence.';
+        }
+        if ($requireConfirmation && ($owner->verified_at === null || (int) $owner->verified_by === (int) $owner->user_id
+            || $owner->verified_at->lt(Carbon::parse($profile['identity']['verified_at']))
+            || ! $owner->property->audits()->where('action', 'owner_identity_confirmed')->where('changes->owner_id', $owner->id)->exists())) {
+            $issues[] = 'Staff must confirm this owner record against the current verified identity and property authority evidence on the Owners tab.';
+        }
 
-        return $owner;
+        return $issues;
+    }
+
+    public function verifyLink(PropertyOwner $owner, User $staff, ?float $share = null, string $reason = '', bool $identityConfirmed = false): PropertyOwner
+    {
+        abort_unless(! $staff->isSuspended() && $staff->id !== $owner->user_id
+            && ($staff->hasPermission('staff.verification') || $staff->hasPermission('staff.properties')), 403);
+        $issues = $this->ownerIdentityBlockers($owner, false);
+        if (! $identityConfirmed || strlen(trim($reason)) < 8 || $issues !== []) {
+            throw ValidationException::withMessages(['ownership' => implode(' ', $issues).' Confirm identity/authority consistency and record a review reason.']);
+        }
+
+        return DB::transaction(function () use ($owner, $staff, $share, $reason): PropertyOwner {
+            $owner->status = OwnerLinkStatus::Verified;
+            $owner->verified_at = now();
+            $owner->verified_by = $staff->id;
+            if ($share !== null) {
+                $owner->share_percent = $share;
+            }
+            $owner->save();
+            PropertyAudit::query()->create([
+                'property_id' => $owner->property_id, 'actor_id' => $staff->id,
+                'action' => 'owner_identity_confirmed', 'changes' => ['owner_id' => $owner->id, 'reason' => trim($reason)],
+            ]);
+
+            return $owner;
+        });
     }
 
     public function addOwner(Property $property, User $seller, OwnerRelationship $relationship, User $staff): PropertyOwner
     {
         $owner = $property->owners()->firstOrNew(['user_id' => $seller->id]);
         $owner->relationship = $relationship;
-        $owner->status = OwnerLinkStatus::Verified;
-        $owner->verified_at = now();
-        $owner->verified_by = $staff->id;
+        $owner->status = OwnerLinkStatus::Pending;
+        $owner->verified_at = null;
+        $owner->verified_by = null;
         $owner->save();
 
         return $owner;

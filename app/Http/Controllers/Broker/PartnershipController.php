@@ -12,6 +12,7 @@ use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\SourcingMatch;
 use App\Models\SourcingRequest;
+use App\Services\Access\CapabilityReviewer;
 use App\Services\Buyer\SourcingMatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,7 @@ class PartnershipController extends Controller
 
     public function propose(Request $request, SourcingRequest $sourcingRequest, SourcingMatcher $matcher): RedirectResponse
     {
+        app(CapabilityReviewer::class)->assertBrokerCanAct($request->user());
         abort_if($sourcingRequest->status === SourcingRequestStatus::Closed, 404);
 
         $data = $request->validate([

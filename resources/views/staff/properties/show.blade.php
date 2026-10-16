@@ -49,10 +49,15 @@
             @forelse ($property->owners as $owner)
                 <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
                     <p class="font-medium text-lamu-900">{{ $owner->user?->name ?? 'Unlinked account' }}</p>
+                    @php($ownerIdentityApplication = $owner->user?->capabilityApplications()->where('capability', \App\Enums\PartnerCapability::Seller)->first())
+                    <p class="mt-1 text-sm text-stone-600">Onboarding legal name: {{ $ownerIdentityApplication?->verification['legal_name'] ?? 'Not recorded' }} · Identity: {{ $ownerIdentityApplication?->verification['identity']['outcome'] ?? 'Not verified' }}</p>
+
                     <p class="text-stone-600">{{ $owner->relationship->label() }} · {{ $owner->status->label() }} @if ($owner->share_percent !== null) · {{ $owner->share_percent }}% @endif</p>
-                    @if ($owner->status !== \App\Enums\OwnerLinkStatus::Verified)
+                    @if ($owner->status !== \App\Enums\OwnerLinkStatus::Verified || app(\App\Services\Seller\SellerPortal::class)->ownerIdentityBlockers($owner) !== [])
                         <form method="POST" action="{{ route('staff.owners.verify', $owner) }}" class="mt-3 flex flex-wrap items-end gap-2">
                             @csrf
+                            <label class="flex w-full items-start gap-2 text-sm"><input type="checkbox" name="identity_consistency_confirmed" value="1" required>I matched the current verified applicant identity, ownership evidence and representative authority to this owner record.</label>
+                            <label class="block w-full text-sm">Review reason (do not include identity numbers)<input name="reason" required minlength="8" maxlength="1000" class="mt-1 block w-full rounded-lg border border-sand-200 px-3 py-2"></label>
                             <label class="text-sm">Share percent
                                 <input name="share_percent" value="{{ $owner->share_percent }}" class="mt-1 block w-28 rounded-lg border border-sand-200 px-3 py-2">
                             </label>

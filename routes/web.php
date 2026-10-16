@@ -25,9 +25,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 Route::get('/broker-partners', BrokerPartnersController::class)->name('broker-partners');
 Route::get('/list-property', ListPropertyController::class)->name('list-property');
-Route::middleware(['auth', 'private.cache'])->group(function () {
+Route::middleware(['private.cache'])->group(function () {
     Route::get('/broker-partners/apply', StartBrokerPartnerApplicationController::class)->name('broker-partners.apply');
     Route::get('/list-property/start', StartPropertyListingController::class)->name('list-property.start');
+    Route::get('/account/applications/create', [CapabilityApplicationController::class, 'create'])->name('account.applications.create');
 });
 Route::post('/payments/mpesa/callback', MpesaCallbackController::class)->name('payments.mpesa.callback');
 
@@ -86,7 +87,7 @@ Route::middleware(['auth', 'private.cache'])->group(function () {
     Route::get('/account/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
     Route::post('/workspace/{workspace}', [WorkspaceController::class, 'switch'])->name('workspaces.switch');
     Route::get('/account/applications', [CapabilityApplicationController::class, 'index'])->name('account.applications.index');
-    Route::get('/account/applications/create', [CapabilityApplicationController::class, 'create'])->name('account.applications.create');
+    Route::get('/account/applications/{application}/evidence/{kind}', [CapabilityApplicationController::class, 'evidence'])->name('account.applications.evidence');
     Route::post('/account/applications', [CapabilityApplicationController::class, 'store'])->name('account.applications.store');
     Route::post('/account/phone/confirm', [ProfileController::class, 'confirmPhone'])->name('account.phone.confirm');
     Route::get('/account/avatar', [ProfileController::class, 'showAvatar'])->name('account.avatar.show');

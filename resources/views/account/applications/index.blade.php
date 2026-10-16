@@ -12,6 +12,13 @@
             <article class="rounded-2xl border border-sand-200 bg-white p-4">
                 <h2 class="font-semibold text-lamu-900">{{ $application->capability->label() }}</h2>
                 <p class="mt-1 text-sm text-stone-600">{{ $application->status->label() }}</p>
+                @if ($application->capability === \App\Enums\PartnerCapability::Broker)
+                    <p class="mt-1 text-sm text-stone-600">Practising certificate expiry: {{ $application->verification['certificate_expires_on'] ?? 'Not supplied' }}. Uploads are self-declared until reviewed.</p>
+                    @if ($application->status !== \App\Enums\CapabilityApplicationStatus::Suspended)
+                        <a href="{{ route('account.applications.create', ['capability' => 'broker']) }}" class="mt-2 inline-block text-sm font-medium text-lamu-800 underline">Provide current or renewed broker credentials</a>
+                    @endif
+                @endif
+
                 @if ($application->decision_reason)
                     <p class="mt-2 text-sm text-stone-700">{{ $application->decision_reason }}</p>
                 @endif

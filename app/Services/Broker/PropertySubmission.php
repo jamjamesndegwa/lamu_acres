@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
+use App\Services\Access\CapabilityReviewer;
 use App\Services\Communications\MessageDesk;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
@@ -32,6 +33,7 @@ class PropertySubmission
      */
     public function submit(User $broker, array $data, array $photos, UploadedFile $authority): Property
     {
+        app(CapabilityReviewer::class)->assertBrokerCanAct($broker);
         $locality = Locality::query()->with('county')->findOrFail($data['locality_id']);
         $title = trim((string) $data['title']);
 

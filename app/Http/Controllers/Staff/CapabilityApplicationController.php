@@ -32,7 +32,8 @@ class CapabilityApplicationController extends Controller
         $this->authorize('decide', $application);
 
         return view('staff.applications.decide', [
-            'application' => $application->load('user:id,name,email'),
+            'application' => $application->load('user:id,name,email,email_verified_at,phone,phone_verified_at,suspended_at'),
+            'verificationBlockers' => app(CapabilityReviewer::class)->verificationBlockers($application),
             'modal' => Turbo::wantsModal($request),
         ]);
     }
@@ -56,6 +57,7 @@ class CapabilityApplicationController extends Controller
             $application,
             CapabilityApplicationStatus::from($data['status']),
             $data['decision_reason'],
+            $request->only(['identity_outcome', 'identity_reference', 'identity_next_review_on', 'licence_outcome', 'licence_reference', 'licence_next_review_on', 'earb_checked']),
         );
 
         return ApprovalsReturn::orRedirect(

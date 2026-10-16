@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\Workspace;
+use App\Services\Access\CapabilityReviewer;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +20,11 @@ class EnsureWorkspace
 
         if ($target === null || $user === null || ! $user->canAccessWorkspace($target)) {
             abort(403);
+        }
+
+        if ($target === Workspace::Broker && ! $request->isMethodSafe()
+            && $request->routeIs('broker.listings.*', 'broker.referrals.store', 'broker.requirements.propose')) {
+            app(CapabilityReviewer::class)->assertBrokerCanAct($user);
         }
 
         $request->session()->put('workspace', $target->value);

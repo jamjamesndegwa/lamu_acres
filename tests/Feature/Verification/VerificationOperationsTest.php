@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Verification;
 
+use App\Enums\PropertyStatus;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationItemState;
 use App\Enums\VerificationLevel;
@@ -17,7 +18,7 @@ class VerificationOperationsTest extends FoundationTestCase
     {
         $officer = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
         $manager = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
 
         $this->actingAs($manager)->get(route('staff.verification.new'))->assertForbidden();
         $this->actingAs($seller)->get(route('staff.verification.missing'))->assertForbidden();
@@ -82,7 +83,7 @@ class VerificationOperationsTest extends FoundationTestCase
         $manager = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
         $property = Property::factory()->create([
             'title' => 'Blocked listing',
-            'status' => \App\Enums\PropertyStatus::Review,
+            'status' => PropertyStatus::Review,
             'submitted_by' => $manager->id,
         ]);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\PartnerCapability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -11,9 +12,11 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('auth.login');
+        $capability = PartnerCapability::tryFrom((string) $request->query('capability', ''))?->value;
+
+        return view('auth.login', ['capability' => $capability]);
     }
 
     public function store(LoginRequest $request): RedirectResponse
@@ -21,6 +24,13 @@ class LoginController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        $capability = PartnerCapability::tryFrom((string) $request->input('capability', ''));
+        if ($capability !== null) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->route('account.applications.create', ['capability' => $capability->value]);
+        }
 
         return redirect()->intended($request->user()->workspaceHomeUrl());
     }

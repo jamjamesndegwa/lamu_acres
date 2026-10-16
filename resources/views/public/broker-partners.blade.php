@@ -6,7 +6,7 @@
         <div class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
             <p class="text-sm font-medium uppercase tracking-wide text-gold-500">Broker Partners</p>
             <h1 class="mt-2 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">Listings and enquiries for licensed brokers and agencies</h1>
-            <p class="mt-4 max-w-2xl text-sand-50">The broker workspace is for professionals marketing land on behalf of sellers. You can read this page without an account; applying requires login.</p>
+            <p class="mt-4 max-w-2xl text-sand-50">The broker workspace is for professionals marketing land on behalf of sellers. Start your application by registering an account, or sign in if you already have one. Staff verifies your identity and professional standing before granting access.</p>
             <div class="mt-8 flex flex-wrap gap-3">
                 <a href="{{ route('broker-partners.apply') }}" class="inline-flex rounded-full bg-white px-5 py-3 text-sm font-medium text-lamu-900">Apply as a Broker Partner</a>
                 @auth

@@ -80,7 +80,7 @@ class DuplicateListingDetector
                     $query->where($location);
                 }
             })
-            ->get(['id', 'reference', 'title', 'slug', 'status', 'submitted_by', 'parcel_identifier']);
+            ->get(['id', 'reference', 'title', 'slug', 'status', 'submitted_by', 'parcel_identifier', 'parent_id']);
     }
 
     public function normalizeParcel(?string $parcel): ?string

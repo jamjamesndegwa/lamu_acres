@@ -15,6 +15,7 @@ use App\Models\Locality;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\Broker\PropertySubmission;
+use App\Services\Seller\SellerPortal;
 use Illuminate\Validation\ValidationException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -167,7 +168,7 @@ class PublicationGateTest extends FoundationTestCase
     private function createEligibleProperty(?User $staff = null): array
     {
         $staff ??= User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
 
         $county = County::query()->firstOrCreate(['slug' => 'lamu'], ['name' => 'Lamu', 'is_active' => true]);
         $locality = Locality::query()->firstOrCreate(
@@ -202,6 +203,7 @@ class PublicationGateTest extends FoundationTestCase
             'terms' => 'Authorised to market this property for sale.',
         ]);
 
+        app(SellerPortal::class)->verifyLink($property->owners()->firstOrFail(), $staff, null, 'Test review: identity and authority match.', true);
         $this->attachPublicPhoto($property, $seller);
 
         return [$staff, $seller, $property];

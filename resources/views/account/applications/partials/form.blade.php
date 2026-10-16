@@ -4,6 +4,7 @@
 
 <form
     method="POST"
+    enctype="multipart/form-data"
     action="{{ route('account.applications.store') }}"
     data-turbo-frame="_top"
     data-confirm="Submit this application?"
@@ -12,6 +13,7 @@
 >
     @csrf
     <input type="hidden" name="capability" value="{{ $capability->value }}">
+    @include('account.applications.partials.verification-fields')
 
     @if ($errors->any())
         <div role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-4">

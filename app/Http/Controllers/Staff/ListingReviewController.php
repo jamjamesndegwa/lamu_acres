@@ -61,6 +61,17 @@ class ListingReviewController extends Controller
         ]);
     }
 
+    public function reviewDuplicate(Request $request, Property $property, VerificationOperations $verification): RedirectResponse
+    {
+        $this->authorize('reviewSubmission', $property);
+        $data = $request->validate([
+            'outcome' => ['required', 'string'], 'reason' => ['required', 'string', 'min:20', 'max:2000'],
+        ]);
+        $verification->recordDuplicateReview($request->user(), $property, $data['outcome'], $data['reason']);
+
+        return back()->with('status', 'Duplicate parcel review recorded. Other publication checks still apply.');
+    }
+
     public function requestInformation(Request $request, Property $property, PropertySubmission $submissions): RedirectResponse
     {
         $this->authorize('reviewSubmission', $property);

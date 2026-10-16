@@ -45,7 +45,7 @@ class EvidenceAccessTest extends FoundationTestCase
 
     public function test_document_release_is_time_limited_and_private(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
         $intruder = User::factory()->withRoles('buyer')->create();

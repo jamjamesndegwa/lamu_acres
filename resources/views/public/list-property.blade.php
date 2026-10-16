@@ -24,7 +24,7 @@
 
             <p class="mt-6 text-sm font-medium uppercase tracking-wide text-gold-500">List Property</p>
             <h1 class="mt-2 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">List Your Land with LAMU ACRES</h1>
-            <p class="mt-4 max-w-2xl text-lg text-sand-50">Landowners and authorized representatives apply for seller access, then submit property details for review. Signing in through a protected link returns you to that page after login; registering a new account does not automatically return you here.</p>
+            <p class="mt-4 max-w-2xl text-lg text-sand-50">Landowners and authorized representatives can register and continue directly to their seller application. Already have an account? Sign in to continue. Staff verifies your application before you can submit property details for review.</p>
 
             <div class="mt-8">
                 @include('public.list-property.partials.primary-action', ['primaryCta' => $primaryCta, 'tone' => 'dark', 'idPrefix' => 'hero'])
@@ -140,7 +140,7 @@
                 </details>
                 <details class="rounded-2xl border border-sand-200 bg-white p-5">
                     <summary class="cursor-pointer font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">What documents are required?</summary>
-                    <p class="mt-3 text-sm text-stone-600">The seller application does not upload files. After approval, ownership documents are uploaded per property in the seller workspace (PDF, JPG, or PNG up to 10&nbsp;MB). Brokers provide marketing authority evidence with each broker listing submission.</p>
+                    <p class="mt-3 text-sm text-stone-600">The seller application collects private identity and applicable representative evidence. After approval, ownership documents are uploaded per property in the seller workspace (PDF, JPG, or PNG up to 10&nbsp;MB). Brokers provide marketing authority evidence with each broker listing submission.</p>
                 </details>
                 <details class="rounded-2xl border border-sand-200 bg-white p-5">
                     <summary class="cursor-pointer font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Can I edit a submission?</summary>

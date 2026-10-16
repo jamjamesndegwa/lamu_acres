@@ -27,7 +27,7 @@ class SellerListingTest extends FoundationTestCase
 {
     public function test_seller_can_create_sale_draft_with_price_basis_and_derivation(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $response = $this->actingAs($seller)->post(route('seller.properties.store'), [
@@ -74,7 +74,7 @@ class SellerListingTest extends FoundationTestCase
 
     public function test_seller_can_create_lease_draft_with_monthly_rent_and_duration(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $response = $this->actingAs($seller)->post(route('seller.properties.store'), [
@@ -110,7 +110,7 @@ class SellerListingTest extends FoundationTestCase
 
     public function test_seller_listing_validation_and_acreage_limits(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         // 1. Missing base required fields
@@ -141,7 +141,7 @@ class SellerListingTest extends FoundationTestCase
 
     public function test_seller_can_edit_draft_but_not_submitted_property(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $property = Property::factory()->listedIn($locality)->create([
@@ -208,7 +208,7 @@ class SellerListingTest extends FoundationTestCase
         ]);
         Storage::fake('r2');
         Storage::fake('r2_private');
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $property = Property::factory()->listedIn($this->createLocality())->create([
             'submitted_by' => $seller->id,
             'status' => PropertyStatus::Draft,
@@ -240,7 +240,7 @@ class SellerListingTest extends FoundationTestCase
     public function test_invalid_photo_rejects_the_entire_selection(): void
     {
         Storage::fake('local');
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $property = Property::factory()->listedIn($this->createLocality())->create([
             'submitted_by' => $seller->id,
             'status' => PropertyStatus::Draft,
@@ -262,7 +262,7 @@ class SellerListingTest extends FoundationTestCase
     public function test_batch_cannot_exceed_the_remaining_listing_photo_slots(): void
     {
         Storage::fake('local');
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $property = Property::factory()->listedIn($this->createLocality())->create([
             'submitted_by' => $seller->id,
             'status' => PropertyStatus::Draft,
@@ -287,7 +287,7 @@ class SellerListingTest extends FoundationTestCase
     public function test_unreadable_photo_rolls_back_files_already_uploaded_in_the_batch(): void
     {
         Storage::fake('local');
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $property = Property::factory()->listedIn($this->createLocality())->create([
             'submitted_by' => $seller->id,
             'status' => PropertyStatus::Draft,
@@ -309,7 +309,7 @@ class SellerListingTest extends FoundationTestCase
     public function test_seller_can_manage_listing_photos(): void
     {
         Storage::fake('local');
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $property = Property::factory()->listedIn($locality)->create([
@@ -378,7 +378,7 @@ class SellerListingTest extends FoundationTestCase
         Notification::fake();
 
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $property = Property::factory()->listedIn($locality)->create([
@@ -444,8 +444,8 @@ class SellerListingTest extends FoundationTestCase
 
     public function test_isolation_between_sellers_and_index_grouping(): void
     {
-        $sellerA = User::factory()->withRoles('seller')->create();
-        $sellerB = User::factory()->withRoles('seller')->create();
+        $sellerA = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $sellerB = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $locality = $this->createLocality();
 
         $propertyA = Property::factory()->listedIn($locality)->create([

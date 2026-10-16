@@ -1,5 +1,6 @@
 <form
     method="POST"
+    enctype="multipart/form-data"
     action="{{ route('account.applications.store') }}"
     data-turbo-frame="_top"
     data-confirm="Submit this seller application?"
@@ -8,6 +9,7 @@
 >
     @csrf
     <input type="hidden" name="capability" value="{{ $capability->value }}">
+    @include('account.applications.partials.verification-fields')
 
     @if ($errors->any())
         <div role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-4" tabindex="-1">
@@ -88,7 +90,7 @@
 
     <section aria-labelledby="seller-documents-heading">
         <h2 id="seller-documents-heading" class="text-lg font-semibold text-lamu-900">Supporting documents</h2>
-        <p class="mt-2 text-sm text-stone-600">This application does not upload files. After approval, you upload ownership or authority documents per property in the seller workspace. Accepted types there are PDF, JPG, or PNG up to 10&nbsp;MB each.</p>
+        <p class="mt-2 text-sm text-stone-600">Identity and representative evidence is provided above for capability review. After approval, ownership documents and marketing authority are still reviewed separately for each property.</p>
     </section>
 
     <section aria-labelledby="seller-declarations-heading">

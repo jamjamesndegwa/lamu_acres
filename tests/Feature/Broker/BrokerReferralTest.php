@@ -22,8 +22,8 @@ class BrokerReferralTest extends FoundationTestCase
         Notification::fake();
         Storage::fake('local');
 
-        $broker = User::factory()->withRoles('broker')->create(['name' => 'Broker Ada']);
-        $other = User::factory()->withRoles('broker')->create(['name' => 'Broker Ben']);
+        $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create(['name' => 'Broker Ada']);
+        $other = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create(['name' => 'Broker Ben']);
         $buyer = User::factory()->withRoles('buyer')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.brokerage')->create();
         $outsider = User::factory()->withRoles('staff')->create();
@@ -82,8 +82,8 @@ class BrokerReferralTest extends FoundationTestCase
         Notification::fake();
         Storage::fake('local');
 
-        $ada = User::factory()->withRoles('broker')->create(['name' => 'Broker Ada']);
-        $ben = User::factory()->withRoles('broker')->create(['name' => 'Broker Ben']);
+        $ada = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create(['name' => 'Broker Ada']);
+        $ben = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create(['name' => 'Broker Ben']);
         $buyer = User::factory()->withRoles('buyer')->create([
             'name' => 'Buyer Claire',
             'email' => 'claire@example.com',

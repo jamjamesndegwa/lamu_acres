@@ -19,8 +19,8 @@ class BrokerPartnershipTest extends FoundationTestCase
 {
     public function test_broker_desk_shows_owned_records_and_hides_buyer_identity_on_the_board(): void
     {
-        $broker = User::factory()->withRoles('broker')->create();
-        $other = User::factory()->withRoles('broker')->create();
+        $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
+        $other = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
         $buyer = User::factory()->withRoles('buyer')->create(['name' => 'Secret Buyer Name']);
         $property = Property::factory()->published()->create(['title' => 'Partner parcel']);
 

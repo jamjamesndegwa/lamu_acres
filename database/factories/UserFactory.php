@@ -2,9 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\PartnerCapability;
+use App\Models\CapabilityApplication;
 use App\Models\Entitlement;
 use App\Models\User;
-use App\Services\Access\RoleAssigner;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -48,7 +49,37 @@ class UserFactory extends Factory
     public function withRoles(string ...$roles): static
     {
         return $this->afterCreating(function (User $user) use ($roles): void {
-            app(RoleAssigner::class)->sync($user, $roles);
+            $user->syncRoles($roles);
+        });
+    }
+
+    /** Explicit test-only current credentials; role fixtures alone do not verify a capability. */
+    public function withVerifiedCapability(string $capability): static
+    {
+        return $this->afterCreating(function (User $user) use ($capability): void {
+            $reviewer = User::factory()->create();
+            $reviewer->assignRole('staff');
+            $reviewer->givePermissionTo('staff.brokerage');
+            $check = [
+                'outcome' => 'verified', 'reviewed_by' => $reviewer->id, 'verified_at' => now()->toIso8601String(),
+                'reference' => 'TEST ONLY: reviewed fixture', 'next_review_on' => now()->addYear()->toDateString(),
+                'authoritative_checked' => true, 'contact_fingerprint' => hash('sha256', $user->email),
+            ];
+            $broker = $capability === PartnerCapability::Broker->value;
+            $evidence = ['identity' => ['disk' => 'local', 'path' => 'partner-evidence/'.$user->id.'/fixture-id.pdf', 'mime' => 'application/pdf']];
+            if ($broker) {
+                $evidence['practising_certificate'] = ['disk' => 'local', 'path' => 'partner-evidence/'.$user->id.'/fixture-certificate.pdf', 'mime' => 'application/pdf'];
+            }
+            $application = CapabilityApplication::query()->firstOrNew(['user_id' => $user->id, 'capability' => $capability]);
+            $application->forceFill([
+                'status' => 'approved', 'statement' => 'Test-only approved capability fixture.', 'decided_by' => $reviewer->id, 'decided_at' => now(),
+                'verification' => [
+                    'legal_name' => $user->name, 'applicant_type' => $broker ? 'individual' : 'individual_owner',
+                    'earb_registration_number' => $broker ? 'TEST-EARB-0001' : null,
+                    'certificate_expires_on' => $broker ? now()->addYear()->toDateString() : null,
+                    'evidence' => $evidence, 'identity' => $check, 'licence' => $check,
+                ],
+            ])->save();
         });
     }
 

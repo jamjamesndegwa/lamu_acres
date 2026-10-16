@@ -10,6 +10,7 @@ use App\Models\Property;
 use App\Models\User;
 use App\Notifications\ReferralDecidedNotification;
 use App\Notifications\ReferralSubmittedNotification;
+use App\Services\Access\CapabilityReviewer;
 use App\Services\Communications\MessageDesk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -26,6 +27,7 @@ class ReferralRecorder
      */
     public function submit(User $broker, array $data, array $propertyIds, UploadedFile $consent, ?UploadedFile $evidence = null): BrokerIntroduction
     {
+        app(CapabilityReviewer::class)->assertBrokerCanAct($broker);
         $email = Str::lower(trim((string) $data['buyer_email']));
         $buyer = User::query()->where('email', $email)->first();
         $flags = $this->conflicts->detect($broker, $propertyIds, $email, $data['buyer_phone'] ?? null);

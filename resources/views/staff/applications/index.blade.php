@@ -11,7 +11,7 @@
                     <td class="px-4 py-4"><x-status-badge :label="$application->status->label()" /></td>
                     <td class="px-4 py-4 text-right">
                         @can('decide', $application)
-                            <a href="{{ route('staff.applications.edit', $application) }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2 text-xs font-medium text-white">Decide</a>
+                            <a href="{{ route('staff.applications.edit', $application) }}" data-turbo-frame="_top" class="rounded-full bg-lamu-900 px-4 py-2 text-xs font-medium text-white">Review application</a>
                         @else
                             <span class="text-xs text-stone-400">Own application</span>
                         @endcan

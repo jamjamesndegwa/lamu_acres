@@ -3,6 +3,7 @@
 namespace App\Services\Verification;
 
 use App\Enums\OwnerLinkStatus;
+use App\Enums\PartnerCapability;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyStatus;
 use App\Enums\VerificationCategory;
@@ -12,11 +13,15 @@ use App\Enums\VerificationOverride;
 use App\Enums\VerificationQueue;
 use App\Models\MarketingAuthority;
 use App\Models\Property;
+use App\Models\PropertyAudit;
 use App\Models\PropertyMedia;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
+use App\Services\Access\CapabilityReviewer;
+use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Media\PropertyMediaLibrary;
+use App\Services\Seller\SellerPortal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -221,27 +226,77 @@ class VerificationOperations
             $blockers['photos'][] = 'At least one public photograph is required.';
         }
 
-        if ($property->owners->isNotEmpty()) {
-            if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
-                $blockers['owners'][] = 'No ownership or authority relationship has been verified.';
-            }
-
-            $authorised = $property->purpose !== null && $property->authorities->contains(
-                fn (MarketingAuthority $authority): bool => $authority->permitsMarketing($property->purpose),
-            );
-
-            if (! $authorised) {
-                $blockers['authority'][] = 'No active marketing authority covers this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+        if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
+            $blockers['owners'][] = 'Link and verify an owner or authorized representative on the Owners tab.';
+        }
+        foreach ($property->owners as $owner) {
+            if ($owner->status === OwnerLinkStatus::Verified) {
+                array_push($blockers['owners'], ...app(SellerPortal::class)->ownerIdentityBlockers($owner));
             }
         }
-
+        $verifiedOwnerIds = $property->owners->where('status', OwnerLinkStatus::Verified)->pluck('user_id')->all();
+        $authorised = $property->purpose !== null && $property->authorities->contains(
+            fn (MarketingAuthority $authority): bool => in_array($authority->seller_id, $verifiedOwnerIds, true) && $authority->permitsMarketing($property->purpose),
+        );
+        if (! $authorised) {
+            $blockers['authority'][] = 'Approve a current marketing authority from a verified owner/representative covering this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+        }
+        $submitter = $property->submitter;
+        if ($submitter !== null && ! $property->owners->contains('user_id', $submitter->id)
+            && (! $submitter->hasPermission('workspace.broker') || ! app(CapabilityReviewer::class)->hasCurrentCapability($submitter, PartnerCapability::Broker))) {
+            $blockers['authority'][] = 'The submitting broker must have current, staff-verified professional credentials.';
+        }
+        foreach (app(SellerPortal::class)->documentRequirements($property) as $requirement) {
+            if (! in_array($requirement['requirement'], [SellerPortal::REQUIRED, SellerPortal::CONDITIONAL], true)) {
+                continue;
+            }
+            $lastReview = $property->ownershipDocuments()->where('document_type', $requirement['type'])
+                ->whereNotNull('reviewed_at')->orderByDesc('reviewed_at')->orderByDesc('id')->first();
+            $conflictingReview = $lastReview !== null && (in_array($lastReview->state, [VerificationItemState::Failed, VerificationItemState::Expired], true)
+                || ($lastReview->state === VerificationItemState::Verified && $lastReview->expires_at !== null && $lastReview->expires_at->isPast()));
+            if ($conflictingReview || in_array($requirement['state'], [VerificationItemState::Failed->label(), VerificationItemState::Expired->label()], true)) {
+                $blockers['owners'][] = $requirement['label'].' has conflicting or expired evidence. Staff must review the replacement document before publication.';
+            }
+        }
         $conflict = $this->parcelConflict($property);
-
-        if ($conflict !== null) {
-            $blockers['parcel'][] = 'Parcel '.$property->parcel_identifier.' is already marketed as '.$conflict->reference.'.';
+        if ($conflict !== null && ! $this->duplicateReviewIsClear($property)) {
+            $blockers['parcel'][] = 'Possible duplicate parcel. Open listing review and record whether shared marketing is authorized; this is not an automatic rejection.';
         }
 
         return $blockers;
+    }
+
+    public function recordDuplicateReview(User $staff, Property $property, string $outcome, string $reason): void
+    {
+        abort_unless(! $staff->isSuspended() && $staff->hasPermission('staff.properties') && $staff->id !== $property->submitted_by, 403);
+        if (! in_array($outcome, ['shared_marketing_authorized', 'hold'], true) || strlen(trim($reason)) < 20) {
+            throw ValidationException::withMessages(['duplicate_review' => 'Choose an outcome and record at least 20 characters explaining the authority and parcel comparison.']);
+        }
+        PropertyAudit::query()->create([
+            'property_id' => $property->id, 'actor_id' => $staff->id, 'action' => 'duplicate_parcel_reviewed',
+            'changes' => ['signature' => $this->duplicateSignature($property), 'outcome' => $outcome, 'reason' => trim($reason)],
+        ]);
+    }
+
+    private function duplicateSignature(Property $property): string
+    {
+        $detector = app(DuplicateListingDetector::class);
+        $parcel = $detector->normalizeParcel($property->parcel_identifier);
+        $matches = $detector->staffMatches($property)->filter(fn (Property $match): bool => $detector->normalizeParcel($match->parcel_identifier) === $parcel
+            && in_array($match->status, [PropertyStatus::Published, PropertyStatus::Reserved, PropertyStatus::Leased], true)
+            && ! in_array($match->id, array_filter([$property->id, $property->parent_id]), true)
+            && ! in_array($match->parent_id, array_filter([$property->id, $property->parent_id]), true))
+            ->pluck('id')->sort()->values()->all();
+
+        return hash('sha256', json_encode([$parcel, $matches], JSON_THROW_ON_ERROR));
+    }
+
+    private function duplicateReviewIsClear(Property $property): bool
+    {
+        $review = $property->audits()->where('action', 'duplicate_parcel_reviewed')->latest('id')->first();
+
+        return $review !== null && ($review->changes['outcome'] ?? null) === 'shared_marketing_authorized'
+            && ($review->changes['signature'] ?? null) === $this->duplicateSignature($property);
     }
 
     /**
@@ -285,14 +340,12 @@ class VerificationOperations
         }
 
         $family = array_filter([$property->id, $property->parent_id]);
+        $detector = app(DuplicateListingDetector::class);
+        $parcel = $detector->normalizeParcel($property->parcel_identifier);
 
-        return Property::query()
-            ->whereKeyNot($property->id)
-            ->where('parcel_identifier', $property->parcel_identifier)
-            ->whereIn('status', [PropertyStatus::Published, PropertyStatus::Reserved, PropertyStatus::Leased])
-            ->whereNotIn('id', $family)
-            ->where(fn (Builder $query) => $query->whereNull('parent_id')->orWhereNotIn('parent_id', $family))
-            ->first(['id', 'reference']);
+        return $detector->staffMatches($property)->first(fn (Property $match): bool => $detector->normalizeParcel($match->parcel_identifier) === $parcel
+            && in_array($match->status, [PropertyStatus::Published, PropertyStatus::Reserved, PropertyStatus::Leased], true)
+            && ! in_array($match->id, $family, true) && ! in_array($match->parent_id, $family, true));
     }
 
     /**
@@ -320,6 +373,10 @@ class VerificationOperations
                 continue;
             }
 
+            if ($item->state === VerificationItemState::Verified && (($item->expires_at !== null && $item->expires_at->isPast())
+                || ($item->review_due_at !== null && $item->review_due_at->isPast()))) {
+                $blockers[] = $item->category->label().' is expired or due for review. Update the critical verification check.';
+            }
             if (! in_array($item->state, [VerificationItemState::Verified, VerificationItemState::NotApplicable], true)) {
                 $blockers[] = $item->category->label().' is '.$item->state->label().'.';
             }

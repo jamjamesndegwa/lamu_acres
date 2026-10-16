@@ -116,7 +116,7 @@ class VerificationPassportTest extends FoundationTestCase
      */
     private function passport(): array
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.verification')->create();
 
         $this->actingAs($seller)->post(route('seller.properties.store'), ['title' => 'Mokowe plot', 'purpose' => 'sale', 'relationship' => 'owner']);

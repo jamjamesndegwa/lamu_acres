@@ -6,7 +6,6 @@ use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationItemState;
-use App\Services\Verification\VerificationDesk;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
@@ -16,6 +15,8 @@ use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Broker\DuplicateListingDetector;
+use App\Services\Seller\SellerPortal;
+use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -28,8 +29,8 @@ class BrokerListingTest extends FoundationTestCase
         Notification::fake();
         Storage::fake('local');
 
-        $broker = User::factory()->withRoles('broker')->create();
-        $other = User::factory()->withRoles('broker')->create();
+        $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
+        $other = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
         $locality = $this->locality();
@@ -151,6 +152,12 @@ class BrokerListingTest extends FoundationTestCase
 
     private function clearCriticalChecks(Property $property, User $staff): void
     {
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $owner = $property->owners()->create(['user_id' => $seller->id, 'relationship' => 'owner', 'status' => 'pending']);
+        app(SellerPortal::class)->verifyLink($owner, $staff, null, 'Test review: owner identity and marketing instruction match.', true);
+        $property->authorities()->create([
+            'seller_id' => $seller->id, 'scope' => 'both', 'status' => 'active', 'terms' => 'Test-only reviewed marketing authority for this property.',
+        ]);
         $desk = app(VerificationDesk::class);
         $desk->seed($property);
 

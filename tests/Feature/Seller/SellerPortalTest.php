@@ -22,8 +22,8 @@ class SellerPortalTest extends FoundationTestCase
 {
     public function test_only_a_verified_or_authorised_relationship_can_see_a_property(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
-        $other = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $other = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.verification')->create();
 
         $this->actingAs($seller)
@@ -39,7 +39,7 @@ class SellerPortalTest extends FoundationTestCase
 
         $link = PropertyOwner::query()->where('property_id', $property->id)->first();
         $this->actingAs($staff)
-            ->post(route('staff.owners.verify', $link))
+            ->post(route('staff.owners.verify', $link), ['identity_consistency_confirmed' => 1, 'reason' => 'Test review: matched identity and authority.'])
             ->assertRedirect();
 
         $this->actingAs($seller)->get(route('seller.properties.index'))->assertOk()->assertSee('Shela holding');
@@ -53,6 +53,10 @@ class SellerPortalTest extends FoundationTestCase
             ])
             ->assertRedirect();
 
+        $otherLink = $property->owners()->where('user_id', $other->id)->firstOrFail();
+        $this->actingAs($staff)->post(route('staff.owners.verify', $otherLink), [
+            'identity_consistency_confirmed' => 1, 'reason' => 'Test review: matched identity and representative authority.',
+        ])->assertSessionHasNoErrors();
         $this->assertSame($before, Property::query()->count());
         $this->actingAs($other)->get(route('seller.properties.show', $property))->assertOk()->assertSee('Shela holding');
 
@@ -80,7 +84,7 @@ class SellerPortalTest extends FoundationTestCase
         }
 
         $document = $property->ownershipDocuments()->where('document_type', 'title_deed')->first();
-        $this->actingAs(User::factory()->withRoles('seller')->create())
+        $this->actingAs(User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create())
             ->get(route('seller.documents.download', $document))
             ->assertForbidden();
 
@@ -167,7 +171,7 @@ class SellerPortalTest extends FoundationTestCase
      */
     private function verifiedProperty(): array
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
 
         $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu', 'is_active' => true]);
@@ -191,7 +195,7 @@ class SellerPortalTest extends FoundationTestCase
             'sale' => ['price_basis' => 'total', 'amount' => 2_400_000],
         ])->assertSessionHasNoErrors();
         $property = Property::query()->where('title', 'Hindi block')->firstOrFail();
-        $this->actingAs($staff)->post(route('staff.owners.verify', $property->owners()->first()));
+        $this->actingAs($staff)->post(route('staff.owners.verify', $property->owners()->first()), ['identity_consistency_confirmed' => 1, 'reason' => 'Test review: matched identity and authority.']);
 
         return [$seller, $staff, $property->refresh()];
     }

@@ -12,8 +12,8 @@ use App\Models\Locality;
 use App\Models\Property;
 use App\Models\PropertyTransaction;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use App\Services\Verification\VerificationOperations;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -63,6 +63,15 @@ class PropertyInventory
 
     public function transition(User $actor, Property $property, PropertyStatus $status): Property
     {
+        if ($status === PropertyStatus::Published && DB::transactionLevel() === 0) {
+            return DB::transaction(fn (): Property => $this->transition($actor, $property, $status), 3);
+        }
+        if ($status === PropertyStatus::Published) {
+            abort_unless($actor->can('update', $property), 403);
+            Property::query()->whereKey($property->id)->lockForUpdate()->firstOrFail();
+            $property->refresh();
+        }
+
         $from = $property->status;
 
         if (! in_array($status, $property->allowedTransitions(), true)) {

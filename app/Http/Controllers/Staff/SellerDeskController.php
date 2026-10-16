@@ -39,8 +39,8 @@ class SellerDeskController extends Controller
     {
         abort_unless($request->user()->hasPermission('staff.verification') || $request->user()->hasPermission('staff.properties'), 403);
 
-        $data = $request->validate(['share_percent' => ['nullable', 'numeric', 'min:0', 'max:100']]);
-        $portal->verifyLink($propertyOwner, $request->user(), isset($data['share_percent']) ? (float) $data['share_percent'] : null);
+        $data = $request->validate(['share_percent' => ['nullable', 'numeric', 'min:0', 'max:100'], 'identity_consistency_confirmed' => ['accepted'], 'reason' => ['required', 'string', 'min:8', 'max:1000']]);
+        $portal->verifyLink($propertyOwner, $request->user(), isset($data['share_percent']) ? (float) $data['share_percent'] : null, $data['reason'], true);
 
         return back()->with('status', 'Ownership link verified.');
     }
