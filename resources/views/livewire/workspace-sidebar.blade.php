@@ -1,4 +1,10 @@
-<div wire:keydown.escape.window="close" class="lg:h-full lg:w-72 lg:shrink-0">
+<div wire:keydown.escape.window="close" class="workspace-sidebar-shell lg:h-full lg:shrink-0">
+    <style>
+        #workspace-sidebar { width: min(16rem, calc(100vw - 2rem)); }
+        @media (min-width: 64rem) {
+            .workspace-sidebar-shell, #workspace-sidebar { width: 14rem; }
+        }
+    </style>
     <button
         type="button"
         class="fixed left-4 top-4 z-50 rounded-md bg-lamu-900 px-3 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700 lg:hidden"
@@ -17,19 +23,19 @@
         id="workspace-sidebar"
         data-open="{{ $open ? 'true' : 'false' }}"
         @class([
-            'fixed inset-y-0 left-0 z-40 flex h-dvh w-72 flex-col overflow-hidden bg-lamu-900 text-sand-50 transition lg:static lg:z-auto lg:h-full lg:translate-x-0',
+            'fixed inset-y-0 left-0 z-40 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 transition lg:static lg:z-auto lg:h-full lg:translate-x-0',
             'translate-x-0' => $open,
             '-translate-x-full' => ! $open,
         ])
     >
-        <div class="border-b border-white/10 px-5 py-6">
+        <div class="border-b border-white/10 px-4 py-4">
             <x-brand-logo tone="dark" />
             @if ($workspace)
                 <p class="mt-1 text-sm text-sand-200">{{ $eyebrow ?: $workspace->label() }}</p>
             @endif
         </div>
 
-        <nav class="sidebar-scroll min-h-0 flex-1 space-y-1 px-3 py-5" aria-label="Workspace">
+        <nav class="sidebar-scroll min-h-0 flex-1 space-y-1 px-2 py-3" aria-label="Workspace">
             @php
                 $moduleIcons = [
                     'overview' => 'fa-gauge',

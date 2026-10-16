@@ -45,10 +45,11 @@
 <x-dynamic-component
     :component="$buyerWorkspace ? 'workspace-layout' : 'public-layout'"
     :heading="$buyerWorkspace ? 'Explore Land' : null"
+    :full-width="$buyerWorkspace"
+    :show-heading="! $buyerWorkspace"
     :title="($areaName ? 'Land in '.$areaName : 'Explore Land in Lamu').' — Lamu Acres'"
     description="Explore land in Lamu. Filter coastal plots and acreage by location, purpose, property type, price, acreage and price per acre."
 >
-    @unless ($buyerWorkspace)
     <section class="relative isolate overflow-hidden bg-lamu-900">
         <img src="{{ asset('images/explore_land_hero_section.jpg') }}" alt="" class="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_50%]" fetchpriority="high">
         <div class="land-hero-fade absolute inset-0 -z-10" aria-hidden="true"></div>
@@ -58,7 +59,6 @@
             <p class="mt-1 max-w-[30rem] text-sm text-sand-50 [text-shadow:0_1px_2px_rgba(0,0,0,.35)]">Find coastal plots, acreage and development opportunities.</p>
         </div>
     </section>
-    @endunless
 
     <div class="mx-auto grid w-full max-w-[1440px] gap-4 px-4 py-4 sm:px-6 lg:w-[90%] lg:grid-cols-[230px_minmax(0,1fr)] lg:px-0 xl:grid-cols-[230px_minmax(0,1fr)_280px]">
         <div class="contents lg:sticky lg:top-[60px] lg:row-span-2 lg:block lg:max-h-[calc(100dvh-72px)] lg:space-y-3 lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin] xl:row-span-1">

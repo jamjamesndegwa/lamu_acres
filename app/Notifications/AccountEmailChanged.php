@@ -11,6 +11,15 @@ class AccountEmailChanged extends Notification
 {
     use Queueable;
 
+    public function __construct(public bool $emailChanged = true) {}
+
+    public static function canDeliverEmail(): bool
+    {
+        $transport = config('mail.mailers.'.config('mail.default').'.transport');
+
+        return filled($transport) && ! in_array($transport, ['log', 'array'], true);
+    }
+
     /**
      * @return array<int, string>
      */
@@ -34,8 +43,8 @@ class AccountEmailChanged extends Notification
     {
         return [
             'title' => 'Confirm your email',
-            'message' => 'The email on this account changed and is not verified yet.',
-            'url' => $this->verificationUrl($notifiable),
+            'message' => $this->emailChanged ? 'The email on this account changed. Open the confirmation email to verify it.' : 'Open the confirmation email sent to your inbox to verify your address.',
+            'url' => route('workspaces.index'),
         ];
     }
 

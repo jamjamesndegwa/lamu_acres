@@ -126,6 +126,10 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::get('/authorities', [SellerDeskController::class, 'authorities'])->name('authorities.index');
             Route::get('/applications', [CapabilityApplicationController::class, 'index'])->name('applications.index');
             Route::get('/applications/{application}', [CapabilityApplicationController::class, 'edit'])->name('applications.edit');
+            Route::post('/applications/{application}/contact-verification', [CapabilityApplicationController::class, 'verifyContact'])
+                ->middleware('throttle:6,1')->name('applications.contact-verification');
+            Route::post('/applications/{application}/email-verification', [CapabilityApplicationController::class, 'requestEmailVerification'])
+                ->middleware('throttle:6,1')->name('applications.email-verification');
             Route::put('/applications/{application}', [CapabilityApplicationController::class, 'update'])->name('applications.update');
             Route::get('/referrals', [ReferralReviewController::class, 'index'])->name('referrals.index');
             Route::get('/referrals/{referral}', [ReferralReviewController::class, 'show'])->name('referrals.show');

@@ -6,6 +6,7 @@ use App\Enums\CapabilityApplicationStatus;
 use App\Enums\PartnerCapability;
 use App\Models\Property;
 use App\Models\User;
+use App\Notifications\AccountEmailChanged;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Access\RoleAssigner;
 use Illuminate\Http\UploadedFile;
@@ -16,6 +17,165 @@ use Tests\Feature\Foundation\FoundationTestCase;
 
 class PartnerVerificationTest extends FoundationTestCase
 {
+    public function test_manual_contact_verification_requires_enabled_configuration_and_authorized_non_self_reviewer(): void
+    {
+        Storage::fake('local');
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create();
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
+        $application = $buyer->capabilityApplications()->firstOrFail();
+        $url = route('staff.applications.contact-verification', $application);
+        $data = ['contact_channel' => 'email', 'contact_value' => $buyer->email, 'verification_reference' => 'Independent control check reference 123', 'contact_confirmed' => 1];
+        config(['lamu.allow_manual_contact_verification' => false]);
+        $this->actingAs($staff)->post($url, $data)->assertForbidden();
+        config(['lamu.allow_manual_contact_verification' => true]);
+        $this->actingAs($buyer)->post($url, $data)->assertForbidden();
+        $this->actingAs(User::factory()->withRoles('staff')->create())->post($url, $data)->assertForbidden();
+        $this->assertNull($buyer->fresh()->email_verified_at);
+    }
+
+    public function test_manual_email_and_phone_verification_records_actual_reviewer_and_does_not_grant_capability(): void
+    {
+        Storage::fake('local');
+        config(['lamu.allow_manual_contact_verification' => true]);
+        foreach (['email', 'phone'] as $channel) {
+            $buyer = User::factory()->unverified()->withRoles('buyer')->create(['phone' => $channel === 'email' ? '+254700123456' : '+254700123457', 'phone_verified_at' => null]);
+            $staff = $this->reviewer();
+            $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
+            $application = $buyer->capabilityApplications()->firstOrFail();
+            $this->actingAs($staff)->get(route('staff.applications.edit', $application))->assertOk()->assertSee('Record contact verification manually');
+            $this->post(route('staff.applications.contact-verification', $application), ['contact_channel' => $channel, 'contact_value' => $buyer->getAttribute($channel), 'verification_reference' => 'Independent confirmation reference 123', 'contact_confirmed' => 1])->assertSessionHasNoErrors();
+            $this->assertNotNull($buyer->fresh()->getAttribute($channel.'_verified_at'));
+            $entry = collect($application->fresh()->verification_history)->last();
+            $this->assertSame($staff->id, $entry['actor_id']);
+            $this->assertSame('staff_recorded', $entry['method']);
+            $this->assertSame(hash('sha256', $buyer->getAttribute($channel)), $entry['contact_hash']);
+            $this->assertSame(CapabilityApplicationStatus::Pending, $application->fresh()->status);
+            $this->assertFalse($buyer->fresh()->hasRole('broker'));
+        }
+    }
+
+    public function test_manual_contact_verification_rejects_stale_contacts_and_missing_evidence(): void
+    {
+        Storage::fake('local');
+        config(['lamu.allow_manual_contact_verification' => true]);
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create(['phone' => null]);
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
+        $application = $buyer->capabilityApplications()->firstOrFail();
+        $url = route('staff.applications.contact-verification', $application);
+        $this->actingAs($staff)->post($url, ['contact_channel' => 'email', 'contact_value' => 'old@example.test', 'verification_reference' => 'Reference for control check', 'contact_confirmed' => 1])->assertSessionHasErrors('contact_value');
+        $this->post($url, ['contact_channel' => 'email', 'contact_value' => $buyer->email])->assertSessionHasErrors(['verification_reference', 'contact_confirmed']);
+        $this->assertNull($buyer->fresh()->email_verified_at);
+    }
+
+    public function test_broker_review_shows_contact_evidence_and_ordered_checks_without_allowing_unverified_contact_approval(): void
+    {
+        Storage::fake('local');
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create(['phone' => null, 'phone_verified_at' => null]);
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'))->assertSessionHasNoErrors();
+        $application = $buyer->capabilityApplications()->firstOrFail();
+
+        $response = $this->actingAs($staff)->get(route('staff.applications.edit', $application));
+        $response->assertOk()->assertSeeInOrder(['Step 1', 'Step 2', 'Step 3', 'Step 4'])
+            ->assertSee($buyer->email)->assertSee('Account phone')->assertSee('Not verified')
+            ->assertSee('TEST-DECLARED-123')->assertSee('Practising certificate preview')
+            ->assertSee('Identity preview')->assertSee('Approve is unavailable');
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $disabledApproval = (new \DOMXPath($document))->query('//select[@name="status"]/option[@value="approved"][@disabled]');
+        $this->assertSame(1, $disabledApproval->length);
+    }
+
+    public function test_staff_can_request_email_confirmation_but_cannot_confirm_it_for_the_applicant(): void
+    {
+        Notification::fake();
+        Storage::fake('local');
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.transport' => 'smtp']);
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create();
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
+        $application = $buyer->capabilityApplications()->firstOrFail();
+        $route = route('staff.applications.email-verification', $application);
+
+        $this->actingAs($buyer)->post($route)->assertForbidden();
+        $this->actingAs(User::factory()->withRoles('staff')->create())->post($route)->assertForbidden();
+        $this->actingAs($staff)->from(route('staff.applications.edit', $application))->post($route)->assertRedirect(route('staff.applications.edit', $application));
+        Notification::assertSentTo($buyer, AccountEmailChanged::class, fn (AccountEmailChanged $notification): bool => ! $notification->emailChanged);
+        $this->assertNull($buyer->fresh()->email_verified_at);
+        $this->assertSame('email_verification_requested', collect($application->fresh()->verification_history)->last()['event']);
+        $notification = new AccountEmailChanged(emailChanged: false);
+        $this->assertSame(route('workspaces.index'), $notification->toArray($buyer)['url']);
+        $url = $notification->verificationUrl($buyer);
+        $this->actingAs($staff)->get($url)->assertForbidden();
+        $this->actingAs($buyer)->get($url)->assertRedirect();
+        $this->assertNotNull($buyer->fresh()->email_verified_at);
+        $this->assertSame(CapabilityApplicationStatus::Pending, $application->fresh()->status);
+        $this->assertFalse($buyer->fresh()->hasRole('broker'));
+    }
+
+    public function test_log_mailer_cannot_be_reported_as_delivering_an_email_confirmation(): void
+    {
+        Notification::fake();
+        Storage::fake('local');
+        config(['mail.default' => 'log', 'mail.mailers.log.transport' => 'log']);
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create();
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('seller'));
+        $application = $buyer->capabilityApplications()->firstOrFail();
+
+        $this->actingAs($staff)->post(route('staff.applications.email-verification', $application))->assertSessionHasErrors('email_delivery');
+        $this->assertNull($buyer->fresh()->email_verified_at);
+        Notification::assertNothingSent();
+    }
+
+    public function test_applicant_can_request_their_own_verification_email_without_self_verifying(): void
+    {
+        Notification::fake();
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.transport' => 'smtp']);
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create();
+        $other = User::factory()->unverified()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->post(route('account.email.verification.send'), ['user_id' => $other->id])->assertRedirect();
+        Notification::assertSentTo($buyer, AccountEmailChanged::class);
+        Notification::assertNotSentTo($other, AccountEmailChanged::class);
+        $this->assertNull($buyer->fresh()->email_verified_at);
+    }
+
+    public function test_verified_phone_is_visible_and_satisfies_contact_check_without_a_verified_email(): void
+    {
+        Notification::fake();
+        Storage::fake('local');
+        $buyer = User::factory()->unverified()->withRoles('buyer')->create(['phone' => '+254700123456', 'phone_verified_at' => now()]);
+        $staff = $this->reviewer();
+        $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
+        $application = $buyer->capabilityApplications()->firstOrFail();
+
+        $response = $this->actingAs($staff)->get(route('staff.applications.edit', $application));
+        $response->assertOk()->assertSee('+254700123456')->assertSee('Verified contact available')->assertDontSee('Approve is unavailable');
+        $this->actingAs($staff)->put(route('staff.applications.update', $application), $this->decision(true))->assertSessionHasNoErrors();
+        $this->assertTrue($buyer->fresh()->hasRole('broker'));
+        $this->assertNull($buyer->fresh()->email_verified_at);
+    }
+
+    public function test_broker_application_uses_the_public_layout_and_keeps_secure_upload_fields(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->get(route('account.applications.create', ['capability' => 'broker']))
+            ->assertOk()
+            ->assertSee('Apply as a Broker Partner')
+            ->assertSee('images/explore_land_hero_section.jpg', false)
+            ->assertSee('Before you submit')
+            ->assertSee('What happens next?')
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('name="identity"', false)
+            ->assertSee('name="practising_certificate"', false)
+            ->assertSee('action="'.route('account.applications.store').'"', false)
+            ->assertDontSee('data-modal-overlay', false);
+    }
+
     public function test_seller_requires_identity_review_without_requiring_earb_credentials(): void
     {
         Notification::fake();
@@ -75,7 +235,7 @@ class PartnerVerificationTest extends FoundationTestCase
         $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
         $application = $broker->capabilityApplications()->firstOrFail();
         $profile = $application->verification;
-        $profile['certificate_expires_on'] = yesterday()->toDateString();
+        $profile['certificate_expires_on'] = now()->subDay()->toDateString();
         $application->forceFill(['verification' => $profile])->save();
 
         $this->actingAs($broker)->post(route('broker.listings.store'), [])->assertSessionHasErrors('capability');
@@ -95,7 +255,7 @@ class PartnerVerificationTest extends FoundationTestCase
         unset($missingCertificate['practising_certificate']);
         $this->actingAs($buyer)->post(route('account.applications.store'), $missingCertificate)->assertSessionHasErrors('practising_certificate');
         $expired = $this->payload('broker');
-        $expired['certificate_expires_on'] = yesterday()->toDateString();
+        $expired['certificate_expires_on'] = now()->subDay()->toDateString();
         $this->actingAs($buyer)->post(route('account.applications.store'), $expired)->assertSessionHasErrors('certificate_expires_on');
         $firm = $this->payload('broker');
         $firm['applicant_type'] = 'firm';

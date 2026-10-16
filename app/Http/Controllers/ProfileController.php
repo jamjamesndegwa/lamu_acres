@@ -156,6 +156,19 @@ class ProfileController extends Controller
         return back()->with('status', 'Phone number confirmed.');
     }
 
+    public function requestEmailVerification(Request $request): RedirectResponse
+    {
+        if ($request->user()->email_verified_at !== null) {
+            return back()->with('status', 'Your email is already verified.');
+        }
+        if (! AccountEmailChanged::canDeliverEmail()) {
+            throw ValidationException::withMessages(['email_delivery' => 'Email delivery is not configured. Ask the desk to configure email delivery before requesting a verification link.']);
+        }
+        $request->user()->notify(new AccountEmailChanged(emailChanged: false));
+
+        return back()->with('status', 'Verification email sent. Open the link in your inbox while signed in to this account.');
+    }
+
     public function verifyEmail(Request $request, string $id, string $hash): RedirectResponse
     {
         $user = $request->user();

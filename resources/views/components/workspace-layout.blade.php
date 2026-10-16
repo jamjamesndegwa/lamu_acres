@@ -1,4 +1,4 @@
-@props(['heading' => 'Dashboard'])
+@props(['heading' => 'Dashboard', 'fullWidth' => false, 'showHeading' => true])
 
 <!DOCTYPE html>
 <html lang="en">
@@ -47,8 +47,10 @@
 
             <livewire:workspace-subnav />
 
-            <main id="main" class="panel-scroll min-h-0 flex-1 px-4 py-8 sm:px-8">
-                <h1 class="text-2xl font-semibold text-lamu-900">{{ $heading }}</h1>
+            <main id="main" @class(['panel-scroll min-h-0 flex-1', 'px-4 py-8 sm:px-8' => ! $fullWidth])>
+                @if ($showHeading)
+                    <h1 class="text-2xl font-semibold text-lamu-900">{{ $heading }}</h1>
+                @endif
                 {{ $slot }}
             </main>
 

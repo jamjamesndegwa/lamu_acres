@@ -92,6 +92,8 @@ Route::middleware(['auth', 'private.cache'])->group(function () {
     Route::get('/account/applications/{application}/evidence/{kind}', [CapabilityApplicationController::class, 'evidence'])->name('account.applications.evidence');
     Route::post('/account/applications', [CapabilityApplicationController::class, 'store'])->name('account.applications.store');
     Route::post('/account/phone/confirm', [ProfileController::class, 'confirmPhone'])->name('account.phone.confirm');
+    Route::post('/account/email/verification', [ProfileController::class, 'requestEmailVerification'])
+        ->middleware('throttle:3,10')->name('account.email.verification.send');
     Route::get('/account/avatar', [ProfileController::class, 'showAvatar'])->name('account.avatar.show');
     Route::post('/account/avatar', [ProfileController::class, 'storeAvatar'])->name('account.avatar.store');
     Route::delete('/account/avatar', [ProfileController::class, 'destroyAvatar'])->name('account.avatar.destroy');

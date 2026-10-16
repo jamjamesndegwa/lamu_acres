@@ -10,6 +10,18 @@ use Livewire\Livewire;
 
 class WorkspaceFoundationTest extends FoundationTestCase
 {
+    public function test_buyer_land_directory_keeps_the_public_hero_inside_the_workspace(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->get('/land')->assertOk()
+            ->assertSee('Explore Land in Lamu')
+            ->assertSee('images/explore_land_hero_section.jpg', false)
+            ->assertSee('id="workspace-sidebar"', false)
+            ->assertSee('Interactive area overview')
+            ->assertSee('No land has been published yet.');
+    }
+
     public function test_public_pages_stay_open_and_private_routes_ask_guests_to_login(): void
     {
         $this->get('/')->assertOk()->assertSee('Lamu Acres')->assertSee('Explore Land');

@@ -8,4 +8,6 @@ return [
 
     'find_land_max_radius_km' => 100,
 
+    'allow_manual_contact_verification' => env('LAMU_ALLOW_MANUAL_CONTACT_VERIFICATION', false),
+
 ];
