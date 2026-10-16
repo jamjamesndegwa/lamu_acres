@@ -4,7 +4,7 @@
 
 @if ($isModal)
     <turbo-frame id="modal">
-        <x-modal title="Profile & Security">
+        <x-modal title="Profile">
             <div class="mb-6">
                 @include('workspaces.partials.avatar-form', ['user' => $user, 'prefix' => 'modal-profile-', 'breakout' => true])
             </div>
@@ -18,9 +18,9 @@
         </x-modal>
     </turbo-frame>
 @else
-    <x-workspace-layout heading="Profile & Security">
+    <x-workspace-layout heading="Profile">
         <x-slot:modal>
-            <x-modal title="Profile & Security" size="xl">
+            <x-modal title="Profile" size="xl">
                 <div class="mb-6">
                     @include('workspaces.partials.avatar-form', ['user' => $user, 'prefix' => 'modal-profile-', 'breakout' => true])
                 </div>

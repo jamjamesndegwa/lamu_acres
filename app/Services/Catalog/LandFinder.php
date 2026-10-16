@@ -22,7 +22,7 @@ class LandFinder
         $centre = $this->centre($input, $county, $locality);
         $base = array_replace($filters, ['min_price' => null, 'max_price' => null, 'min_acres' => null, 'max_acres' => null, 'min_price_per_acre' => null, 'max_price_per_acre' => null]);
         $query = $this->catalog->query($base, $centre ? null : $county, $centre ? null : $locality)->reorder();
-        $acres = "COALESCE(properties.offered_acreage, CASE WHEN properties.parent_id IS NOT NULL THEN properties.acreage ELSE properties.acreage - COALESCE((SELECT SUM(portion.acreage) FROM properties AS portion WHERE portion.parent_id = properties.id AND portion.status = 'sold'), 0) END)";
+        $acres = "COALESCE(properties.offered_acreage, CASE WHEN properties.parent_id IS NOT NULL THEN properties.acreage ELSE properties.acreage - COALESCE((SELECT SUM(sold_portion.acreage) FROM properties AS sold_portion WHERE sold_portion.parent_id = properties.id AND sold_portion.status = 'sold'), 0) END)";
         $query->whereRaw($acres.' > 0')->withSum(['portions as sold_portion_acreage' => fn (Builder $portions) => $portions->where('status', 'sold')], 'acreage');
         $budget = "CASE WHEN properties.purpose = 'sale' THEN properties.price_amount WHEN properties.price_basis IN ('parcel_month', 'acre_month') THEN properties.price_amount WHEN properties.price_basis IN ('parcel_year', 'acre_year') THEN properties.price_amount / 12.0 ELSE NULL END";
         if (($input['budget_basis'] ?? 'total') === 'per_acre') {

@@ -38,17 +38,16 @@
             </div>
         </div>
 
-        <div class="mt-3 space-y-2 border-t border-sand-200 pt-3">
-            @include('workspaces.partials.avatar-form', ['user' => $user, 'prefix' => 'account-menu-', 'breakout' => false])
-        </div>
-
         <div class="mt-3 space-y-1 border-t border-sand-200 pt-2">
+            @if ($workspace?->value === 'buyer')
+                <a href="{{ route('buyer.dashboard') }}" data-turbo-frame="_top" onclick="this.closest('details')?.removeAttribute('open')" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Buyer panel</a>
+            @endif
             @can('create', \App\Models\CapabilityApplication::class)
                 <a href="{{ route('account.applications.index') }}" data-turbo-frame="_top" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Seller &amp; broker applications</a>
             @endcan
             @if ($workspace)
                 @php($settingsRoute = $workspace->value === 'buyer' ? 'buyer.profile' : $workspace->value.'.profile')
-                <a href="{{ route($settingsRoute) }}" @if ($workspace->value !== 'buyer') data-turbo-frame="modal" @endif class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Settings</a>
+                <a href="{{ route($settingsRoute) }}" @if ($workspace->value !== 'buyer') data-turbo-frame="modal" @endif class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Profile</a>
             @endif
             @if (count($workspaces) > 1)
                 <a id="switch-workspace" href="{{ route('workspaces.index') }}" data-turbo-frame="modal" onclick="this.closest('details')?.removeAttribute('open')" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Switch Workspace</a>

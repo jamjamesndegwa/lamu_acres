@@ -1,14 +1,15 @@
-<div>
-    <!-- You must be the change you wish to see in the world. - Mahatma Gandhi -->
-</div>
-<x-workspace-layout heading="Account">
+<x-workspace-layout heading="Profile">
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5 sm:p-7" aria-labelledby="account-profile-heading">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h2 id="account-profile-heading" class="text-lg font-semibold text-lamu-900">Profile &amp; Security</h2>
-                <p class="mt-1 text-sm text-stone-600">Review your account details and security settings.</p>
+                <h2 id="account-profile-heading" class="text-lg font-semibold text-lamu-900">Profile</h2>
+                <p class="mt-1 text-sm text-stone-600">Manage your photo, contact details, and account security.</p>
             </div>
             <a href="{{ route('buyer.profile.edit') }}" data-turbo-frame="modal" class="inline-flex items-center rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white hover:bg-lamu-800">Edit profile</a>
+        </div>
+
+        <div class="mt-5 border-t border-sand-200 pt-5">
+            @include('workspaces.partials.avatar-form', ['user' => $user, 'prefix' => 'profile-index-', 'breakout' => true])
         </div>
 
         <dl class="mt-6 divide-y divide-sand-200 border-t border-sand-200">
