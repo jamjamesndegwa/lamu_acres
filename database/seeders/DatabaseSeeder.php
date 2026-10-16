@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AccessSeeder::class,
             GeographySeeder::class,
+            SystemDefaultsSeeder::class,
+            InitialAdministratorSeeder::class,
         ]);
 
         if (! app()->environment('local')) {
