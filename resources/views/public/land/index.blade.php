@@ -23,8 +23,7 @@
         'acres_asc' => 'Acreage: small to large',
         'acres_desc' => 'Acreage: large to small',
     ];
-    $findLandModal = auth()->check() && auth()->user()->hasPermission('workspace.buyer');
-    $findLandHref = $findLandModal ? route('buyer.sourcing.create') : route('home').'#find-land';
+    $findLandHref = rtrim(config('app.url'), '/').route('find-land.index', [], false);
     $mapImage = collect(['images/lamu_area_overview.jpg', 'images/lamu_map.jpg', 'images/lamu_map.png'])
         ->first(fn (string $path) => is_file(public_path($path)));
     $resultCount = $listings->total();
@@ -186,7 +185,7 @@
                 <div>
                     <h2 class="home-serif text-base font-semibold leading-snug text-stone-900">Looking for something specific?</h2>
                     <p class="mt-0.5 text-xs text-stone-600">Tell us your preferred location, budget and acreage.</p>
-                    <a href="{{ $findLandHref }}" @if ($findLandModal) data-turbo-frame="modal" @endif class="mt-1 inline-flex min-h-7 items-center rounded-sm text-xs font-semibold text-gold-500 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Find Land for Me <span aria-hidden="true" class="ml-1">→</span></a>
+                    <a href="{{ $findLandHref }}" class="mt-1 inline-flex min-h-7 items-center rounded-sm text-xs font-semibold text-gold-500 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Find Land for Me <span aria-hidden="true" class="ml-1">→</span></a>
                 </div>
             </div>
         </aside>

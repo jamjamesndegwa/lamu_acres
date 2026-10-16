@@ -1,9 +1,7 @@
 @php
     $deskEmail = config('lamu.desk_email');
     $deskEmail = is_string($deskEmail) && filter_var($deskEmail, FILTER_VALIDATE_EMAIL) ? $deskEmail : null;
-    $findLandHref = auth()->check() && auth()->user()->hasPermission('workspace.buyer')
-        ? route('buyer.sourcing.create')
-        : route('home').'#find-land';
+    $findLandHref = route('find-land.index');
     $buyerBriefHref = auth()->check() && auth()->user()->hasPermission('workspace.buyer')
         ? route('buyer.sourcing.create')
         : route('register');
@@ -196,7 +194,8 @@
         <article id="find-land" class="flex flex-col rounded-lg border border-sand-200 bg-sand-50 p-3">
             <h2 class="home-serif text-base font-semibold text-stone-900">Find Land for Me</h2>
             <p class="mt-1 text-[10px] leading-snug text-stone-500">Search published land by place, budget, and size.</p>
-            <form method="GET" action="{{ route('land.index') }}" class="mt-2 grid flex-1 content-start grid-cols-2 gap-x-2 gap-y-1 text-xs">
+            <form method="GET" action="{{ route('find-land.index') }}" class="mt-2 grid flex-1 content-start grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                <input type="hidden" name="purpose" value="sale">
                 <label class="col-span-1">
                     <span class="text-[10px] font-medium text-stone-700">Preferred location</span>
                     <input name="q" type="search" class="mt-0.5 h-7 w-full rounded-md border border-sand-200 bg-white px-2 text-xs">

@@ -12,6 +12,7 @@ use App\Http\Controllers\Land\PropertyController;
 use App\Http\Controllers\Payments\MpesaCallbackController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSite\BrokerPartnersController;
+use App\Http\Controllers\PublicSite\FindLandController;
 use App\Http\Controllers\PublicSite\HomeController;
 use App\Http\Controllers\PublicSite\LandDirectoryController;
 use App\Http\Controllers\PublicSite\ListingInterestController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/find-land', FindLandController::class)->name('find-land.index');
 Route::get('/broker-partners', BrokerPartnersController::class)->name('broker-partners');
 Route::get('/list-property', ListPropertyController::class)->name('list-property');
 Route::middleware(['private.cache'])->group(function () {

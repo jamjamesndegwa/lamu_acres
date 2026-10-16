@@ -32,8 +32,9 @@
                 const north = Number(node.dataset.pointA)
                 const east = Number(node.dataset.pointB)
                 const map = L.map(node, { scrollWheelZoom: false }).setView([north, east], 13)
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap',
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    referrerPolicy: 'origin',
                 }).addTo(map)
                 L.marker([north, east]).addTo(map)
                 node.dataset.ready = '1'
