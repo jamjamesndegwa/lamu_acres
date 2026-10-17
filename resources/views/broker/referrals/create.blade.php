@@ -47,14 +47,8 @@
             <span class="font-medium">Consent and authority</span>
             <textarea name="consent_note" rows="3" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('consent_note') }}</textarea>
         </label>
-        <label class="block text-sm">
-            <span class="font-medium">Consent evidence</span>
-            <input name="consent_evidence" type="file" accept="image/*,.pdf" required class="mt-1 block w-full text-sm">
-        </label>
-        <label class="block text-sm">
-            <span class="font-medium">Other evidence</span>
-            <input name="evidence" type="file" accept="image/*,.pdf" class="mt-1 block w-full text-sm">
-        </label>
+        <x-upload-manager name="consent_evidence" label="Consent evidence" accept="image/*,.pdf" required />
+        <x-upload-manager name="evidence" label="Other evidence" accept="image/*,.pdf" />
         <label class="block text-sm">
             <span class="font-medium">Notes</span>
             <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('notes') }}</textarea>

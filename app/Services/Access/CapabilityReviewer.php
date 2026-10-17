@@ -59,7 +59,7 @@ class CapabilityReviewer
                 }
                 $application ??= new CapabilityApplication(['user_id' => $user->id, 'capability' => $capability]);
                 $privateBucket = config('filesystems.disks.r2_private.bucket');
-                $disk = filled($privateBucket) && $privateBucket !== config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+                $disk = filled($privateBucket) || filled(config('filesystems.disks.r2.bucket')) ? 'r2_private' : 'local';
                 foreach (self::EVIDENCE_TYPES as $kind) {
                     if (($data[$kind] ?? null) instanceof UploadedFile) {
                         $path = $data[$kind]->store('partner-evidence/'.$user->id, $disk);

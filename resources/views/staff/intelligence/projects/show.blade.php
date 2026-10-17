@@ -27,9 +27,9 @@
         @endforelse
     </ul>
     <h2 class="mt-8 font-semibold">Evidence</h2>
-    <form method="POST" action="{{ route('staff.projects.evidence', $project) }}" enctype="multipart/form-data" class="mt-3 flex items-center gap-3">
+    <form method="POST" action="{{ route('staff.projects.evidence', $project) }}" enctype="multipart/form-data" class="mt-3 max-w-xl space-y-3">
         @csrf
-        <input type="file" name="evidence" required>
+        <x-upload-manager name="evidence" label="Source evidence" required />
         <button class="rounded-full border border-lamu-900 px-4 py-2 text-sm">Attach</button>
     </form>
     <h2 class="mt-8 font-semibold">History</h2>

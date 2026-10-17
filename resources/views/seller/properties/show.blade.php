@@ -153,10 +153,16 @@
                         <x-status-badge :label="$requirement['state']" />
                     </div>
                     @if ($requirement['type'] && ! in_array($property->status, [PropertyStatus::Sold, PropertyStatus::Archived], true))
-                        <label class="mt-3 block text-sm">
-                            <span class="font-medium">Choose {{ $requirement['label'] }}</span>
-                            <input type="file" name="documents[{{ $requirement['type'] }}]" form="seller-document-uploads" data-document-type="{{ $requirement['type'] }}" data-document-label="{{ $requirement['label'] }}" accept=".pdf,image/jpeg,image/png" class="mt-1 block w-full text-sm">
-                        </label>
+                        <x-upload-manager
+                            :id="'document-upload-'.$requirement['type']"
+                            :name="'documents['.$requirement['type'].']'"
+                            :label="'Choose '.$requirement['label']"
+                            form="seller-document-uploads"
+                            :data-document-type="$requirement['type']"
+                            :data-document-label="$requirement['label']"
+                            accept=".pdf,image/jpeg,image/png"
+                            container-class="mt-3"
+                        />
                     @endif
                 </li>
             @endforeach

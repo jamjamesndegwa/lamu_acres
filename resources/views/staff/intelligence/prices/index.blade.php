@@ -17,7 +17,7 @@
         <input name="price_amount" placeholder="Sale price KSh" required class="rounded-lg border border-sand-200 px-3 py-2">
         <input type="date" name="sold_on" required class="rounded-lg border border-sand-200 px-3 py-2">
         <input name="source_name" placeholder="Source" required class="rounded-lg border border-sand-200 px-3 py-2">
-        <input type="file" name="evidence" required>
+        <x-upload-manager name="evidence" label="Sale evidence" required container-class="sm:col-span-2" />
         <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Save verified sale</button>
     </form>
     <div class="mt-6">

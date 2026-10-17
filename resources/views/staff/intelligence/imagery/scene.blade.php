@@ -27,7 +27,7 @@
             </select>
         </label>
         <label class="block text-sm">Notes <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('notes', $scene->notes) }}</textarea></label>
-        <label class="block text-sm">Image file <input type="file" name="image" accept="image/*"></label>
+        <x-upload-manager name="image" label="Image file" accept="image/*" />
         @if ($errors->any()) <p class="text-sm text-red-700">{{ $errors->first() }}</p> @endif
         <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm text-white">Save scene</button>
     </form>

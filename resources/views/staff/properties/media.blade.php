@@ -7,15 +7,12 @@
         <div class="mt-4">
             <x-property-gallery :photos="$photos" />
         </div>
-        <form method="POST" action="{{ route('staff.properties.photos.store', $property) }}" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-end gap-3">
+        <form method="POST" action="{{ route('staff.properties.photos.store', $property) }}" enctype="multipart/form-data" class="mt-4 max-w-xl space-y-3">
             @csrf
-            <div>
-                <label for="photo" class="block text-sm font-medium">Add photo</label>
-                <input id="photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp" required class="mt-1 block text-sm">
-                @error('photo')
-                    <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
-                @enderror
-            </div>
+            <x-upload-manager id="photo" name="photo" label="Add photo" accept="image/jpeg,image/png,image/webp" required />
+            @error('photo')
+                <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
+            @enderror
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload</button>
         </form>
         @if ($photos !== [])
@@ -60,7 +57,7 @@
         <form method="POST" action="{{ route('staff.properties.videos.store', $property) }}" enctype="multipart/form-data" class="mt-4 space-y-3 rounded-2xl border border-sand-200 bg-white p-4">
             @csrf
             <h3 class="font-medium text-lamu-900">Upload a video</h3>
-            <x-upload-manager name="video" label="Video file (MP4 or WebM)" accept="video/mp4,video/webm" required />
+            <x-upload-manager name="video" label="Video file" accept="video/mp4,video/webm" required help="Choose an MP4 or WebM video file." />
             <p class="text-sm text-stone-600">Maximum file size on this server: {{ number_format(\App\Services\Media\PropertyMediaLibrary::maxVideoKilobytes() / 1024, 1) }} MB. Uploaded videos appear on the public listing after publication.</p>
             @error('video')<p class="text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload video</button>

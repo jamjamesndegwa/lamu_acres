@@ -37,11 +37,9 @@
     <p class="mt-2 text-sm text-stone-700">{{ $listing->status->label() }}. Verification: {{ $listing->verification_level?->label() ?? 'Not reviewed' }}.</p>
 
     <h2 class="mt-8 font-semibold text-lamu-900">Photos</h2>
-    <form method="POST" action="{{ route('broker.listings.photos.store', $listing) }}" enctype="multipart/form-data" class="mt-3 flex flex-wrap items-end gap-3">
+    <form method="POST" action="{{ route('broker.listings.photos.store', $listing) }}" enctype="multipart/form-data" class="mt-3 max-w-xl space-y-3">
         @csrf
-        <label class="text-sm">Add a photo
-            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required class="mt-1 block text-sm">
-        </label>
+        <x-upload-manager name="photo" label="Add a photo" accept="image/jpeg,image/png,image/webp" required />
         <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Upload</button>
     </form>
     @php($photos = $listing->media->where('kind', 'photo')->sortBy('position'))

@@ -366,19 +366,20 @@ class PartnerVerificationTest extends FoundationTestCase
         $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
-    public function test_shared_bucket_configuration_falls_back_to_local_private_storage(): void
+    public function test_shared_bucket_configuration_still_uses_private_disk_for_private_evidence(): void
     {
         Storage::fake('local');
         Storage::fake('r2_private');
+        Storage::fake('r2');
         config(['filesystems.disks.r2.bucket' => 'shared-bucket', 'filesystems.disks.r2_private.bucket' => 'shared-bucket']);
         $buyer = User::factory()->withRoles('buyer')->create();
 
         $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('seller'))->assertSessionHasNoErrors();
 
         $evidence = $buyer->capabilityApplications()->firstOrFail()->verification['evidence']['identity'];
-        $this->assertSame('local', $evidence['disk']);
-        Storage::disk('local')->assertExists($evidence['path']);
-        $this->assertSame([], Storage::disk('r2_private')->allFiles());
+        $this->assertSame('r2_private', $evidence['disk']);
+        Storage::disk('r2_private')->assertExists($evidence['path']);
+        $this->assertSame([], Storage::disk('r2')->allFiles());
     }
 
     public function test_representative_evidence_is_required_and_missing_files_cannot_be_approved(): void

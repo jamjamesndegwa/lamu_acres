@@ -6,8 +6,7 @@
     class="space-y-2"
 >
     @csrf
-    <label for="{{ $prefix }}avatar" class="block text-sm font-medium">{{ $user->avatar_path ? 'Change photo' : 'Add photo' }}</label>
-    <input id="{{ $prefix }}avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" required class="block w-full text-sm">
+    <x-upload-manager :id="$prefix.'avatar'" name="avatar" :label="$user->avatar_path ? 'Change photo' : 'Add photo'" accept="image/jpeg,image/png,image/webp" required />
     @error('avatar')
         <p class="text-sm text-red-700">{{ $message }}</p>
     @enderror

@@ -64,15 +64,17 @@
                     <textarea name="notes" class="rounded-lg border border-sand-200 px-3 py-2 sm:col-span-2" placeholder="Notes">{{ $item->notes }}</textarea>
                     <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save check</button>
                 </form>
-                <form method="POST" action="{{ route('staff.verification.evidence', $item) }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Store this evidence privately?" class="mt-3 flex flex-wrap items-end gap-3">
+                <form method="POST" action="{{ route('staff.verification.evidence', $item) }}" enctype="multipart/form-data" data-turbo-frame="_top" data-confirm="Store this evidence privately?" class="mt-3 grid max-w-3xl gap-3 sm:grid-cols-2">
                     @csrf
-                    <input type="file" name="file" required>
-                    <select name="sensitivity" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <x-upload-manager name="file" label="Evidence file" required container-class="sm:col-span-2" />
+                    <label class="block text-sm font-medium">Sensitivity
+                        <select name="sensitivity" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
                         @foreach ($sensitivities as $sensitivity)
                             <option value="{{ $sensitivity->value }}">{{ $sensitivity->label() }}</option>
                         @endforeach
-                    </select>
-                    <button class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium">Upload evidence</button>
+                        </select>
+                    </label>
+                    <button class="self-end rounded-full border border-sand-200 px-5 py-3 text-sm font-medium">Upload evidence</button>
                 </form>
                 @foreach ($item->files as $file)
                     <form method="POST" action="{{ route('staff.verification.grant', $file) }}" data-turbo-frame="_top" data-confirm="Grant time-limited access to {{ $file->original_name }}? Access stays private and expires at the time you set." class="mt-3 flex flex-wrap items-end gap-3 text-sm">
