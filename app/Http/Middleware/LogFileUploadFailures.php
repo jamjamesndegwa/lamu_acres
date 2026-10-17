@@ -39,6 +39,7 @@ class LogFileUploadFailures
                 }
 
                 Log::error('File upload request failed.', $context);
+                Log::channel('stderr')->error('[UPLOAD FAILURE] File upload request failed.', $context);
             }
 
             throw $exception;

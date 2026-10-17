@@ -4,6 +4,7 @@
     'accept' => null,
     'multiple' => false,
     'required' => false,
+    'maxKilobytes' => null,
     'id' => null,
     'help' => null,
     'containerClass' => '',
@@ -41,9 +42,13 @@
         @if ($accept) accept="{{ $accept }}" @endif
         @if ($multiple) multiple @endif
         @required($required)
+        @if ($maxKilobytes) data-max-kilobytes="{{ $maxKilobytes }}" @endif
         aria-describedby="{{ $helpId }}"
         {{ $attributes->class(['mt-2.5 block w-full cursor-pointer rounded-lg border border-sand-200 bg-white text-sm text-stone-700 shadow-sm file:mr-2.5 file:cursor-pointer file:rounded-md file:border-0 file:bg-lamu-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700']) }}
     >
+    @if ($maxKilobytes)
+        <p data-upload-size-error hidden role="alert" class="mt-2 text-sm text-red-700"></p>
+    @endif
 </div>
 @if (trim($slot) !== '')
     <div class="mt-3">{{ $slot }}</div>

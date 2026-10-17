@@ -14,7 +14,7 @@
             @foreach ($types as $value => $label)<option value="{{ $value }}" @selected(old('applicant_type', $profile['applicant_type'] ?? '') === $value)>{{ $label }}</option>@endforeach
         </select>
     </label>
-    <x-upload-manager name="identity" label="Identity evidence (ID or passport, relevant pages only; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" required />
+    <x-upload-manager name="identity" label="Identity evidence (ID or passport, relevant pages only; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" :max-kilobytes="\App\Services\Access\CapabilityReviewer::MAX_EVIDENCE_KILOBYTES" required />
     @if ($isBroker)
         <p class="text-sm text-stone-600">The account email or phone must be verified before broker approval. For a firm, provide its legal organisation name below and the responsible agent's credentials. Submitting renewed credentials pauses new regulated brokerage actions until staff review them.</p>
         <label class="block text-sm">EARB registration number
@@ -23,11 +23,11 @@
         <label class="block text-sm">Practising certificate expiry
             <input type="date" name="certificate_expires_on" required min="{{ today('Africa/Nairobi')->toDateString() }}" value="{{ old('certificate_expires_on', $profile['certificate_expires_on'] ?? '') }}" class="mt-1 block w-full rounded-lg border border-sand-200 px-3 py-2">
         </label>
-        <x-upload-manager name="practising_certificate" label="Current practising certificate (PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" required />
+        <x-upload-manager name="practising_certificate" label="Current practising certificate (PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" :max-kilobytes="\App\Services\Access\CapabilityReviewer::MAX_EVIDENCE_KILOBYTES" required />
     @else
         <p class="text-sm text-stone-600">Owners disposing of their own land do not need an EARB registration. Representatives must provide the owner's authorization. Company representatives also provide relevant company documentation.</p>
-        <x-upload-manager name="representative_authority" label="Representative authority (required for representatives; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" />
+        <x-upload-manager name="representative_authority" label="Representative authority (required for representatives; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" :max-kilobytes="\App\Services\Access\CapabilityReviewer::MAX_EVIDENCE_KILOBYTES" />
     @endif
-    <x-upload-manager name="business_document" label="Relevant business documentation (required for firms and company representatives; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" />
+    <x-upload-manager name="business_document" label="Relevant business documentation (required for firms and company representatives; PDF/JPG/PNG, up to 2 MB)" accept=".pdf,image/jpeg,image/png" :max-kilobytes="\App\Services\Access\CapabilityReviewer::MAX_EVIDENCE_KILOBYTES" />
     <p class="text-xs text-stone-500">On reapplication, provide current evidence again. Previous decisions remain in the private review history.</p>
 </fieldset>

@@ -4,6 +4,47 @@ import 'sweetalert2/dist/sweetalert2.min.css'
 
 Turbo.session.drive = false
 
+function validateUploadSize(input) {
+    const maxKilobytes = Number(input.dataset.maxKilobytes)
+    if (!Number.isFinite(maxKilobytes) || maxKilobytes <= 0) return true
+
+    const isTooLarge = Array.from(input.files ?? []).some((file) => file.size > maxKilobytes * 1024)
+    const fileLabel = input.name.replaceAll('_', ' ')
+    const maxMegabytes = maxKilobytes / 1024
+    const maxSize = Number.isInteger(maxMegabytes) ? `${maxMegabytes} MB` : `${maxKilobytes} KB`
+    const message = `${fileLabel} must be ${maxSize} or smaller. Choose a smaller file before submitting.`
+    const error = input.parentElement?.querySelector('[data-upload-size-error]')
+
+    input.setCustomValidity(isTooLarge ? message : '')
+    if (error) {
+        error.textContent = isTooLarge ? message : ''
+        error.hidden = !isTooLarge
+    }
+
+    return !isTooLarge
+}
+
+document.addEventListener('change', (event) => {
+    const input = event.target
+    if (!(input instanceof HTMLInputElement) || input.type !== 'file' || !input.dataset.maxKilobytes) return
+
+    validateUploadSize(input)
+})
+
+document.addEventListener('submit', (event) => {
+    const form = event.target
+    if (!(form instanceof HTMLFormElement)) return
+
+    const invalidInput = Array.from(form.querySelectorAll('input[type="file"][data-max-kilobytes]'))
+        .find((input) => !validateUploadSize(input))
+
+    if (!invalidInput) return
+
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    invalidInput.reportValidity()
+}, true)
+
 async function saveOwnerSubmission(url, data) {
     const response = await fetch(url, {
         method: 'POST', body: data, credentials: 'same-origin',
