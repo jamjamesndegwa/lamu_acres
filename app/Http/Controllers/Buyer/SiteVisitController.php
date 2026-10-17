@@ -8,6 +8,7 @@ use App\Models\SiteVisit;
 use App\Services\Buyer\InterestWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class SiteVisitController extends Controller
@@ -39,5 +40,31 @@ class SiteVisitController extends Controller
         $workflow->acknowledge($siteVisit, $request->user());
 
         return back()->with('status', 'Viewing acknowledged.');
+    }
+
+    public function confirmDetails(Request $request, SiteVisit $siteVisit, InterestWorkflow $workflow): RedirectResponse
+    {
+        $this->authorize('confirmDetails', $siteVisit);
+        $workflow->confirmVisitDetails($siteVisit, $request->user());
+
+        return back()->with('status', 'Appointment details confirmed.');
+    }
+
+    public function requestReschedule(Request $request, SiteVisit $siteVisit, InterestWorkflow $workflow): RedirectResponse
+    {
+        $this->authorize('requestReschedule', $siteVisit);
+        $data = $request->validate([
+            'preferred_for' => ['required', 'date', 'after:now'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $workflow->requestVisitReschedule(
+            $siteVisit,
+            $request->user(),
+            Carbon::parse($data['preferred_for']),
+            $data['note'] ?? null,
+        );
+
+        return back()->with('status', 'Your reschedule request was sent to the visit desk. Your current appointment remains confirmed until staff responds.');
     }
 }

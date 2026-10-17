@@ -16,5 +16,6 @@
             </div>
             <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Send request</button>
         </form>
+        <p class="mt-4 text-xs text-stone-500">Confirmation appears in your in-app notifications. We attempt email when email updates are enabled and mail delivery is configured. SMS requires SMS updates to be enabled and an active Lamu Acres SMS provider.</p>
     </x-modal>
 </turbo-frame>

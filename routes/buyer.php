@@ -37,6 +37,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
         Route::get('/visits', [SiteVisitController::class, 'index'])->name('visits.index');
         Route::post('/visits/{siteVisit}/cancel', [SiteVisitController::class, 'cancel'])->name('visits.cancel');
         Route::post('/visits/{siteVisit}/acknowledgment', [SiteVisitController::class, 'acknowledge'])->name('visits.acknowledge');
+        Route::post('/visits/{siteVisit}/confirmation', [SiteVisitController::class, 'confirmDetails'])->name('visits.confirm-details');
+        Route::post('/visits/{siteVisit}/reschedule', [SiteVisitController::class, 'requestReschedule'])->name('visits.reschedule');
         Route::get('/offers', [OfferController::class, 'index'])->name('offers.index');
         Route::post('/offers/{offer}/withdraw', [OfferController::class, 'withdraw'])->name('offers.withdraw');
         Route::get('/buying-profile', [BuyingProfileController::class, 'edit'])->name('buying-profile');

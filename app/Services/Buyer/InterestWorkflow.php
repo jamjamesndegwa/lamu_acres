@@ -178,6 +178,7 @@ class InterestWorkflow
 
         if ($status === SiteVisitStatus::Confirmed) {
             $visit->confirmed_for = $confirmedFor ?? $visit->requested_for;
+            $visit->buyer_confirmed_at = null;
         }
 
         if ($status === SiteVisitStatus::Cancelled) {
@@ -198,13 +199,76 @@ class InterestWorkflow
         }
 
         if ($status === SiteVisitStatus::Confirmed) {
-            app(MessageDesk::class)->send($visit->buyer, MessageEvent::SiteVisitConfirmed, [
-                'name' => $visit->buyer->name,
-                'title' => $visit->property->title,
-                'status' => $status->label(),
-                'summary' => 'Your site visit for '.$visit->property->title.' is confirmed.',
-                'url' => route('buyer.visits.index'),
-            ], 'visit:'.$visit->id, new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
+            $this->notifyVisitConfirmed($visit);
+        }
+
+        return $visit;
+    }
+
+    public function confirmVisitDetails(SiteVisit $visit, User $buyer): SiteVisit
+    {
+        if ($visit->status !== SiteVisitStatus::Confirmed || $visit->buyer_confirmed_at !== null) {
+            throw ValidationException::withMessages(['visit' => 'This confirmed appointment can no longer be acknowledged.']);
+        }
+
+        $visit->buyer_confirmed_at = now();
+        $visit->save();
+        $this->visitTimeline($visit, 'Buyer confirmed the appointment details.', $buyer);
+        $this->notifyVisitTeam($visit, new SiteVisitUpdatedNotification($visit, 'The buyer confirmed the appointment details.'));
+
+        return $visit;
+    }
+
+    public function requestVisitReschedule(SiteVisit $visit, User $buyer, Carbon $preferredFor, ?string $note): SiteVisit
+    {
+        if ($visit->status !== SiteVisitStatus::Confirmed || $visit->reschedule_requested_at !== null) {
+            throw ValidationException::withMessages(['visit' => 'A reschedule request is not available for this visit.']);
+        }
+
+        $visit->forceFill([
+            'reschedule_requested_at' => now(),
+            'reschedule_preferred_for' => $preferredFor,
+            'reschedule_note' => filled($note) ? trim((string) $note) : null,
+        ])->save();
+        $this->visitTimeline($visit, 'Buyer requested a change to the confirmed visit time.', $buyer);
+        $this->notifyVisitTeam($visit, new SiteVisitUpdatedNotification($visit, 'The buyer requested a reschedule.'));
+
+        return $visit;
+    }
+
+    public function resolveVisitReschedule(
+        SiteVisit $visit,
+        User $actor,
+        bool $accept,
+        ?Carbon $confirmedFor,
+        string $response,
+    ): SiteVisit {
+        if ($visit->status !== SiteVisitStatus::Confirmed || $visit->reschedule_requested_at === null) {
+            throw ValidationException::withMessages(['visit' => 'There is no pending reschedule request for this visit.']);
+        }
+
+        if ($accept && $confirmedFor === null) {
+            throw ValidationException::withMessages(['confirmed_for' => 'Choose the confirmed date and time.']);
+        }
+
+        if ($accept) {
+            $visit->confirmed_for = $confirmedFor;
+            $visit->buyer_confirmed_at = null;
+        }
+
+        $decision = $accept ? 'accepted' : 'declined';
+        $visit->forceFill([
+            'reschedule_requested_at' => null,
+            'reschedule_preferred_for' => null,
+            'reschedule_note' => null,
+        ])->save();
+        $summary = 'Your reschedule request was '.$decision.'. '.trim($response);
+        $this->visitTimeline($visit, 'Reschedule request '.$decision.'. '.trim($response), $actor);
+
+        if ($accept) {
+            $this->notifyVisitConfirmed($visit);
+        } else {
+            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, $summary));
         }
 
         return $visit;
@@ -350,5 +414,29 @@ class InterestWorkflow
     private function notifyDesk(object $notification): void
     {
         Notification::send(User::permission('staff.buyers')->get(), $notification);
+    }
+
+    private function notifyVisitTeam(SiteVisit $visit, object $notification): void
+    {
+        $recipients = User::permission('staff.buyers')->get();
+        if ($visit->assignee !== null) {
+            $recipients->push($visit->assignee);
+        }
+
+        Notification::send($recipients->unique('id'), $notification);
+    }
+
+    private function notifyVisitConfirmed(SiteVisit $visit): void
+    {
+        $confirmedFor = $visit->confirmed_for?->timezone(config('app.timezone'))->toDayDateTimeString() ?? 'a time to be confirmed';
+        $summary = 'Your site visit for '.$visit->property->title.' is confirmed for '.$confirmedFor.'.';
+
+        app(MessageDesk::class)->send($visit->buyer, MessageEvent::SiteVisitConfirmed, [
+            'name' => $visit->buyer->name,
+            'title' => $visit->property->title,
+            'status' => SiteVisitStatus::Confirmed->label(),
+            'summary' => $summary,
+            'url' => route('buyer.visits.index'),
+        ], 'visit:'.$visit->id.':'.$visit->confirmed_for?->timestamp, new SiteVisitUpdatedNotification($visit, $summary));
     }
 }

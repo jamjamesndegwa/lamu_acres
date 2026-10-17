@@ -76,4 +76,24 @@ class SiteVisitController extends Controller
 
         return back()->with('status', 'Visit updated.');
     }
+
+    public function resolveReschedule(Request $request, SiteVisit $siteVisit, InterestWorkflow $workflow): RedirectResponse
+    {
+        $this->authorize('manage', $siteVisit);
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['accept', 'decline'])],
+            'confirmed_for' => ['required_if:decision,accept', 'nullable', 'date', 'after:now'],
+            'response' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $workflow->resolveVisitReschedule(
+            $siteVisit,
+            $request->user(),
+            $data['decision'] === 'accept',
+            isset($data['confirmed_for']) ? Carbon::parse($data['confirmed_for']) : null,
+            $data['response'],
+        );
+
+        return back()->with('status', 'Reschedule request resolved and buyer notified.');
+    }
 }

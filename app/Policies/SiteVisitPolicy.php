@@ -60,4 +60,20 @@ class SiteVisitPolicy
             && $siteVisit->status === SiteVisitStatus::Completed
             && $siteVisit->buyer_acknowledged_at === null;
     }
+
+    public function confirmDetails(User $user, SiteVisit $siteVisit): bool
+    {
+        return $siteVisit->isOwnedBy($user)
+            && $user->hasPermission('workspace.buyer')
+            && $siteVisit->status === SiteVisitStatus::Confirmed
+            && $siteVisit->buyer_confirmed_at === null;
+    }
+
+    public function requestReschedule(User $user, SiteVisit $siteVisit): bool
+    {
+        return $siteVisit->isOwnedBy($user)
+            && $user->hasPermission('workspace.buyer')
+            && $siteVisit->status === SiteVisitStatus::Confirmed
+            && $siteVisit->reschedule_requested_at === null;
+    }
 }
