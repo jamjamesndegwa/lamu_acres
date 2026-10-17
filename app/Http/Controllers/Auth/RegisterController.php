@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Services\Access\RoleAssigner;
 use App\Services\Communications\MessageDesk;
+use App\Support\SafeListingReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +17,11 @@ use Illuminate\View\View;
 
 class RegisterController extends Controller
 {
-    public function create(Request $request): View
+    public function create(Request $request, SafeListingReturn $listingReturn): View
     {
         return view('auth.register', [
             'capability' => PartnerCapability::tryFrom((string) $request->query('capability', ''))?->value,
+            'returnTo' => $listingReturn->remember($request),
         ]);
     }
 
@@ -44,6 +46,6 @@ class RegisterController extends Controller
             return redirect()->route('account.applications.create', ['capability' => $capability]);
         }
 
-        return redirect()->route('buyer.dashboard');
+        return redirect()->intended(route('buyer.dashboard'));
     }
 }

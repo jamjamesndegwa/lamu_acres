@@ -14,7 +14,7 @@
         <a href="{{ route('register', ['capability' => 'broker']) }}" class="underline">Register as a broker</a>
     </div>
 
-    <form method="POST" action="{{ route('register') }}" class="mt-8 space-y-4">
+    <form method="POST" action="{{ route('register', array_filter(['return_to' => $returnTo ?? null])) }}" class="mt-8 space-y-4">
         @csrf
         @if ($selectedCapability)
             <input type="hidden" name="capability" value="{{ $selectedCapability }}">
@@ -47,5 +47,5 @@
         <button type="submit" class="w-full rounded-full bg-lamu-900 px-4 py-3 text-sm font-medium text-white">{{ $selectedCapability ? 'Create account & continue to '.$selectedCapability.' application' : 'Create account' }}</button>
     </form>
 
-    <p class="mt-6 text-sm text-stone-600">Already have an account? <a href="{{ route('login', array_filter(['capability' => $selectedCapability])) }}" class="font-medium text-lamu-800">{{ $selectedCapability ? 'Sign in to continue your '.$selectedCapability.' application' : 'Sign in' }}</a></p>
+    <p class="mt-6 text-sm text-stone-600">Already have an account? <a href="{{ route('login', array_filter(['capability' => $selectedCapability, 'return_to' => $returnTo ?? null])) }}" class="font-medium text-lamu-800">{{ $selectedCapability ? 'Sign in to continue your '.$selectedCapability.' application' : 'Sign in' }}</a></p>
 </x-auth-layout>

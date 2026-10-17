@@ -288,7 +288,7 @@
                     <a href="{{ route('land.documents.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Request documents</a>
                 @endcan
             @else
-                <a href="{{ route('login') }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Login to enquire or save</a>
+                <a href="{{ route('login', ['return_to' => $property->publicUrl()]) }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Login to enquire or save</a>
             @endauth
         </div>
         <section class="mt-6 border-t border-sand-200 pt-5">

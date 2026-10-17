@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\PartnerCapability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\SafeListingReturn;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,11 +13,14 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    public function create(Request $request): View
+    public function create(Request $request, SafeListingReturn $listingReturn): View
     {
         $capability = PartnerCapability::tryFrom((string) $request->query('capability', ''))?->value;
 
-        return view('auth.login', ['capability' => $capability]);
+        return view('auth.login', [
+            'capability' => $capability,
+            'returnTo' => $listingReturn->remember($request),
+        ]);
     }
 
     public function store(LoginRequest $request): RedirectResponse
