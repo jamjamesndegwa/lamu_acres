@@ -54,6 +54,14 @@
                 <p class="mt-2 text-sm">{{ $transaction->agreed_price ? 'KSh '.number_format($transaction->agreed_price) : 'No agreed price' }}</p>
                 <p class="mt-1 text-sm text-stone-600">{{ $transaction->acreage ? $transaction->acreage.' acres' : 'Acreage not stated' }}</p>
             </article>
+            @if ($transaction->enquiry?->purchase_request)
+                <article class="rounded-2xl border border-sand-200 bg-white p-5">
+                    <h2 class="font-semibold text-lamu-900">Buyer purchase request</h2>
+                    <p class="mt-2 text-sm">Proposed price: KSh {{ number_format($transaction->enquiry->requested_price) }}</p>
+                    <p class="mt-1 text-sm text-stone-600">Requested area: {{ $transaction->enquiry->requested_acreage ? $transaction->enquiry->requested_acreage.' acres' : 'Full offered area' }}</p>
+                    <p class="mt-2 whitespace-pre-line text-sm text-stone-600">{{ $transaction->enquiry->message }}</p>
+                </article>
+            @endif
             <article class="rounded-2xl border border-sand-200 bg-white p-5">
                 <h2 class="font-semibold text-lamu-900">Origin</h2>
                 <p class="mt-2 text-sm">{{ $transaction->origin->label() }}</p>
@@ -134,6 +142,9 @@
             <p class="mt-2">{{ $transaction->origin->label() }}</p>
             @if ($transaction->enquiry)
                 <p class="mt-1">Enquiry on {{ $transaction->enquiry->property?->title ?? 'a property' }}</p>
+                @if ($transaction->enquiry->purchase_request)
+                    <p class="mt-1">Buyer request: KSh {{ number_format($transaction->enquiry->requested_price) }} · {{ $transaction->enquiry->requested_acreage ? $transaction->enquiry->requested_acreage.' acres' : 'full offered area' }}</p>
+                @endif
             @endif
             @if ($transaction->introduction)
                 <p class="mt-1">Referral {{ $transaction->introduction->reference }} · {{ $transaction->introduction->broker?->name ?? $transaction->introduction->buyer_name }}</p>

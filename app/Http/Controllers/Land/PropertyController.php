@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Land;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Buyer\StoreEnquiryRequest;
+use App\Http\Requests\Buyer\StorePurchaseRequest;
+use App\Models\Enquiry;
 use App\Models\Property;
 use App\Models\SavedProperty;
 use App\Services\Buyer\EnquiryRecorder;
 use App\Services\Buyer\SavedPropertyService;
+use App\Services\Sales\SalesPipeline;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +49,7 @@ class PropertyController extends Controller
         abort_unless($property->isPublished(), 404);
         $this->authorize('enquire', $property);
 
-        if (! Turbo::wantsModal(request())) {
+        if (! Turbo::wantsModal(request()) && ! session()->has('errors')) {
             return redirect()->to($property->publicUrl());
         }
 
@@ -60,6 +63,55 @@ class PropertyController extends Controller
         return redirect()
             ->route('buyer.enquiries.index')
             ->with('status', 'Your enquiry has been sent.');
+    }
+
+    public function createPurchaseRequest(Property $property): View|RedirectResponse
+    {
+        abort_unless($property->isPubliclyListed() && ! $property->isLease(), 404);
+        $this->authorize('enquire', $property);
+
+        if (! Turbo::wantsModal(request())) {
+            return redirect()->to($property->publicUrl());
+        }
+
+        return view('land.purchase-request', ['property' => $property]);
+    }
+
+    public function storePurchaseRequest(
+        StorePurchaseRequest $request,
+        Property $property,
+        EnquiryRecorder $recorder,
+        SalesPipeline $pipeline,
+    ): RedirectResponse {
+        $existingRequest = Enquiry::query()
+            ->where('buyer_id', $request->user()->id)
+            ->where('property_id', $property->id)
+            ->where('purchase_request', true)
+            ->whereHas('salesTransaction', fn ($query) => $query
+                ->where('stage', '!=', 'completed')
+                ->where(fn ($query) => $query->whereNull('outcome')->orWhere('outcome', 'disputed')))
+            ->latest()
+            ->first();
+
+        if ($existingRequest !== null) {
+            return redirect()
+                ->route('buyer.enquiries.show', $existingRequest)
+                ->with('status', 'You already have an active purchase request for this property.');
+        }
+
+        $enquiry = $recorder->submitPurchaseRequest(
+            $request->user(),
+            $property,
+            (int) $request->validated('requested_price'),
+            $request->filled('requested_acreage') ? (float) $request->validated('requested_acreage') : null,
+            $request->validated('message'),
+            $request,
+            $pipeline,
+        );
+
+        return redirect()
+            ->route('buyer.enquiries.show', $enquiry)
+            ->with('status', 'Your purchase request has been sent to the Lamu Acres sales desk.');
     }
 
     public function save(Request $request, Property $property, SavedPropertyService $saved): RedirectResponse

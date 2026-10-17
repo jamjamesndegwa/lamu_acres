@@ -9,7 +9,9 @@ use App\Models\BrokerIntroduction;
 use App\Models\Enquiry;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Sales\SalesPipeline;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class EnquiryRecorder
@@ -21,15 +23,100 @@ class EnquiryRecorder
         $this->guardAgainstDuplicate($buyer, $property, $message);
         $this->guardAgainstSpam($message);
 
-        $introduction = $this->matchingIntroduction($buyer, $property);
+        $enquiry = $this->createEnquiry($buyer, $property, $message, $request);
 
-        $enquiry = Enquiry::query()->create([
+        event(new EnquirySubmitted($enquiry));
+
+        return $enquiry;
+    }
+
+    public function submitPurchaseRequest(
+        User $buyer,
+        Property $property,
+        int $requestedPrice,
+        ?float $requestedAcreage,
+        ?string $note,
+        Request $request,
+        SalesPipeline $pipeline,
+    ): Enquiry {
+        $area = $requestedAcreage ?? $property->offeredAcreage();
+        $message = 'Buyer request to purchase '.$property->title.'. Proposed price: KSh '.number_format($requestedPrice).'. Requested area: '.rtrim(rtrim(number_format($area, 4, '.', ''), '0'), '.').' acres.';
+
+        $existingRequest = Enquiry::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('property_id', $property->id)
+            ->where('purchase_request', true)
+            ->whereHas('salesTransaction', fn ($query) => $query
+                ->whereNull('outcome')
+                ->where('stage', '!=', 'completed'))
+            ->exists();
+
+        if ($existingRequest) {
+            throw ValidationException::withMessages([
+                'requested_price' => 'You already have an active purchase request for this property. Open it from your enquiries to review its progress.',
+            ]);
+        }
+
+        if (filled($note)) {
+            $message .= "\n\nBuyer message: ".trim((string) $note);
+        }
+
+        $this->guardAgainstDuplicate($buyer, $property, $message);
+        $this->guardAgainstSpam($message);
+
+        return DB::transaction(function () use ($buyer, $property, $requestedPrice, $requestedAcreage, $message, $request, $pipeline): Enquiry {
+            $enquiry = $this->createEnquiry(
+                $buyer,
+                $property,
+                $message,
+                $request,
+                true,
+                $requestedPrice,
+                $requestedAcreage,
+            );
+
+            $assignedTo = User::permission('staff.sales')->orderBy('id')->value('id')
+                ?? User::permission('staff.buyers')->orderBy('id')->value('id')
+                ?? $buyer->id;
+
+            $transaction = $pipeline->open($buyer, [
+                'origin' => 'enquiry',
+                'property_id' => $property->id,
+                'enquiry_id' => $enquiry->id,
+                'assigned_to' => $assignedTo,
+                'acreage' => $area,
+            ]);
+
+            $pipeline->recordOffer($transaction, $buyer, 0, [
+                'amount' => $requestedPrice,
+                'note' => 'Buyer-submitted purchase request',
+            ]);
+
+            event(new EnquirySubmitted($enquiry));
+
+            return $enquiry;
+        });
+    }
+
+    private function createEnquiry(
+        User $buyer,
+        Property $property,
+        string $message,
+        Request $request,
+        bool $purchaseRequest = false,
+        ?int $requestedPrice = null,
+        ?float $requestedAcreage = null,
+    ): Enquiry {
+        return Enquiry::query()->create([
             'buyer_id' => $buyer->id,
             'property_id' => $property->id,
-            'broker_introduction_id' => $introduction?->id,
+            'broker_introduction_id' => $this->matchingIntroduction($buyer, $property)?->id,
             'status' => EnquiryStatus::New,
             'lead_status' => LeadStatus::New,
             'message' => $message,
+            'purchase_request' => $purchaseRequest,
+            'requested_price' => $requestedPrice,
+            'requested_acreage' => $requestedAcreage,
             'referrer_url' => $this->referrer($request, $property),
             'campaign' => $this->campaign($request),
             'source' => 'website',
@@ -37,10 +124,6 @@ class EnquiryRecorder
             'user_agent' => substr((string) $request->userAgent(), 0, 2000),
             'flagged_as_spam' => false,
         ]);
-
-        event(new EnquirySubmitted($enquiry));
-
-        return $enquiry;
     }
 
     private function matchingIntroduction(User $buyer, Property $property): ?BrokerIntroduction

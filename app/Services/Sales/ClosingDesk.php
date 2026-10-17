@@ -131,7 +131,7 @@ class ClosingDesk
             $locked->lock_version = $version + 1;
             $locked->save();
 
-            $this->pipeline->timeline($locked, $actor, 'Sale completed.');
+            $this->pipeline->timeline($locked, $actor, 'Sale completed.', true);
             $this->pipeline->audit($locked, $actor, 'sale_completed', [
                 'agreed_price' => $locked->agreed_price,
                 'acreage' => (string) $locked->acreage,

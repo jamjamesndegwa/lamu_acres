@@ -33,7 +33,13 @@
     </section>
 
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
-        <h2 class="font-semibold text-lamu-900">Enquiry</h2>
+        <h2 class="font-semibold text-lamu-900">{{ $enquiry->purchase_request ? 'Purchase request' : 'Enquiry' }}</h2>
+        @if ($enquiry->purchase_request)
+            <p class="mt-2 text-sm font-medium text-lamu-900">Proposed price: KSh {{ number_format($enquiry->requested_price) }} · Requested area: {{ $enquiry->requested_acreage ? $enquiry->requested_acreage.' acres' : 'Full offered area' }}</p>
+            @if ($enquiry->salesTransaction)
+                <p class="mt-1 text-sm text-stone-600">Sales case <a class="font-medium text-lamu-800 underline" href="{{ route('staff.sales.show', $enquiry->salesTransaction) }}">{{ $enquiry->salesTransaction->reference }}</a> · {{ $enquiry->salesTransaction->stage->label() }}</p>
+            @endif
+        @endif
         <p class="mt-3 whitespace-pre-line text-sm text-stone-700">{{ $enquiry->message }}</p>
         <dl class="mt-4 grid gap-2 text-sm text-stone-600 sm:grid-cols-2">
             <div>

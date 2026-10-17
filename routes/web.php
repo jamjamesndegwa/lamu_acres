@@ -56,6 +56,10 @@ Route::middleware(['auth', 'private.cache'])->group(function () {
     Route::post('/land/{property}/enquiries', [PropertyController::class, 'storeEnquiry'])
         ->middleware('throttle:enquiries')
         ->name('land.enquiries.store');
+    Route::get('/land/{property}/purchase-request', [PropertyController::class, 'createPurchaseRequest'])->name('land.purchase-requests.create');
+    Route::post('/land/{property}/purchase-request', [PropertyController::class, 'storePurchaseRequest'])
+        ->middleware('throttle:enquiries')
+        ->name('land.purchase-requests.store');
     Route::get('/land/{property}/visits', [ListingInterestController::class, 'createVisit'])->name('land.visits.create');
     Route::post('/land/{property}/visits', [ListingInterestController::class, 'storeVisit'])->name('land.visits.store');
     Route::get('/land/{property}/documents', [ListingInterestController::class, 'createDocuments'])->name('land.documents.create');

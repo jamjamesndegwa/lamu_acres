@@ -283,6 +283,9 @@
                             <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save property</button>
                         </form>
                     @endif
+                    @if (! $property->isLease())
+                        <a href="{{ route('land.purchase-requests.create', $property) }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Request to buy</a>
+                    @endif
                     <a href="{{ route('land.enquiries.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Enquire</a>
                     <a href="{{ route('land.visits.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Book site visit</a>
                     <a href="{{ route('land.documents.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-5 py-3 text-sm font-medium text-lamu-900">Request documents</a>

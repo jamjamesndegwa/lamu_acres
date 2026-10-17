@@ -39,6 +39,9 @@
                 <tr class="border-b border-sand-200 last:border-b-0 {{ $enquiry->lead_status->value === 'new' ? 'bg-lamu-100/40' : '' }}">
                     <td class="px-4 py-4 font-medium text-lamu-900">
                         {{ $enquiry->property->title }}
+                        @if ($enquiry->purchase_request)
+                            <span class="ml-2 rounded-full bg-lamu-100 px-2 py-0.5 text-xs font-medium text-lamu-900">Purchase request</span>
+                        @endif
                         @if ($enquiry->lead_status->value === 'new')
                             <span class="ml-2 rounded-full bg-lamu-900 px-2 py-0.5 text-xs font-medium text-white">New lead</span>
                         @endif

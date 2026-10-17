@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'buyer_id',
@@ -26,6 +27,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'ip_address',
     'user_agent',
     'flagged_as_spam',
+    'purchase_request',
+    'requested_price',
+    'requested_acreage',
     'responded_at',
     'closed_at',
 ])]
@@ -40,6 +44,9 @@ class Enquiry extends Model
             'status' => EnquiryStatus::class,
             'lead_status' => LeadStatus::class,
             'flagged_as_spam' => 'boolean',
+            'purchase_request' => 'boolean',
+            'requested_price' => 'integer',
+            'requested_acreage' => 'decimal:4',
             'responded_at' => 'datetime',
             'closed_at' => 'datetime',
         ];
@@ -63,6 +70,11 @@ class Enquiry extends Model
     public function brokerIntroduction(): BelongsTo
     {
         return $this->belongsTo(BrokerIntroduction::class);
+    }
+
+    public function salesTransaction(): HasOne
+    {
+        return $this->hasOne(SalesTransaction::class);
     }
 
     public function responses(): HasMany

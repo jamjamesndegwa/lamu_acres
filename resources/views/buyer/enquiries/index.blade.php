@@ -1,11 +1,12 @@
-<x-workspace-layout heading="My Enquiries">
-    <p class="mt-3 max-w-3xl text-stone-700">Questions you have sent about specific properties, and the replies that were shared with you.</p>
+<x-workspace-layout :heading="$purchaseRequestsOnly ? 'My Purchase Requests' : 'My Enquiries'">
+    <p class="mt-3 max-w-3xl text-stone-700">{{ $purchaseRequestsOnly ? 'Purchase proposals you have sent and the sales progress shared by Lamu Acres.' : 'Questions and purchase proposals you have sent about specific properties, with replies and progress updates.' }}</p>
+    <p class="mt-3 text-sm"><a href="{{ route('buyer.enquiries.index', ['type' => 'purchase']) }}" class="font-medium text-lamu-800 underline">View purchase requests</a> · <a href="{{ route('buyer.enquiries.index') }}" class="font-medium text-lamu-800 underline">View all enquiries</a></p>
 
     @if ($enquiries->isNotEmpty())
         <x-buyer.next-step
-            label="Open the conversation"
+            label="Open your latest request"
             :href="route('buyer.enquiries.show', $enquiries->first())"
-            detail="Read the replies, then book a visit or make an offer from an approved match."
+            detail="Read replies and track any linked purchase request through the sales process."
         />
     @endif
 
@@ -17,6 +18,9 @@
                     <td class="px-4 py-4">
                         <a href="{{ route('buyer.enquiries.show', $enquiry) }}" class="font-medium text-lamu-900 hover:underline">{{ $enquiry->property->title }}</a>
                         <p class="text-xs text-stone-500">{{ $enquiry->property->reference }} · {{ $enquiry->property->locationLabel() }}</p>
+                        @if ($enquiry->purchase_request)
+                            <p class="mt-1 text-xs font-medium text-lamu-800">Purchase request · {{ $enquiry->salesTransaction?->outcome?->label() ?? $enquiry->salesTransaction?->stage?->label() ?? 'Submitted' }}</p>
+                        @endif
                     </td>
                     <td class="px-4 py-4 text-sm text-stone-700">{{ \Illuminate\Support\Str::limit($enquiry->message, 80) }}</td>
                     <td class="px-4 py-4 text-sm"><x-status-badge :label="$enquiry->status->label()" /></td>

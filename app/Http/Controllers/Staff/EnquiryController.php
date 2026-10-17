@@ -51,7 +51,7 @@ class EnquiryController extends Controller
     {
         $this->authorize('view', $enquiry);
 
-        $enquiry->load(['buyer.buyerProfile', 'property', 'assignee', 'brokerIntroduction', 'responses.author']);
+        $enquiry->load(['buyer.buyerProfile', 'property', 'assignee', 'brokerIntroduction', 'responses.author', 'salesTransaction']);
 
         return view('staff.enquiries.show', [
             'enquiry' => $enquiry,

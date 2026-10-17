@@ -46,7 +46,14 @@ class SalesPipeline
             'opened_at' => now(),
         ]);
 
-        $this->timeline($transaction, $actor, 'Opened from '.$origin->label().'.');
+        $isPurchaseRequest = $links['enquiry_id'] !== null
+            && Enquiry::query()->whereKey($links['enquiry_id'])->where('purchase_request', true)->exists();
+        $this->timeline(
+            $transaction,
+            $actor,
+            $isPurchaseRequest ? 'Purchase request submitted.' : 'Opened from '.$origin->label().'.',
+            $isPurchaseRequest,
+        );
         $this->audit($transaction, $actor, 'opened', ['origin' => $origin->value]);
         $assignee = User::query()->find($transaction->assigned_to);
         if ($assignee !== null && ! $assignee->is($actor) && $assignee->hasPermission('staff.sales')) {
@@ -67,8 +74,13 @@ class SalesPipeline
             if ($agent->hasPermission('staff.sales')) {
                 $agent->notify(new WorkAssignedNotification('Sales case', $locked->id, route('staff.sales.show', $locked)));
             }
-            $this->timeline($locked, $actor, 'Assigned to '.$agent->name.'.');
+            $this->timeline($locked, $actor, 'Assigned to '.$agent->name.'.', true);
             $this->audit($locked, $actor, 'assigned', ['agent_id' => $agent->id]);
+            $locked->buyer?->notify(new TemplatedDeskNotification(
+                'Sales contact assigned',
+                'A Lamu Acres contact has been assigned to your purchase request.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
         });
     }
 
@@ -91,7 +103,7 @@ class SalesPipeline
 
             $from = $locked->stage;
             $locked->stage = $stage;
-            $this->timeline($locked, $actor, 'Stage moved from '.$from->label().' to '.$stage->label().'.');
+            $this->timeline($locked, $actor, 'Stage moved from '.$from->label().' to '.$stage->label().'.', true);
             $this->audit($locked, $actor, 'stage_changed', ['from' => $from->value, 'to' => $stage->value]);
             $locked->buyer?->notify(new TemplatedDeskNotification(
                 'Sale progress updated',
@@ -134,7 +146,13 @@ class SalesPipeline
             $locked->outcome = $outcome;
             $locked->closed_at = $outcome->terminal() ? now() : null;
             $this->timeline($locked, $actor, $outcome->label().': '.$reason);
+            $this->timeline($locked, $actor, 'Request status updated: '.$outcome->label().'.', true);
             $this->audit($locked, $actor, 'outcome_'.$outcome->value, ['reason' => $reason]);
+            $locked->buyer?->notify(new TemplatedDeskNotification(
+                'Purchase request update',
+                'Your purchase request is now '.$outcome->label().'. Open the related record for details.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
         });
     }
 
@@ -147,8 +165,13 @@ class SalesPipeline
 
             $locked->outcome = null;
             $locked->closed_at = null;
-            $this->timeline($locked, $actor, 'Dispute resolved. The transaction returned to '.$locked->stage->label().'.');
+            $this->timeline($locked, $actor, 'Dispute resolved. The transaction returned to '.$locked->stage->label().'.', true);
             $this->audit($locked, $actor, 'dispute_resolved', ['stage' => $locked->stage->value]);
+            $locked->buyer?->notify(new TemplatedDeskNotification(
+                'Purchase request updated',
+                'Your purchase request is active again at '.$locked->stage->label().'.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
         });
     }
 
@@ -157,8 +180,13 @@ class SalesPipeline
         return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($price, $actor): void {
             $this->guardOpen($locked);
             $locked->agreed_price = $price;
-            $this->timeline($locked, $actor, 'Agreed price recorded as KSh '.number_format($price).'.');
+            $this->timeline($locked, $actor, 'Agreed price recorded as KSh '.number_format($price).'.', true);
             $this->audit($locked, $actor, 'price_agreed', ['agreed_price' => $price]);
+            $locked->buyer?->notify(new TemplatedDeskNotification(
+                'Agreed price updated',
+                'The agreed price for your purchase request is KSh '.number_format($price).'.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
         });
     }
 
@@ -180,8 +208,16 @@ class SalesPipeline
             if (filled($data['seller_response'] ?? null)) {
                 $summary .= ' Seller response: '.$data['seller_response'].'.';
             }
-            $this->timeline($locked, $actor, $summary);
+            $this->timeline($locked, $actor, $summary, true);
             $this->audit($locked, $actor, 'offer_recorded', ['amount' => $data['amount']]);
+
+            if ($locked->buyer !== null && ! $locked->buyer->is($actor)) {
+                $locked->buyer->notify(new TemplatedDeskNotification(
+                    'Offer updated',
+                    $summary,
+                    $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+                ));
+            }
         });
     }
 
@@ -227,11 +263,12 @@ class SalesPipeline
         });
     }
 
-    public function timeline(SalesTransaction $transaction, ?User $actor, string $summary): void
+    public function timeline(SalesTransaction $transaction, ?User $actor, string $summary, bool $visibleToBuyer = false): void
     {
         $transaction->timeline()->create([
             'actor_id' => $actor?->id,
             'summary' => $summary,
+            'visible_to_buyer' => $visibleToBuyer,
         ]);
     }
 

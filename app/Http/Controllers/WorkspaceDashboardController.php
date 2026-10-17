@@ -119,7 +119,8 @@ class WorkspaceDashboardController extends Controller
             ['label' => 'Open searches', 'value' => SourcingRequest::query()->where('buyer_id', $buyerId)->where('status', '!=', SourcingRequestStatus::Closed)->count(), 'href' => route('buyer.sourcing.index')],
             ['label' => 'Saved properties', 'value' => SavedProperty::query()->where('user_id', $buyerId)->count(), 'href' => route('buyer.saved.index')],
             ['label' => 'Shortlisted matches', 'value' => PropertyMatch::query()->where('buyer_id', $buyerId)->where('status', PropertyMatchStatus::Shortlisted)->count(), 'href' => route('buyer.matches.index')],
-            ['label' => 'Enquiries', 'value' => Enquiry::query()->where('buyer_id', $buyerId)->count(), 'href' => route('buyer.enquiries.index')],
+            ['label' => 'Enquiries', 'value' => Enquiry::query()->where('buyer_id', $buyerId)->where('purchase_request', false)->count(), 'href' => route('buyer.enquiries.index')],
+            ['label' => 'Purchase requests', 'value' => Enquiry::query()->where('buyer_id', $buyerId)->where('purchase_request', true)->count(), 'href' => route('buyer.enquiries.index', ['type' => 'purchase'])],
             ['label' => 'Upcoming visits', 'value' => SiteVisit::query()->where('buyer_id', $buyerId)->whereIn('status', [SiteVisitStatus::Requested, SiteVisitStatus::Confirmed])->count(), 'href' => route('buyer.visits.index')],
             ['label' => 'Open offers', 'value' => Offer::query()->where('buyer_id', $buyerId)->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])->count(), 'href' => route('buyer.offers.index')],
         ];
@@ -136,6 +137,13 @@ class WorkspaceDashboardController extends Controller
         $offers = Offer::query()->where('buyer_id', $buyerId)->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])->count();
         $saved = SavedProperty::query()->where('user_id', $buyerId)->count();
         $enquiries = Enquiry::query()->where('buyer_id', $buyerId)->count();
+        $activePurchaseRequests = Enquiry::query()
+            ->where('buyer_id', $buyerId)
+            ->where('purchase_request', true)
+            ->whereHas('salesTransaction', fn ($query) => $query
+                ->where('stage', '!=', 'completed')
+                ->where(fn ($query) => $query->whereNull('outcome')->orWhere('outcome', 'disputed')))
+            ->exists();
 
         if ($searches === 0 && $saved === 0) {
             return ['label' => 'Find land for me', 'detail' => 'Choose an area on the map and record the size, budget, and use you want.', 'href' => route('buyer.sourcing.create'), 'frame' => 'modal'];
@@ -143,6 +151,10 @@ class WorkspaceDashboardController extends Controller
 
         if ($matches > 0) {
             return ['label' => 'Review your matches', 'detail' => 'Compare the shortlist, then enquire, book a visit, or make an offer.', 'href' => route('buyer.matches.index')];
+        }
+
+        if ($activePurchaseRequests) {
+            return ['label' => 'Track your purchase request', 'detail' => 'See the latest sales stage and replies from the Lamu Acres desk.', 'href' => route('buyer.enquiries.index', ['type' => 'purchase'])];
         }
 
         if ($visits > 0) {

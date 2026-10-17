@@ -184,7 +184,7 @@ class SalesPipelineController extends Controller
 
     private function query(Request $request)
     {
-        return SalesTransaction::query()->with(['property:id,title,slug', 'buyer:id,name', 'agent:id,name']);
+        return SalesTransaction::query()->with(['property:id,title,slug', 'buyer:id,name', 'agent:id,name', 'enquiry']);
     }
 
     private function authorizeDesk(Request $request): void
