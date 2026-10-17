@@ -76,11 +76,13 @@ class SalesPipeline
             }
             $this->timeline($locked, $actor, 'Assigned to '.$agent->name.'.', true);
             $this->audit($locked, $actor, 'assigned', ['agent_id' => $agent->id]);
-            $locked->buyer?->notify(new TemplatedDeskNotification(
-                'Sales contact assigned',
-                'A Lamu Acres contact has been assigned to your purchase request.',
-                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
-            ));
+            if ($locked->enquiry?->purchase_request) {
+                $locked->buyer?->notify(new TemplatedDeskNotification(
+                    'Sales contact assigned',
+                    'A Lamu Acres contact has been assigned to your purchase request.',
+                    route('buyer.enquiries.show', $locked->enquiry_id),
+                ));
+            }
         });
     }
 

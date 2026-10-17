@@ -64,7 +64,7 @@ class EnquiryRecorder
         $this->guardAgainstDuplicate($buyer, $property, $message);
         $this->guardAgainstSpam($message);
 
-        return DB::transaction(function () use ($buyer, $property, $requestedPrice, $requestedAcreage, $message, $request, $pipeline): Enquiry {
+        return DB::transaction(function () use ($buyer, $property, $requestedPrice, $requestedAcreage, $area, $message, $request, $pipeline): Enquiry {
             $enquiry = $this->createEnquiry(
                 $buyer,
                 $property,
