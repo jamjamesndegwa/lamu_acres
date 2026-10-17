@@ -9,9 +9,13 @@ async function saveOwnerSubmission(url, data) {
         method: 'POST', body: data, credentials: 'same-origin',
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     })
-    const result = await response.json().catch(() => ({}))
+    const body = await response.text()
+    let result = {}
+    try { result = JSON.parse(body) } catch {}
     if (!response.ok || !result.id) {
-        throw new Error(Object.values(result.errors ?? {}).flat().join(' ') || result.message || 'The request could not be saved. Please try again.')
+        const details = Object.values(result.errors ?? {}).flat().join(' ')
+        const status = `Request failed (HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}).`
+        throw new Error(details || result.message || status)
     }
     return result
 }
@@ -181,10 +185,13 @@ document.addEventListener('submit', async (event) => {
                     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin',
                 })
-                const result = await response.json().catch(() => ({}))
+                const body = await response.text()
+                let result = {}
+                try { result = JSON.parse(body) } catch {}
                 if (!response.ok || !result.id) {
                     const details = Object.values(result.errors ?? {}).flat().join(' ')
-                    throw new Error(details || result.message || 'The document could not be uploaded. Please try again.')
+                    const status = `Upload failed (HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}).`
+                    throw new Error(details || result.message || status)
                 }
                 completed++
                 input.value = ''

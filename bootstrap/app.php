@@ -2,12 +2,13 @@
 
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureWorkspace;
+use App\Http\Middleware\LogFileUploadFailures;
 use App\Http\Middleware\PreventPrivateCaching;
-use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -34,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AuthenticateSession::class,
             EnsureAccountIsActive::class,
         ]);
+
+        $middleware->prepend(LogFileUploadFailures::class);
 
         $middleware->alias([
             'workspace' => EnsureWorkspace::class,

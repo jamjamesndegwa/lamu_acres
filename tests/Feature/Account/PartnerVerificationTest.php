@@ -4,19 +4,46 @@ namespace Tests\Feature\Account;
 
 use App\Enums\CapabilityApplicationStatus;
 use App\Enums\PartnerCapability;
+use App\Http\Middleware\LogFileUploadFailures;
 use App\Models\Property;
 use App\Models\User;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Access\RoleAssigner;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PartnerVerificationTest extends FoundationTestCase
 {
+    public function test_upload_failures_are_logged_with_route_file_and_exception_details(): void
+    {
+        Log::spy();
+        $request = Request::create('/account/applications', 'POST');
+        $request->files->set('identity', UploadedFile::fake()->create('identity.pdf', 10, 'application/pdf'));
+        $route = Route::post('/account/applications', fn () => null)->name('account.applications.store');
+        $request->setRouteResolver(fn () => $route);
+
+        try {
+            app(LogFileUploadFailures::class)->handle($request, fn () => throw new \RuntimeException('Cloudflare storage unavailable'));
+            $this->fail('The upload exception should continue through Laravel exception handling.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Cloudflare storage unavailable', $exception->getMessage());
+        }
+
+        Log::shouldHaveReceived('error')->once()->with('File upload request failed.', \Mockery::on(
+            fn (array $context): bool => $context['route'] === 'account.applications.store'
+                && $context['files'][0]['field'] === 'identity'
+                && $context['files'][0]['size_bytes'] > 0
+                && $context['exception_message'] === 'Cloudflare storage unavailable',
+        ));
+    }
+
     public function test_manual_contact_verification_requires_enabled_configuration_and_authorized_non_self_reviewer(): void
     {
         Storage::fake('local');
