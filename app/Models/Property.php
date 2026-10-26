@@ -478,6 +478,31 @@ class Property extends Model
     }
 
     /**
+     * Staff-registered listing marketed as Lamu Acres inventory (no linked landowner account).
+     */
+    public function isLamuAcresInventoryListing(): bool
+    {
+        return $this->represented_by !== null
+            && $this->submitted_by === null;
+    }
+
+    /**
+     * Any property registered through the staff intake form (agency or on behalf of an owner).
+     */
+    public function isStaffIntakeListing(): bool
+    {
+        if ($this->represented_by === null) {
+            return false;
+        }
+
+        if ($this->submitted_by !== null && (int) $this->represented_by === (int) $this->submitted_by) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Where the submitting broker or landowner follows this listing in their workspace.
      */
     public function submitterUrl(): string

@@ -232,27 +232,29 @@ class VerificationOperations
             $blockers['photos'][] = 'At least one public photograph is required.';
         }
 
-        if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
-            $blockers['owners'][] = 'Link and verify an owner or authorized representative on the Owners tab.';
-        }
-        foreach ($property->owners as $owner) {
-            if ($owner->status === OwnerLinkStatus::Verified) {
-                array_push($blockers['owners'], ...app(SellerPortal::class)->ownerIdentityBlockers($owner));
+        if (! $property->isLamuAcresInventoryListing()) {
+            if (! $property->owners->contains(fn ($owner): bool => $owner->status === OwnerLinkStatus::Verified)) {
+                $blockers['owners'][] = 'Link and verify an owner or authorized representative on the Owners tab.';
             }
-        }
-        $verifiedOwnerIds = $property->owners->where('status', OwnerLinkStatus::Verified)->pluck('user_id')->all();
-        $authorised = $property->purpose !== null && $property->authorities->contains(
-            fn (MarketingAuthority $authority): bool => in_array($authority->seller_id, $verifiedOwnerIds, true) && $authority->permitsMarketing($property->purpose),
-        );
-        if (! $authorised) {
-            $blockers['authority'][] = 'Approve a current marketing authority from a verified owner/representative covering this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+            foreach ($property->owners as $owner) {
+                if ($owner->status === OwnerLinkStatus::Verified) {
+                    array_push($blockers['owners'], ...app(SellerPortal::class)->ownerIdentityBlockers($owner));
+                }
+            }
+            $verifiedOwnerIds = $property->owners->where('status', OwnerLinkStatus::Verified)->pluck('user_id')->all();
+            $authorised = $property->purpose !== null && $property->authorities->contains(
+                fn (MarketingAuthority $authority): bool => in_array($authority->seller_id, $verifiedOwnerIds, true) && $authority->permitsMarketing($property->purpose),
+            );
+            if (! $authorised) {
+                $blockers['authority'][] = 'Approve a current marketing authority from a verified owner/representative covering this '.strtolower($property->purpose?->label() ?? 'listing').'.';
+            }
         }
         $submitter = $property->submitter;
         if ($submitter !== null && ! $property->owners->contains('user_id', $submitter->id)
             && (! $submitter->hasPermission('workspace.broker') || ! app(CapabilityReviewer::class)->hasCurrentCapability($submitter, PartnerCapability::Broker))) {
             $blockers['authority'][] = 'The submitting broker must have current, staff-verified professional credentials.';
         }
-        if (! $property->isStaffRepresentedListing()) {
+        if (! $property->isStaffIntakeListing()) {
             foreach (app(SellerPortal::class)->documentRequirements($property) as $requirement) {
                 if (! in_array($requirement['requirement'], [SellerPortal::REQUIRED, SellerPortal::CONDITIONAL], true)) {
                     continue;

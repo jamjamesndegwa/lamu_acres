@@ -65,15 +65,15 @@ class StaffPropertyListingRequest extends SellerListingRequest
         return array_merge($rules, [
             'relationship' => ['nullable', Rule::in(array_map(fn (OwnerRelationship $relationship) => $relationship->value, OwnerRelationship::sellerFacing()))],
             'reference' => ['nullable', 'string', 'max:32', Rule::unique('properties', 'reference')],
-            'marketing_role' => ['required', Rule::enum(MarketingRole::class)],
+            'marketing_role' => ['nullable', 'required_with:owner_user_id', Rule::enum(MarketingRole::class)],
             'seller_name' => ['nullable', 'string', 'max:160'],
             'seller_contact' => ['nullable', 'string', 'max:80'],
             'owner_user_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->whereIn('id', User::permission('workspace.seller')->select('id'))),
             ],
-            'owner_relationship' => ['required', Rule::enum(OwnerRelationship::class)],
+            'owner_relationship' => ['nullable', 'required_with:owner_user_id', Rule::enum(OwnerRelationship::class)],
             'photos' => ['required', 'array', 'min:1', 'max:12'],
             'photos.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.PropertyMediaLibrary::MAX_KILOBYTES],
         ]);

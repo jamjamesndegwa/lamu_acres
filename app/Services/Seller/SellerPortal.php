@@ -89,6 +89,7 @@ class SellerPortal
             $relationship = OwnerRelationship::tryFrom((string) ($data['owner_relationship'] ?? $data['relationship'] ?? ''))
                 ?? OwnerRelationship::Owner;
             $ownerUserId = filled($data['owner_user_id'] ?? null) ? (int) $data['owner_user_id'] : null;
+            $agencyInventory = $ownerUserId === null;
 
             $property->forceFill([
                 'reference' => filled($data['reference'] ?? null) ? (string) $data['reference'] : $this->reference('LA'),
@@ -96,25 +97,25 @@ class SellerPortal
                 'status' => PropertyStatus::Draft,
                 'availability' => PropertyAvailability::Available,
                 'submitted_by' => $ownerUserId,
-                'seller_name' => $data['seller_name'] ?? null,
+                'seller_name' => $agencyInventory
+                    ? ($data['seller_name'] ?? 'Lamu Acres')
+                    : ($data['seller_name'] ?? null),
                 'seller_contact' => $data['seller_contact'] ?? null,
                 'price_currency' => 'KES',
-                'marketing_role' => MarketingRole::from((string) $data['marketing_role']),
+                'marketing_role' => $agencyInventory
+                    ? MarketingRole::AuthorizedMarketer
+                    : MarketingRole::from((string) $data['marketing_role']),
                 'represented_by' => $staff->id,
             ]);
             $property->save();
 
-            if ($ownerUserId === null) {
-                throw ValidationException::withMessages([
-                    'owner_user_id' => 'Link a seller account for the landowner.',
+            if ($ownerUserId !== null) {
+                $property->owners()->create([
+                    'user_id' => $ownerUserId,
+                    'relationship' => $relationship,
+                    'status' => OwnerLinkStatus::Pending,
                 ]);
             }
-
-            $owner = $property->owners()->create([
-                'user_id' => $ownerUserId,
-                'relationship' => $relationship,
-                'status' => OwnerLinkStatus::Pending,
-            ]);
 
             $this->syncAmenities($property, $data['amenities'] ?? []);
             $this->verification->seed($property);
@@ -132,7 +133,7 @@ class SellerPortal
     public function finalizeStaffRegistration(User $staff, Property $property): Property
     {
         abort_unless($staff->hasPermission('staff.properties'), 403);
-        abort_unless($property->isStaffRepresentedListing(), 422);
+        abort_unless($property->isStaffIntakeListing(), 422);
 
         return DB::transaction(function () use ($staff, $property): Property {
             $property->refresh();
@@ -142,24 +143,26 @@ class SellerPortal
                 throw ValidationException::withMessages($gaps);
             }
 
-            $owner = $property->owners()->firstOrFail();
-            $this->verifyLink($owner, $staff, null, 'Staff intake: owner identity and authority confirmed at registration.', true);
+            if ($property->isStaffRepresentedListing()) {
+                $owner = $property->owners()->firstOrFail();
+                $this->verifyLink($owner, $staff, null, 'Staff intake: owner identity and authority confirmed at registration.', true);
 
-            $scope = match ($property->purpose) {
-                ListingPurpose::Sale => AuthorityScope::Sale,
-                ListingPurpose::Lease => AuthorityScope::Lease,
-                default => AuthorityScope::Both,
-            };
+                $scope = match ($property->purpose) {
+                    ListingPurpose::Sale => AuthorityScope::Sale,
+                    ListingPurpose::Lease => AuthorityScope::Lease,
+                    default => AuthorityScope::Both,
+                };
 
-            $property->authorities()->create([
-                'seller_id' => (int) $property->submitted_by,
-                'status' => AuthorityStatus::Active,
-                'terms' => 'Staff-confirmed marketing authority recorded at land registration.',
-                'scope' => $scope,
-                'submitted_at' => now(),
-                'decided_at' => now(),
-                'decided_by' => $staff->id,
-            ]);
+                $property->authorities()->create([
+                    'seller_id' => (int) $property->submitted_by,
+                    'status' => AuthorityStatus::Active,
+                    'terms' => 'Staff-confirmed marketing authority recorded at land registration.',
+                    'scope' => $scope,
+                    'submitted_at' => now(),
+                    'decided_at' => now(),
+                    'decided_by' => $staff->id,
+                ]);
+            }
 
             $this->verification->recordStaffIntakeChecks($property, $staff);
 

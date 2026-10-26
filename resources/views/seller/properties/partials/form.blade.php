@@ -79,12 +79,12 @@
     @if ($staffEntry ?? false)
         <section class="space-y-4">
             <h2 class="text-lg font-semibold text-lamu-900">Owner contact</h2>
-            <p class="text-sm text-stone-600">Link the landowner’s seller account (required). Ownership documents are not required at registration — staff verification is recorded automatically.</p>
+            <p class="text-sm text-stone-600">Link a landowner’s seller account if one exists. If you leave this blank, the listing is recorded as <strong>Lamu Acres</strong> agency inventory. Ownership documents are not required at registration.</p>
             <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
-                    <span class="font-medium">Linked seller account *</span>
-                    <select name="owner_user_id" required class="{{ $input }}">
-                        <option value="">Choose seller account</option>
+                    <span class="font-medium">Linked seller account</span>
+                    <select name="owner_user_id" class="{{ $input }}">
+                        <option value="">Lamu Acres inventory (no linked owner)</option>
                         @foreach ($owners ?? [] as $owner)
                             <option value="{{ $owner->id }}" @selected((string) old('owner_user_id') === (string) $owner->id)>{{ $owner->name }} ({{ $owner->email }})</option>
                         @endforeach
@@ -92,8 +92,8 @@
                     @error('owner_user_id')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
                 </label>
                 <label class="block text-sm">
-                    <span class="font-medium">Owner relationship *</span>
-                    <select name="owner_relationship" required class="{{ $input }}">
+                    <span class="font-medium">Owner relationship</span>
+                    <select name="owner_relationship" class="{{ $input }}">
                         @foreach (\App\Enums\OwnerRelationship::sellerFacing() as $option)
                             <option value="{{ $option->value }}" @selected(old('owner_relationship', $relationship) === $option->value)>{{ $option->label() }}</option>
                         @endforeach

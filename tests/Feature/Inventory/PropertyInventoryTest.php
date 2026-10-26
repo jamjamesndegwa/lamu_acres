@@ -103,6 +103,33 @@ class PropertyInventoryTest extends FoundationTestCase
         ]))->assertSessionHasErrors('locality_id');
     }
 
+    public function test_staff_can_register_lamu_acres_inventory_without_a_linked_seller(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $locality = $this->locality();
+
+        $payload = $this->payload($locality, overrides: [
+            'title' => 'Agency beach plot',
+            'owner_user_id' => null,
+            'owner_relationship' => null,
+            'marketing_role' => null,
+        ]);
+        unset($payload['owner_user_id'], $payload['owner_relationship'], $payload['marketing_role']);
+
+        $this->actingAs($staff)
+            ->post(route('staff.properties.store'), $payload)
+            ->assertRedirect();
+
+        $property = Property::query()->where('title', 'Agency beach plot')->firstOrFail();
+
+        $this->assertSame(PropertyStatus::Published, $property->status);
+        $this->assertTrue($property->isLamuAcresInventoryListing());
+        $this->assertFalse($property->isStaffRepresentedListing());
+        $this->assertSame('Lamu Acres', $property->seller_name);
+        $this->assertSame(MarketingRole::AuthorizedMarketer, $property->marketing_role);
+        $this->assertSame(0, $property->owners()->count());
+    }
+
     public function test_staff_register_page_uses_full_layout_not_modal(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
@@ -119,9 +146,9 @@ class PropertyInventoryTest extends FoundationTestCase
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
-    private function payload(Locality $locality, User $seller, array $overrides = []): array
+    private function payload(Locality $locality, ?User $seller = null, array $overrides = []): array
     {
-        return array_merge([
+        $base = [
             'purpose' => ListingPurpose::Sale->value,
             'title' => 'Mokowe holding',
             'summary' => 'Coastal holding near Mokowe.',
@@ -140,15 +167,20 @@ class PropertyInventoryTest extends FoundationTestCase
             'public_longitude' => 40.9021,
             'restricted_latitude' => 9.8765432,
             'restricted_longitude' => 40.1234567,
-            'marketing_role' => MarketingRole::Owner->value,
-            'owner_user_id' => $seller->id,
-            'owner_relationship' => OwnerRelationship::Owner->value,
             'sale' => [
                 'price_basis' => PriceBasis::PerAcre->value,
                 'amount' => 100_000,
             ],
             'photos' => [UploadedFile::fake()->image('plot.jpg')],
-        ], $overrides);
+        ];
+
+        if ($seller !== null) {
+            $base['marketing_role'] = MarketingRole::Owner->value;
+            $base['owner_user_id'] = $seller->id;
+            $base['owner_relationship'] = OwnerRelationship::Owner->value;
+        }
+
+        return array_merge($base, $overrides);
     }
 
     private function locality(): Locality
