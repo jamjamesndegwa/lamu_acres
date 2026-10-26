@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminReportExportController;
 use App\Http\Controllers\Admin\ApprovalsController;
 use App\Http\Controllers\Admin\GeographyController;
 use App\Http\Controllers\Admin\InfrastructureController;
@@ -70,6 +71,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
         });
 
         Route::middleware('permission:admin.reports')->group(function () {
+            Route::get('/reports/export/{dataset}', AdminReportExportController::class)->name('reports.export');
             Route::get('/reports/sales', ReportController::class)->name('reports.sales');
             Route::get('/reports/commissions', ReportController::class)->name('reports.commissions');
             Route::get('/reports/financial', ReportController::class)->name('reports.financial');

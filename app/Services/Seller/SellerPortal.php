@@ -76,6 +76,55 @@ class SellerPortal
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * Register a new listing on behalf of a landowner (staff intake).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function registerByStaff(User $staff, array $data): Property
+    {
+        return DB::transaction(function () use ($staff, $data): Property {
+            $property = new Property;
+            $this->fillListing($property, $data);
+            $relationship = OwnerRelationship::tryFrom((string) ($data['owner_relationship'] ?? $data['relationship'] ?? ''))
+                ?? OwnerRelationship::Owner;
+            $ownerUserId = filled($data['owner_user_id'] ?? null) ? (int) $data['owner_user_id'] : null;
+
+            $property->forceFill([
+                'reference' => filled($data['reference'] ?? null) ? (string) $data['reference'] : $this->reference('LA'),
+                'slug' => Str::slug((string) $data['title']).'-'.Str::lower(Str::random(5)),
+                'status' => PropertyStatus::Draft,
+                'availability' => PropertyAvailability::Available,
+                'submitted_by' => $ownerUserId,
+                'seller_name' => $data['seller_name'] ?? null,
+                'seller_contact' => $data['seller_contact'] ?? null,
+                'price_currency' => 'KES',
+                'marketing_role' => MarketingRole::from((string) $data['marketing_role']),
+                'represented_by' => $staff->id,
+            ]);
+            $property->save();
+
+            if ($ownerUserId !== null) {
+                $property->owners()->create([
+                    'user_id' => $ownerUserId,
+                    'relationship' => $relationship,
+                    'status' => OwnerLinkStatus::Verified,
+                ]);
+            }
+
+            $this->syncAmenities($property, $data['amenities'] ?? []);
+            $this->verification->seed($property);
+
+            PropertyAudit::query()->create([
+                'property_id' => $property->id,
+                'actor_id' => $staff->id,
+                'action' => 'registered by staff',
+            ]);
+
+            return $property;
+        });
+    }
+
     public function submit(User $seller, array $data): Property
     {
         return DB::transaction(function () use ($seller, $data): Property {

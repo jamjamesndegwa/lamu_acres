@@ -3,6 +3,10 @@
         'today' => 'Today',
         '7' => '7 days',
         '30' => '30 days',
+        'month' => 'This month',
+        'last_month' => 'Last month',
+        'quarter' => 'This quarter',
+        'year' => 'This year',
     ];
 @endphp
 

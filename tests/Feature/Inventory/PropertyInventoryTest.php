@@ -4,8 +4,10 @@ namespace Tests\Feature\Inventory;
 
 use App\Enums\AuthorityScope;
 use App\Enums\AuthorityStatus;
+use App\Enums\MarketingRole;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
+use App\Enums\PriceBasis;
 use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
@@ -25,20 +27,24 @@ class PropertyInventoryTest extends FoundationTestCase
 
         $this->actingAs($buyer)->post(route('staff.properties.store'), $this->payload($locality))->assertForbidden();
 
-        $this->actingAs($staff)->post(route('staff.properties.store'), $this->payload($locality, [
+        $response = $this->actingAs($staff)->post(route('staff.properties.store'), $this->payload($locality, [
             'acreage' => 10,
-            'price_amount' => 1_000_000,
+            'sale' => [
+                'price_basis' => PriceBasis::PerAcre->value,
+                'amount' => 100_000,
+            ],
             'restricted_latitude' => 9.8765432,
             'restricted_longitude' => 40.1234567,
-        ]))->assertRedirect(route('staff.properties.index'));
+        ]));
 
         $property = Property::query()->where('title', 'Mokowe holding')->firstOrFail();
+        $response->assertRedirect(route('staff.properties.show', $property));
 
         $this->assertSame(100_000, $property->pricePerAcre());
         $this->assertSame(PropertyStatus::Draft, $property->status);
-        $this->assertSame('owner', $property->marketing_role->value);
+        $this->assertSame(MarketingRole::Owner, $property->marketing_role);
         $this->assertNotNull($property->reference);
-        $this->assertTrue(PropertyAudit::query()->where('property_id', $property->id)->where('action', 'created')->exists());
+        $this->assertTrue(PropertyAudit::query()->where('property_id', $property->id)->where('action', 'registered by staff')->exists());
 
         $this->actingAs($staff)->put(route('staff.properties.transition', $property), [
             'status' => 'sold',
@@ -134,8 +140,11 @@ class PropertyInventoryTest extends FoundationTestCase
             'land_use' => 'agricultural',
             'purpose' => 'sale',
             'acreage' => 5,
-            'price_amount' => 500_000,
-            'marketing_role' => 'owner',
+            'marketing_role' => MarketingRole::Owner->value,
+            'sale' => [
+                'price_basis' => PriceBasis::Total->value,
+                'amount' => 500_000,
+            ],
         ], $overrides);
     }
 

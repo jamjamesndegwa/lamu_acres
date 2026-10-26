@@ -2,6 +2,16 @@
     <p class="mt-3 max-w-3xl text-stone-700">{{ $intro }}</p>
 
     @include('admin.partials.range', ['window' => $window])
+    @include('admin.partials.filters', ['window' => $window, 'filters' => $filters])
+
+    @if ($requestUser = auth()->user())
+        @if ($requestUser->hasPermission('admin.reports'))
+            <p class="mt-4 text-sm text-stone-600">
+                <a href="{{ route('admin.reports.export', ['dataset' => $tab === 'financial' ? 'agency-earnings' : ($tab === 'commissions' ? 'broker-commissions' : 'completed-sales'), ...array_merge($window->query(), $filters->query())]) }}" class="font-medium text-lamu-800 hover:underline">Download CSV</a>
+                for the current period and filters.
+            </p>
+        @endif
+    @endif
 
     <section class="mt-8" aria-labelledby="report-section">
         <h2 id="report-section" class="font-semibold text-lamu-900">{{ $section['heading'] }}</h2>

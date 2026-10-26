@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\ExecutiveReport;
+use App\Support\Reporting\ReportingFilters;
 use App\Support\Reporting\ReportingWindow;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,11 +23,13 @@ class OversightController extends Controller
         };
 
         $window = ReportingWindow::fromRequest($request);
-        $report = ExecutiveReport::make($request->user(), $window);
+        $filters = ReportingFilters::fromRequest($request);
+        $report = ExecutiveReport::make($request->user(), $window, $filters);
 
         return view('admin.oversight.show', [
             'tab' => $tab,
             'window' => $window,
+            'filters' => $filters,
             'section' => $report->section($tab),
             'tables' => $report->records($tab),
         ]);

@@ -12,6 +12,7 @@ use App\Enums\SourcingRequestStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationItemState;
+use App\Models\AgencyFeeAgreement;
 use App\Models\BrokerIntroduction;
 use App\Models\BrokerIntroductionAudit;
 use App\Models\CommissionAgreement;
@@ -29,6 +30,8 @@ use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionReceipt;
 use App\Models\User;
 use App\Models\VerificationItem;
+use App\Services\Sales\SalesFinancialReport;
+use App\Support\Reporting\ReportingFilters;
 use App\Support\Reporting\ReportingWindow;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -41,11 +44,12 @@ class ExecutiveReport
     public function __construct(
         private readonly User $user,
         private readonly ReportingWindow $window,
+        private readonly ReportingFilters $filters = new ReportingFilters,
     ) {}
 
-    public static function make(User $user, ReportingWindow $window): self
+    public static function make(User $user, ReportingWindow $window, ?ReportingFilters $filters = null): self
     {
-        return new self($user, $window);
+        return new self($user, $window, $filters ?? ReportingFilters::empty());
     }
 
     /**
@@ -58,6 +62,7 @@ class ExecutiveReport
         $charts = array_values(array_filter([
             $this->listingChart(),
             $this->pipelinePolygon(),
+            $this->salesTrendChart(),
             $this->financePolygon(),
             $this->brokerPolygon(),
             $this->subscriptionChart(),
@@ -136,7 +141,7 @@ class ExecutiveReport
         return match ($tab) {
             'sales' => [$this->salesTable()],
             'commissions' => [$this->commissionAgreementTable(), $this->commissionPaymentTable()],
-            'financial' => [$this->completedSaleValueTable(), $this->commissionPaymentTable(), $this->receiptTable()],
+            'financial' => [$this->agencyFeeLedgerTable(), $this->completedSaleValueTable(), $this->commissionPaymentTable(), $this->receiptTable()],
             'audit' => [$this->auditTable()],
             default => abort(404),
         };
@@ -167,13 +172,20 @@ class ExecutiveReport
             return $this->unconfigured('Active property listings');
         }
 
-        $inventory = route('admin.oversight.inventory', $this->window->query());
+        $query = array_merge($this->window->query(), $this->filters->query());
+        $inventory = route('admin.oversight.inventory', $query);
+        $snapshot = app(AdminInventoryMetrics::class)->summarize($this->filters);
 
-        return $this->configured('Active property listings', [
-            $this->metric('Published and available', $this->publishedAvailable(), $inventory),
-            $this->metric('Reserved', $this->statusCount(PropertyStatus::Reserved), $inventory),
-            $this->metric('Sold', $this->statusCount(PropertyStatus::Sold), $inventory),
-            $this->metric('Pending review', $this->statusCount(PropertyStatus::Review), $inventory),
+        return $this->configured('Property inventory performance', [
+            $this->metric('Published listings', $snapshot['published_listings'], $inventory),
+            $this->metric('Registered acreage', number_format($snapshot['registered_acreage'], 2), $inventory),
+            $this->metric('Offered acreage', number_format($snapshot['offered_acreage'], 2), $inventory),
+            $this->metric('Sold acreage', number_format($snapshot['sold_acreage'], 2), $inventory),
+            $this->metric('Remaining acreage', number_format($snapshot['remaining_acreage'], 2), $inventory),
+            $this->metric('Fully sold parcels', $snapshot['fully_sold_parcels'], $inventory),
+            $this->metric('Partially sold parcels', $snapshot['partially_sold_parcels'], $inventory),
+            $this->metric('Whole-sale listings', $snapshot['whole_sale_listings'], $inventory),
+            $this->metric('Partial-sale listings', $snapshot['partial_sale_listings'], $inventory),
         ], $this->listingChart());
     }
 
@@ -186,13 +198,27 @@ class ExecutiveReport
             return $this->unconfigured('Sales performance');
         }
 
-        $href = route('admin.oversight.sales', $this->window->query());
+        $query = array_merge($this->window->query(), $this->filters->query());
+        $href = route('admin.oversight.sales', $query);
         $completed = $this->completedSales();
+        $completedCount = (clone $completed)->count();
+        $completedValue = (int) (clone $completed)->sum('agreed_price');
+        $acreageSold = (float) (clone $completed)->sum('acreage');
+        $financial = $this->salesFinancial()->summary();
 
         return $this->configured('Sales performance', [
-            $this->metric('Active sales', $this->openSales()->count(), $href),
-            $this->metric('Completed sales', (clone $completed)->count(), $href),
-            $this->metric('Completed value', $this->money((int) (clone $completed)->sum('agreed_price')), $href),
+            $this->metric('Completed sales', $completedCount, $href),
+            $this->metric('Completed value', $this->money($completedValue), $href),
+            $this->metric('Acreage sold', number_format($acreageSold, 2), $href),
+            $this->metric('Average completed sale', $completedCount > 0 ? $this->money((int) round($completedValue / $completedCount)) : '—', $href),
+            $this->metric('Active pipeline', (int) $financial['active_pipeline_count'], $href),
+            $this->metric('Pending closings', (int) $financial['pending_closings'], $href),
+            $this->metric('Completed this month', (int) $financial['completed_sales_this_month'], $href),
+            $this->metric('Avg price per acre', $acreageSold > 0 ? $this->money((int) round($completedValue / $acreageSold)) : '—', $href),
+            $this->metric('Open purchase requests', (int) $financial['open_purchase_requests'], route('admin.oversight.buyers', $query)),
+            $this->metric('Awaiting seller response', (int) $financial['deals_awaiting_seller_response'], $href),
+            $this->metric('Agency fee exceptions', (int) $financial['agency_fee_exceptions'], route('admin.reports.financial', $query)),
+            $this->metric('Collection follow-ups', (int) $financial['outstanding_collection_followups'], route('admin.reports.financial', $query)),
         ], $this->pipelineChart());
     }
 
@@ -223,13 +249,22 @@ class ExecutiveReport
             return $this->unconfigured('Broker performance');
         }
 
-        $href = route('admin.oversight.brokers', $this->window->query());
+        $query = array_merge($this->window->query(), $this->filters->query());
+        $href = route('admin.oversight.brokers', $query);
+        $financial = $this->salesFinancial()->summary();
+        $brokerSales = $this->completedSales()->where(function (Builder $builder): void {
+            $builder->whereNotNull('broker_introduction_id')
+                ->orWhereHas('property', fn ($property) => $property->whereNotNull('submitted_by'));
+        });
 
         return $this->configured('Broker performance', [
             $this->metric('Approved brokers', User::role('broker')->whereNull('suspended_at')->count(), $href),
-            $this->metric('Accepted introductions', BrokerIntroduction::query()->where('status', BrokerIntroductionStatus::Accepted)->count(), $href),
-            $this->metric('Deals in progress', $this->openSales()->whereNotNull('broker_introduction_id')->count(), $href),
-            $this->metric('Completed referred deals', $this->completedSales()->whereNotNull('broker_introduction_id')->count(), $href),
+            $this->metric('Broker-linked completions', (clone $brokerSales)->count(), $href),
+            $this->metric('Linked sale value', $this->money((int) (clone $brokerSales)->sum('agreed_price')), $href),
+            $this->metric('Commission earned', $this->money((int) $financial['broker_commissions_earned']), $href),
+            $this->metric('Commission paid', $this->money((int) $financial['broker_commissions_paid']), $href),
+            $this->metric('Outstanding liabilities', $this->money((int) $financial['outstanding_broker_liabilities']), $href),
+            $this->metric('Disputed agreements', CommissionAgreement::query()->where('status', CommissionStatus::Disputed)->count(), $href),
         ], $this->brokerPolygon());
     }
 
@@ -238,16 +273,36 @@ class ExecutiveReport
      */
     private function finance(): array
     {
-        if (! $this->ready('commission_agreements') || ! $this->ready('commission_payments') || ! $this->ready('subscription_receipts')) {
+        if (! $this->ready('commission_agreements') || ! $this->ready('commission_payments')) {
             return $this->unconfigured('Financial summary');
         }
 
-        return $this->configured('Financial summary', [
-            $this->metric('Commission earned', $this->money($this->commissionAmount(CommissionStatus::Earned)), route('admin.oversight.sales', $this->window->query())),
-            $this->metric('Commission payable', $this->money($this->commissionAmount(CommissionStatus::Payable)), route('admin.oversight.sales', $this->window->query())),
-            $this->metric('Commission paid', $this->money($this->commissionPaid()), route('admin.oversight.sales', $this->window->query())),
-            $this->metric('Premium revenue received', $this->money($this->premiumReceived()), route('admin.oversight.subscriptions', $this->window->query())),
-        ], $this->financePolygon());
+        $query = array_merge($this->window->query(), $this->filters->query());
+        $href = route('admin.reports.financial', $query);
+        $collectionDesk = $this->user->hasPermission('agency.record')
+            ? route('staff.agency-collections.index')
+            : null;
+        $summary = $this->salesFinancial()->summary();
+        $metrics = [
+            $this->metric('Agency fees earned', $this->money((int) $summary['gross_agency_fees_earned']), $collectionDesk ?? $href),
+            $this->metric('Agency fees collected', $this->money((int) $summary['agency_fees_collected']), $collectionDesk ?? $href),
+            $this->metric('Outstanding receivables', $this->money((int) $summary['outstanding_agency_receivables']), $href),
+            $this->metric('Collection rate', $summary['agency_collection_rate'] === null ? '—' : $summary['agency_collection_rate'].'%', $href),
+            $this->metric('Collections this month', $this->money((int) $summary['agency_collections_this_month']), $collectionDesk ?? $href),
+            $this->metric('Broker commission earned', $this->money((int) $summary['broker_commissions_earned']), route('admin.reports.commissions', $query)),
+            $this->metric('Broker commission paid', $this->money((int) $summary['broker_commissions_paid']), route('admin.reports.commissions', $query)),
+            $this->metric('Outstanding broker liabilities', $this->money((int) $summary['outstanding_broker_liabilities']), route('admin.reports.commissions', $query)),
+        ];
+
+        if ($this->ready('subscription_receipts')) {
+            $metrics[] = $this->metric('Premium revenue received', $this->money($this->premiumReceived()), route('admin.oversight.subscriptions', $query));
+        }
+
+        if ($this->ready('agency_fee_agreements')) {
+            $metrics[] = $this->metric('Fee agreement exceptions', (int) $summary['agency_fee_exceptions'], $href);
+        }
+
+        return $this->configured('Revenue & collections', $metrics, $this->financePolygon());
     }
 
     /**
@@ -351,17 +406,56 @@ class ExecutiveReport
 
     private function openSales(): Builder
     {
-        return SalesTransaction::query()
+        $query = SalesTransaction::query()
             ->whereNull('outcome')
             ->where('stage', '!=', SalesStage::Completed);
+
+        return $this->filters->applyToSales($query);
     }
 
     private function completedSales(): Builder
     {
-        return $this->constrainToWindow(
-            SalesTransaction::query()->where('stage', SalesStage::Completed),
-            'completed_at',
-        );
+        $query = SalesTransaction::query()->where('stage', SalesStage::Completed);
+        $this->filters->applyToSales($query);
+
+        return $this->constrainToWindow($query, 'completed_at');
+    }
+
+    private function salesFinancial(): SalesFinancialReport
+    {
+        $from = $this->window->isAllRecords() ? null : $this->window->from;
+        $to = $this->window->isAllRecords() ? null : $this->window->to;
+
+        return SalesFinancialReport::between($from, $to, $this->filters);
+    }
+
+    /**
+     * @return array{type: string, heading: string, unit: string, rows: array<int, array{label: string, count: int}>}|null
+     */
+    private function salesTrendChart(): ?array
+    {
+        if (! $this->ready('sales_transactions')) {
+            return null;
+        }
+
+        $points = collect($this->salesFinancial()->monthlyTrends(6))
+            ->map(fn (array $bucket): array => [
+                'label' => $bucket['month'],
+                'count' => (int) $bucket['sales_value'],
+            ])
+            ->all();
+
+        if ($points === []) {
+            return null;
+        }
+
+        return [
+            'type' => 'line',
+            'heading' => 'Monthly completed sales value',
+            'series' => [
+                ['label' => 'Completed value (KSh)', 'points' => $points],
+            ],
+        ];
     }
 
     private function openSourcing(): Builder
@@ -636,20 +730,27 @@ class ExecutiveReport
      */
     private function financePolygon(): ?array
     {
-        if (! $this->ready('commission_agreements') || ! $this->ready('commission_payments') || ! $this->ready('subscription_receipts')) {
+        if (! $this->ready('commission_agreements') || ! $this->ready('commission_payments')) {
             return null;
+        }
+
+        $summary = $this->salesFinancial()->summary();
+        $rows = [
+            ['label' => 'Agency earned', 'count' => (int) $summary['gross_agency_fees_earned']],
+            ['label' => 'Agency collected', 'count' => (int) $summary['agency_fees_collected']],
+            ['label' => 'Commission earned', 'count' => (int) $summary['broker_commissions_earned']],
+            ['label' => 'Commission paid', 'count' => (int) $summary['broker_commissions_paid']],
+        ];
+
+        if ($this->ready('subscription_receipts')) {
+            $rows[] = ['label' => 'Premium receipts', 'count' => $this->premiumReceived()];
         }
 
         return [
             'type' => 'polygon',
             'heading' => 'Commission and premium revenue',
             'unit' => 'KSh',
-            'rows' => [
-                ['label' => 'Earned', 'count' => $this->commissionAmount(CommissionStatus::Earned)],
-                ['label' => 'Payable', 'count' => $this->commissionAmount(CommissionStatus::Payable)],
-                ['label' => 'Paid', 'count' => $this->commissionPaid()],
-                ['label' => 'Premium receipts', 'count' => $this->premiumReceived()],
-            ],
+            'rows' => $rows,
         ];
     }
 
@@ -744,16 +845,35 @@ class ExecutiveReport
      */
     private function salesTable(): array
     {
-        $rows = SalesTransaction::query()
-            ->with('property:id,title')
-            ->where(function ($query): void {
-                $query->where(function ($completed): void {
+        $query = SalesTransaction::query()
+            ->with([
+                'property:id,title,seller_name',
+                'buyer:id,name',
+                'agent:id,name',
+                'introduction.broker:id,name',
+            ]);
+
+        $this->filters->applyToSales($query);
+
+        if ($this->window->isAllRecords()) {
+            $query->where(function ($builder): void {
+                $builder->where('stage', SalesStage::Completed)
+                    ->orWhere(function ($open): void {
+                        $open->whereNull('outcome')->where('stage', '!=', SalesStage::Completed);
+                    });
+            });
+        } else {
+            $query->where(function ($builder): void {
+                $builder->where(function ($completed): void {
                     $completed->where('stage', SalesStage::Completed)
                         ->whereBetween('completed_at', [$this->window->from, $this->window->to]);
                 })->orWhere(function ($open): void {
                     $open->whereNull('outcome')->where('stage', '!=', SalesStage::Completed);
                 });
-            })
+            });
+        }
+
+        $rows = $query
             ->latest('updated_at')
             ->limit(25)
             ->get()
@@ -761,8 +881,14 @@ class ExecutiveReport
                 'cells' => [
                     $sale->reference,
                     $sale->property?->title ?? 'Property removed',
-                    $sale->stage->label(),
+                    $sale->buyer?->name ?? '—',
+                    $sale->property?->seller_name ?: '—',
+                    $sale->agent?->name ?? '—',
+                    $sale->introduction?->broker?->name ?? '—',
+                    $sale->acreage === null ? '—' : number_format((float) $sale->acreage, 2),
                     $sale->agreed_price === null ? '—' : $this->money((int) $sale->agreed_price),
+                    $sale->completed_at?->toFormattedDateString() ?? '—',
+                    $sale->stage->label(),
                 ],
                 'href' => $this->saleHref($sale),
             ])
@@ -770,7 +896,80 @@ class ExecutiveReport
 
         return [
             'heading' => 'Sales in view',
-            'columns' => ['Reference', 'Property', 'Stage', 'Agreed price'],
+            'columns' => ['Reference', 'Property', 'Buyer', 'Seller', 'Officer', 'Broker', 'Acres', 'Agreed price', 'Completed', 'Stage'],
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * @return array{heading: string, columns: array<int, string>, rows: array<int, array{cells: array<int, string>, href: ?string}>}
+     */
+    private function agencyFeeLedgerTable(): array
+    {
+        if (! $this->ready('agency_fee_agreements')) {
+            return [
+                'heading' => 'Agency fee collections',
+                'columns' => ['Transaction', 'Property', 'Payer', 'Agreement', 'Earned', 'Collected', 'Outstanding', 'Status', 'Last payment'],
+                'rows' => [],
+            ];
+        }
+
+        $rows = AgencyFeeAgreement::query()
+            ->with([
+                'transaction:id,reference',
+                'property:id,title',
+                'seller:id,name',
+                'receipts' => fn ($receipt) => $receipt->where('status', 'collected')->latest('collected_at')->limit(1),
+            ])
+            ->whereIn('status', [
+                CommissionStatus::Accepted,
+                CommissionStatus::Earned,
+                CommissionStatus::Payable,
+                CommissionStatus::Paid,
+            ])
+            ->whereHas('transaction', function (Builder $transaction): void {
+                $transaction->where('stage', SalesStage::Completed);
+                $this->filters->applyToSales($transaction);
+
+                if (! $this->window->isAllRecords()) {
+                    $transaction->whereBetween('completed_at', [$this->window->from, $this->window->to]);
+                }
+            })
+            ->latest('updated_at')
+            ->limit(25)
+            ->get()
+            ->map(function (AgencyFeeAgreement $agreement): array {
+                $lastReceipt = $agreement->receipts->first();
+                $outstanding = $agreement->outstandingReceivable();
+                $status = match (true) {
+                    $outstanding <= 0 && (int) ($agreement->earned_amount ?? 0) > 0 => 'Fully collected',
+                    (int) $agreement->collected_amount > 0 => 'Partially collected',
+                    (int) ($agreement->earned_amount ?? 0) > 0 => 'Outstanding',
+                    default => $agreement->status->label(),
+                };
+
+                return [
+                    'cells' => [
+                        $agreement->transaction?->reference ?? '—',
+                        $agreement->property?->title ?? '—',
+                        $agreement->seller?->name ?? '—',
+                        $agreement->reference,
+                        $agreement->earned_amount === null ? '—' : $this->money((int) $agreement->earned_amount),
+                        $this->money((int) $agreement->collected_amount),
+                        $this->money($outstanding),
+                        $status,
+                        $lastReceipt?->collected_at?->toFormattedDateString() ?? '—',
+                    ],
+                    'href' => $this->user->hasPermission('agency.record')
+                        ? route('staff.agency-collections.index')
+                        : ($agreement->transaction ? $this->saleHref($agreement->transaction) : null),
+                ];
+            })
+            ->all();
+
+        return [
+            'heading' => 'Agency fee collections in this period',
+            'columns' => ['Transaction', 'Property', 'Payer', 'Agreement', 'Earned', 'Collected', 'Outstanding', 'Status', 'Last payment'],
             'rows' => $rows,
         ];
     }

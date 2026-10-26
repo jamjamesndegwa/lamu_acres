@@ -36,9 +36,9 @@ final class ReportingWindow
             $range = '30';
         }
 
-        if (! in_array($range, ['today', '7', '30', 'custom'], true)) {
+        if (! in_array($range, ['today', '7', '30', 'month', 'last_month', 'quarter', 'year', 'custom'], true)) {
             throw ValidationException::withMessages([
-                'range' => 'Choose today, 7 days, 30 days, or a custom range.',
+                'range' => 'Choose a supported reporting period.',
             ]);
         }
 
@@ -59,8 +59,16 @@ final class ReportingWindow
         $from = match ($range) {
             'today' => CarbonImmutable::now()->startOfDay(),
             '7' => CarbonImmutable::now()->subDays(7)->startOfDay(),
+            'month' => CarbonImmutable::now()->startOfMonth(),
+            'last_month' => CarbonImmutable::now()->subMonth()->startOfMonth(),
+            'quarter' => CarbonImmutable::now()->startOfQuarter(),
+            'year' => CarbonImmutable::now()->startOfYear(),
             default => CarbonImmutable::now()->subDays(30)->startOfDay(),
         };
+
+        if ($range === 'last_month') {
+            $to = CarbonImmutable::now()->subMonth()->endOfMonth()->endOfDay();
+        }
 
         return new self($from, $to, $range);
     }

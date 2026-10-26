@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Staff;
 
 use App\Enums\Amenity;
 use App\Enums\DocumentCheckState;
+use App\Enums\OwnerRelationship;
 use App\Enums\PropertyStatus;
 use App\Enums\RoadAccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\PropertyInventoryRequest;
+use App\Http\Requests\Staff\StaffPropertyListingRequest;
 use App\Models\County;
 use App\Models\InfrastructureFeature;
 use App\Models\Property;
+use App\Models\User;
 use App\Services\Inventory\PropertyInventory;
+use App\Services\Media\PropertyMediaLibrary;
 use App\Services\Seller\SellerPortal;
 use App\Services\Verification\VerificationOperations;
 use App\Support\Turbo;
@@ -51,19 +55,47 @@ class PropertyInventoryController extends Controller
     {
         $this->authorize('create', Property::class);
 
-        return view('staff.properties.form', [
-            'property' => new Property,
-            'parent' => $request->filled('parent') ? Property::query()->find($request->integer('parent')) : null,
+        if ($request->filled('parent')) {
+            return view('staff.properties.form', [
+                'property' => new Property,
+                'parent' => Property::query()->find($request->integer('parent')),
+                'counties' => County::query()->active()->with(['localities' => fn ($query) => $query->active()->orderBy('name')])->orderBy('name')->get(),
+                'modal' => Turbo::wantsModal($request),
+            ]);
+        }
+
+        return view('staff.properties.create', [
+            'property' => new Property(['purpose' => $request->query('purpose') === 'lease' ? 'lease' : 'sale']),
+            'relationship' => OwnerRelationship::Owner->value,
             'counties' => County::query()->active()->with(['localities' => fn ($query) => $query->active()->orderBy('name')])->orderBy('name')->get(),
-            'modal' => Turbo::wantsModal($request),
+            'owners' => User::role('seller')->orderBy('name')->get(['id', 'name', 'email']),
         ]);
     }
 
-    public function store(PropertyInventoryRequest $request, PropertyInventory $inventory): RedirectResponse
+    public function store(Request $request, PropertyInventory $inventory, SellerPortal $portal, PropertyMediaLibrary $library): RedirectResponse
     {
-        $inventory->create($request->user(), $request->validated());
+        $this->authorize('create', Property::class);
 
-        return redirect()->route('staff.properties.index')->with('status', 'Property saved as a draft.');
+        if ($request->filled('parent_id')) {
+            $validated = $request->validate((new PropertyInventoryRequest)->rules());
+            $inventory->create($request->user(), $validated);
+
+            return redirect()->route('staff.properties.index')->with('status', 'Property portion saved as a draft.');
+        }
+
+        $listing = StaffPropertyListingRequest::createFrom($request);
+        $listing->setContainer(app())->setRedirector(app('redirect'));
+        $listing->validateResolved();
+
+        $property = $portal->registerByStaff($request->user(), $listing->validated());
+
+        foreach ($request->file('photos', []) ?? [] as $photo) {
+            $library->storePhoto($request->user(), $property, $photo);
+        }
+
+        return redirect()
+            ->route('staff.properties.show', $property)
+            ->with('status', 'Property draft saved. Add media or ownership documents from the property record when ready.');
     }
 
     public function edit(Request $request, Property $property): View

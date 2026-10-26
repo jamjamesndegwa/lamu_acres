@@ -25,7 +25,7 @@
     </div>
 @endif
 
-<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-seller-listing-form @if ($bulkSave ?? false) data-owner-bulk-save @endif class="mt-6 max-w-3xl space-y-10">
+<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-seller-listing-form @if ($bulkSave ?? false) data-owner-bulk-save @endif @if ($staffEntry ?? false) enctype="multipart/form-data" @endif class="mt-6 max-w-3xl space-y-10">
     @csrf
     @if ($method !== 'POST')
         @method($method)
@@ -45,17 +45,73 @@
             </div>
             @error('purpose')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
         </fieldset>
-        <label class="block text-sm">
-            <span class="font-medium">Your relationship to the land *</span>
-            <select name="relationship" required class="{{ $input }}">
-                @foreach (\App\Enums\OwnerRelationship::sellerFacing() as $option)
-                    <option value="{{ $option->value }}" @selected(old('relationship', $relationship) === $option->value)>{{ $option->label() }}</option>
-                @endforeach
-            </select>
-            <span class="mt-1 block text-stone-500">Co-owners and authorised representatives will be asked for written authority from the other owners.</span>
-            @error('relationship')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
-        </label>
+        @if ($staffEntry ?? false)
+            <div class="grid gap-4 sm:grid-cols-2">
+                <label class="block text-sm">
+                    <span class="font-medium">Marketing role *</span>
+                    <select name="marketing_role" required class="{{ $input }}">
+                        @foreach (\App\Enums\MarketingRole::cases() as $role)
+                            <option value="{{ $role->value }}" @selected(old('marketing_role', $marketingRole ?? \App\Enums\MarketingRole::AuthorizedMarketer->value) === $role->value)>{{ $role->label() }}</option>
+                        @endforeach
+                    </select>
+                    @error('marketing_role')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium">Internal reference</span>
+                    <input name="reference" value="{{ old('reference') }}" maxlength="32" class="{{ $input }}" placeholder="Generated if empty">
+                    @error('reference')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+            </div>
+        @else
+            <label class="block text-sm">
+                <span class="font-medium">Your relationship to the land *</span>
+                <select name="relationship" required class="{{ $input }}">
+                    @foreach (\App\Enums\OwnerRelationship::sellerFacing() as $option)
+                        <option value="{{ $option->value }}" @selected(old('relationship', $relationship) === $option->value)>{{ $option->label() }}</option>
+                    @endforeach
+                </select>
+                <span class="mt-1 block text-stone-500">Co-owners and authorised representatives will be asked for written authority from the other owners.</span>
+                @error('relationship')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+            </label>
+        @endif
     </section>
+
+    @if ($staffEntry ?? false)
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold text-lamu-900">Owner contact</h2>
+            <p class="text-sm text-stone-600">Link a seller account when one exists, or record the owner name and phone for verification. Documents are optional at this stage.</p>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <label class="block text-sm">
+                    <span class="font-medium">Linked seller account</span>
+                    <select name="owner_user_id" class="{{ $input }}">
+                        <option value="">No linked account</option>
+                        @foreach ($owners ?? [] as $owner)
+                            <option value="{{ $owner->id }}" @selected((string) old('owner_user_id') === (string) $owner->id)>{{ $owner->name }} ({{ $owner->email }})</option>
+                        @endforeach
+                    </select>
+                    @error('owner_user_id')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium">Owner relationship</span>
+                    <select name="owner_relationship" class="{{ $input }}">
+                        @foreach (\App\Enums\OwnerRelationship::sellerFacing() as $option)
+                            <option value="{{ $option->value }}" @selected(old('owner_relationship', $relationship) === $option->value)>{{ $option->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium">Owner name (if no account)</span>
+                    <input name="seller_name" value="{{ old('seller_name') }}" maxlength="160" class="{{ $input }}">
+                    @error('seller_name')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+                <label class="block text-sm">
+                    <span class="font-medium">Owner contact</span>
+                    <input name="seller_contact" value="{{ old('seller_contact') }}" maxlength="80" class="{{ $input }}">
+                    @error('seller_contact')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
+                </label>
+            </div>
+        </section>
+    @endif
 
     <section class="space-y-4">
         <h2 class="text-lg font-semibold text-lamu-900">2. Land identity and location</h2>
@@ -114,28 +170,16 @@
             <span class="font-medium">How to reach the land</span>
             <textarea name="access_description" rows="2" maxlength="1000" class="{{ $input }}">{{ old('access_description', $property->access_description) }}</textarea>
         </label>
-        <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block text-sm">
-                <span class="font-medium">Approximate latitude (public)</span>
-                <input name="public_latitude" value="{{ old('public_latitude', $property->public_latitude) }}" class="{{ $input }}">
-                @error('public_latitude')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm">
-                <span class="font-medium">Approximate longitude (public)</span>
-                <input name="public_longitude" value="{{ old('public_longitude', $property->public_longitude) }}" class="{{ $input }}">
-                @error('public_longitude')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm">
-                <span class="font-medium">Exact latitude (private, staff only)</span>
-                <input name="restricted_latitude" value="{{ old('restricted_latitude', $property->restricted_latitude) }}" class="{{ $input }}">
-                @error('restricted_latitude')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm">
-                <span class="font-medium">Exact longitude (private, staff only)</span>
-                <input name="restricted_longitude" value="{{ old('restricted_longitude', $property->restricted_longitude) }}" class="{{ $input }}">
-                @error('restricted_longitude')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
-            </label>
-        </div>
+        <x-property-location-map
+            :public-lat="old('public_latitude', $property->public_latitude)"
+            :public-lng="old('public_longitude', $property->public_longitude)"
+            :restricted-lat="old('restricted_latitude', $property->restricted_latitude)"
+            :restricted-lng="old('restricted_longitude', $property->restricted_longitude)"
+        />
+        @error('public_latitude')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
+        @error('public_longitude')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
+        @error('restricted_latitude')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
+        @error('restricted_longitude')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
 
         @php($saleMode = old('sale_mode', $property->purpose?->value === 'sale' ? $property->saleMode()->value : 'whole'))
         <h3 class="pt-2 font-medium text-lamu-900">Parcel</h3>
@@ -299,6 +343,20 @@
         @endforeach
         <p class="text-sm text-stone-600">Lamu Acres records confirmed leases but does not collect rent or manage tenancies.</p>
     </section>
+
+    @if ($staffEntry ?? false)
+        <section class="space-y-4">
+            <h2 class="text-lg font-semibold text-lamu-900">Photographs</h2>
+            <p class="text-sm text-stone-600">Optional now; you can add more on the property record after saving. Location metadata is stripped from copies shown to buyers.</p>
+            <x-upload-manager name="photos[]" label="Select photographs (JPEG, PNG or WebP, up to 5 MB each)" accept="image/jpeg,image/png,image/webp" multiple />
+            @error('photos')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
+            @foreach ($errors->get('photos.*') as $messages)
+                @foreach ($messages as $message)
+                    <span class="block text-sm text-red-700">{{ $message }}</span>
+                @endforeach
+            @endforeach
+        </section>
+    @endif
 
     <div class="flex flex-wrap items-center gap-3">
         @if ($bulkSave ?? false)

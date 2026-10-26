@@ -369,7 +369,7 @@ class ExecutiveDashboardTest extends FoundationTestCase
             ->assertSee('Faza')
             ->assertSeeInOrder(['Approved brokers', '1'])
             ->assertSeeInOrder(['Completed referred deals', '1'])
-            ->assertSee('Paid')
+            ->assertSee('Commission paid')
             ->assertSee('KSh 105,000')
             ->assertSee('Premium receipts')
             ->assertSee('Sale ST-OPEN: offer recorded')

@@ -16,7 +16,7 @@
             </select>
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Filter</button>
         </x-filter-bar>
-        <a href="{{ route('staff.properties.create') }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add property</a>
+        <a href="{{ route('staff.properties.create') }}" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add property</a>
     </div>
 
     <div class="mt-6">
