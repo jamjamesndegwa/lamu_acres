@@ -177,6 +177,9 @@
             @endforelse
         </ul>
         @include('staff.properties.partials.attributes')
+    @elseif ($tab === 'offers')
+        <p class="mt-1 text-sm text-stone-600">Offers from buyers and brokers on the public listing. Contact the offerer directly or manage status in the offers desk.</p>
+        @include('partials.property-offers-list', ['offers' => $property->offers, 'showStaffActions' => true])
     @elseif ($tab === 'enquiries')
         <ul class="mt-6 max-w-3xl space-y-3">
             @forelse ($property->enquiries as $enquiry)

@@ -5,6 +5,15 @@
             <article id="offer-{{ $offer->id }}" class="rounded-2xl border border-sand-200 bg-white p-5">
                 <p class="font-medium text-lamu-900">{{ $offer->property->title }}</p>
                 <p class="mt-1 text-sm text-stone-600">{{ $offer->buyer->name }} · KSh {{ number_format($offer->amount) }} · {{ $offer->status->label() }}</p>
+                <p class="mt-2 flex flex-wrap gap-3 text-sm">
+                    @if ($offer->buyer->email)
+                        <a class="font-medium text-lamu-800 hover:underline" href="mailto:{{ $offer->buyer->email }}">Email buyer</a>
+                    @endif
+                    @if ($offer->buyer->phone)
+                        <a class="font-medium text-lamu-800 hover:underline" href="tel:{{ preg_replace('/\s+/', '', $offer->buyer->phone) }}">Call buyer</a>
+                    @endif
+                    <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.properties.show', [$offer->property, 'tab' => 'offers']) }}#offer-{{ $offer->id }}">Open property</a>
+                </p>
                 <h2 class="mt-4 text-sm font-medium text-lamu-900">Buyer offer</h2>
                 <p class="mt-1 whitespace-pre-line text-sm text-stone-700">{{ $offer->message ?: 'No message was included with this offer.' }}</p>
                 @if ($offer->presentations->isNotEmpty())

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\PublicSite;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Buyer\StorePublicOfferRequest;
 use App\Models\ListingDocumentRequest;
 use App\Models\Property;
 use App\Models\PropertyVisitRequest;
@@ -14,6 +15,45 @@ use Illuminate\View\View;
 
 class ListingInterestController extends Controller
 {
+    public function createOffer(Property $property): View|RedirectResponse
+    {
+        abort_unless($property->isPubliclyListed(), 404);
+
+        if (! auth()->check()) {
+            return redirect()->route('login', [
+                'return_to' => route('land.offers.create', $property),
+            ]);
+        }
+
+        $this->authorize('offer', $property);
+
+        if (! Turbo::wantsModal(request()) && ! session()->has('errors')) {
+            return redirect()->to($property->publicUrl().'#make-offer');
+        }
+
+        return view('public.land.offer', ['property' => $this->publicProperty($property)]);
+    }
+
+    public function storeOffer(StorePublicOfferRequest $request, Property $property, InterestWorkflow $workflow): RedirectResponse
+    {
+        abort_unless($property->isPubliclyListed(), 404);
+
+        $workflow->submitListingOffer(
+            $request->user(),
+            $property,
+            (int) $request->validated('amount'),
+            $request->validated('message'),
+        );
+
+        $redirect = $request->user()->hasPermission('workspace.buyer')
+            ? route('buyer.offers.index')
+            : $property->publicUrl();
+
+        return redirect()
+            ->to($redirect)
+            ->with('status', 'Your offer has been sent to the Lamu Acres desk.');
+    }
+
     public function createVisit(Property $property): View|RedirectResponse
     {
         $this->guard($property);

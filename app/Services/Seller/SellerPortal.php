@@ -104,13 +104,17 @@ class SellerPortal
             ]);
             $property->save();
 
-            if ($ownerUserId !== null) {
-                $property->owners()->create([
-                    'user_id' => $ownerUserId,
-                    'relationship' => $relationship,
-                    'status' => OwnerLinkStatus::Verified,
+            if ($ownerUserId === null) {
+                throw ValidationException::withMessages([
+                    'owner_user_id' => 'Link a seller account for the landowner.',
                 ]);
             }
+
+            $owner = $property->owners()->create([
+                'user_id' => $ownerUserId,
+                'relationship' => $relationship,
+                'status' => OwnerLinkStatus::Pending,
+            ]);
 
             $this->syncAmenities($property, $data['amenities'] ?? []);
             $this->verification->seed($property);
@@ -119,6 +123,62 @@ class SellerPortal
                 'property_id' => $property->id,
                 'actor_id' => $staff->id,
                 'action' => 'registered by staff',
+            ]);
+
+            return $property;
+        });
+    }
+
+    public function finalizeStaffRegistration(User $staff, Property $property): Property
+    {
+        abort_unless($staff->hasPermission('staff.properties'), 403);
+        abort_unless($property->isStaffRepresentedListing(), 422);
+
+        return DB::transaction(function () use ($staff, $property): Property {
+            $property->refresh();
+            $gaps = $this->submissionGaps($property, requireDocuments: false);
+
+            if ($gaps !== []) {
+                throw ValidationException::withMessages($gaps);
+            }
+
+            $owner = $property->owners()->firstOrFail();
+            $this->verifyLink($owner, $staff, null, 'Staff intake: owner identity and authority confirmed at registration.', true);
+
+            $scope = match ($property->purpose) {
+                ListingPurpose::Sale => AuthorityScope::Sale,
+                ListingPurpose::Lease => AuthorityScope::Lease,
+                default => AuthorityScope::Both,
+            };
+
+            $property->authorities()->create([
+                'seller_id' => (int) $property->submitted_by,
+                'status' => AuthorityStatus::Active,
+                'terms' => 'Staff-confirmed marketing authority recorded at land registration.',
+                'scope' => $scope,
+                'submitted_at' => now(),
+                'decided_at' => now(),
+                'decided_by' => $staff->id,
+            ]);
+
+            $this->verification->recordStaffIntakeChecks($property, $staff);
+
+            $from = $property->status;
+
+            if ($property->status === PropertyStatus::Draft) {
+                $this->inventory->transition($staff, $property, PropertyStatus::Review);
+                $property->refresh();
+            }
+
+            $property = $this->inventory->publish($staff, $property);
+
+            PropertyAudit::query()->create([
+                'property_id' => $property->id,
+                'actor_id' => $staff->id,
+                'action' => 'approved',
+                'from_status' => $from->value,
+                'to_status' => PropertyStatus::Published->value,
+                'changes' => ['source' => 'staff_intake'],
             ]);
 
             return $property;
@@ -265,7 +325,7 @@ class SellerPortal
      *
      * @return array<string, string>
      */
-    public function submissionGaps(Property $property): array
+    public function submissionGaps(Property $property, bool $requireDocuments = true): array
     {
         $gaps = [];
         $required = [
@@ -321,9 +381,11 @@ class SellerPortal
             $gaps['photos'] = 'Upload at least one photograph of the land.';
         }
 
-        foreach ($this->documentRequirements($property) as $requirement) {
-            if ($requirement['requirement'] === self::REQUIRED && ! $requirement['supplied']) {
-                $gaps['documents.'.$requirement['type']] = 'Upload the '.Str::lower($requirement['label']).'.';
+        if ($requireDocuments) {
+            foreach ($this->documentRequirements($property) as $requirement) {
+                if ($requirement['requirement'] === self::REQUIRED && ! $requirement['supplied']) {
+                    $gaps['documents.'.$requirement['type']] = 'Upload the '.Str::lower($requirement['label']).'.';
+                }
             }
         }
 

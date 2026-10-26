@@ -79,12 +79,12 @@
     @if ($staffEntry ?? false)
         <section class="space-y-4">
             <h2 class="text-lg font-semibold text-lamu-900">Owner contact</h2>
-            <p class="text-sm text-stone-600">Link a seller account when one exists, or record the owner name and phone for verification. Documents are optional at this stage.</p>
+            <p class="text-sm text-stone-600">Link the landowner’s seller account (required). Ownership documents are not required at registration — staff verification is recorded automatically.</p>
             <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block text-sm">
-                    <span class="font-medium">Linked seller account</span>
-                    <select name="owner_user_id" class="{{ $input }}">
-                        <option value="">No linked account</option>
+                    <span class="font-medium">Linked seller account *</span>
+                    <select name="owner_user_id" required class="{{ $input }}">
+                        <option value="">Choose seller account</option>
                         @foreach ($owners ?? [] as $owner)
                             <option value="{{ $owner->id }}" @selected((string) old('owner_user_id') === (string) $owner->id)>{{ $owner->name }} ({{ $owner->email }})</option>
                         @endforeach
@@ -92,8 +92,8 @@
                     @error('owner_user_id')<span class="mt-1 block text-sm text-red-700">{{ $message }}</span>@enderror
                 </label>
                 <label class="block text-sm">
-                    <span class="font-medium">Owner relationship</span>
-                    <select name="owner_relationship" class="{{ $input }}">
+                    <span class="font-medium">Owner relationship *</span>
+                    <select name="owner_relationship" required class="{{ $input }}">
                         @foreach (\App\Enums\OwnerRelationship::sellerFacing() as $option)
                             <option value="{{ $option->value }}" @selected(old('owner_relationship', $relationship) === $option->value)>{{ $option->label() }}</option>
                         @endforeach
@@ -347,8 +347,8 @@
     @if ($staffEntry ?? false)
         <section class="space-y-4">
             <h2 class="text-lg font-semibold text-lamu-900">Photographs</h2>
-            <p class="text-sm text-stone-600">Optional now; you can add more on the property record after saving. Location metadata is stripped from copies shown to buyers.</p>
-            <x-upload-manager name="photos[]" label="Select photographs (JPEG, PNG or WebP, up to 5 MB each)" accept="image/jpeg,image/png,image/webp" multiple />
+            <p class="text-sm text-stone-600">At least one photograph is required (same as a seller submission). Location metadata is stripped from copies shown to buyers.</p>
+            <x-upload-manager name="photos[]" label="Select photographs * (JPEG, PNG or WebP, up to 5 MB each)" accept="image/jpeg,image/png,image/webp" multiple required />
             @error('photos')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
             @foreach ($errors->get('photos.*') as $messages)
                 @foreach ($messages as $message)
@@ -365,7 +365,11 @@
             <p class="text-sm text-stone-600">This saves all the details above and uploads the photographs and documents you have selected on this page. Files already uploaded are kept.</p>
         @endif
         <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">{{ $submitLabel }}</button>
-        <span class="text-sm text-stone-600">Saving does not submit the listing. You will review and submit it on the next page.</span>
+        @if ($staffEntry ?? false)
+            <span class="text-sm text-stone-600">The listing is published immediately after you save. No seller approval queue.</span>
+        @else
+            <span class="text-sm text-stone-600">Saving does not submit the listing. You will review and submit it on the next page.</span>
+        @endif
     </div>
 </form>
 

@@ -468,6 +468,16 @@ class Property extends Model
     }
 
     /**
+     * Land registered by staff on behalf of a linked owner (not a broker self-submission).
+     */
+    public function isStaffRepresentedListing(): bool
+    {
+        return $this->represented_by !== null
+            && $this->submitted_by !== null
+            && (int) $this->represented_by !== (int) $this->submitted_by;
+    }
+
+    /**
      * Where the submitting broker or landowner follows this listing in their workspace.
      */
     public function submitterUrl(): string
@@ -533,6 +543,11 @@ class Property extends Model
     public function presentations(): HasMany
     {
         return $this->hasMany(OfferPresentation::class)->latest();
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class)->latest();
     }
 
     public function transactions(): HasMany

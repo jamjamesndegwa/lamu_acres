@@ -252,16 +252,18 @@ class VerificationOperations
             && (! $submitter->hasPermission('workspace.broker') || ! app(CapabilityReviewer::class)->hasCurrentCapability($submitter, PartnerCapability::Broker))) {
             $blockers['authority'][] = 'The submitting broker must have current, staff-verified professional credentials.';
         }
-        foreach (app(SellerPortal::class)->documentRequirements($property) as $requirement) {
-            if (! in_array($requirement['requirement'], [SellerPortal::REQUIRED, SellerPortal::CONDITIONAL], true)) {
-                continue;
-            }
-            $lastReview = $property->ownershipDocuments()->where('document_type', $requirement['type'])
-                ->whereNotNull('reviewed_at')->orderByDesc('reviewed_at')->orderByDesc('id')->first();
-            $conflictingReview = $lastReview !== null && (in_array($lastReview->state, [VerificationItemState::Failed, VerificationItemState::Expired], true)
-                || ($lastReview->state === VerificationItemState::Verified && $lastReview->expires_at !== null && $lastReview->expires_at->isPast()));
-            if ($conflictingReview || in_array($requirement['state'], [VerificationItemState::Failed->label(), VerificationItemState::Expired->label()], true)) {
-                $blockers['owners'][] = $requirement['label'].' has conflicting or expired evidence. Staff must review the replacement document before publication.';
+        if (! $property->isStaffRepresentedListing()) {
+            foreach (app(SellerPortal::class)->documentRequirements($property) as $requirement) {
+                if (! in_array($requirement['requirement'], [SellerPortal::REQUIRED, SellerPortal::CONDITIONAL], true)) {
+                    continue;
+                }
+                $lastReview = $property->ownershipDocuments()->where('document_type', $requirement['type'])
+                    ->whereNotNull('reviewed_at')->orderByDesc('reviewed_at')->orderByDesc('id')->first();
+                $conflictingReview = $lastReview !== null && (in_array($lastReview->state, [VerificationItemState::Failed, VerificationItemState::Expired], true)
+                    || ($lastReview->state === VerificationItemState::Verified && $lastReview->expires_at !== null && $lastReview->expires_at->isPast()));
+                if ($conflictingReview || in_array($requirement['state'], [VerificationItemState::Failed->label(), VerificationItemState::Expired->label()], true)) {
+                    $blockers['owners'][] = $requirement['label'].' has conflicting or expired evidence. Staff must review the replacement document before publication.';
+                }
             }
         }
         $conflict = $this->parcelConflict($property);

@@ -11,6 +11,7 @@ use App\Models\BuyerTimelineEntry;
 use App\Models\DocumentAccessRequest;
 use App\Models\Enquiry;
 use App\Models\Offer;
+use App\Models\Property;
 use App\Models\PropertyMatch;
 use App\Models\PropertyVisitRequest;
 use App\Models\SiteVisit;
@@ -317,12 +318,68 @@ class InterestWorkflow
         ]);
 
         $this->timeline($buyer, 'Offer submitted for '.$match->property->title.'.', $match, $buyer);
-
-        $sales = User::permission('staff.sales')->get();
-        $desk = $sales->isNotEmpty() ? $sales : User::permission('staff.buyers')->get();
-        Notification::send($desk, new OfferSubmittedNotification($offer));
+        $this->notifyOfferSubmitted($offer);
 
         return $offer;
+    }
+
+    public function submitListingOffer(User $buyer, Property $property, int $amount, ?string $message): Offer
+    {
+        if (! $property->isPubliclyListed()) {
+            throw ValidationException::withMessages([
+                'listing' => 'Offers can only be made on published listings.',
+            ]);
+        }
+
+        $open = Offer::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('property_id', $property->id)
+            ->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])
+            ->exists();
+
+        if ($open) {
+            throw ValidationException::withMessages([
+                'amount' => 'You already have an open offer on this listing.',
+            ]);
+        }
+
+        $match = PropertyMatch::query()->firstOrCreate(
+            [
+                'buyer_id' => $buyer->id,
+                'property_id' => $property->id,
+            ],
+            [
+                'status' => PropertyMatchStatus::Shortlisted,
+                'approved_at' => now(),
+            ],
+        );
+
+        $offer = Offer::query()->create([
+            'buyer_id' => $buyer->id,
+            'property_id' => $property->id,
+            'property_match_id' => $match->id,
+            'enquiry_id' => $match->enquiry_id,
+            'amount' => $amount,
+            'currency' => 'KES',
+            'message' => $message,
+            'status' => OfferStatus::Submitted,
+        ]);
+
+        $this->timeline($buyer, 'Offer submitted on '.$property->title.'.', $match, $buyer);
+        $this->notifyOfferSubmitted($offer);
+
+        return $offer;
+    }
+
+    private function notifyOfferSubmitted(Offer $offer): void
+    {
+        $recipients = collect();
+
+        foreach (['staff.sales', 'staff.buyers', 'staff.properties'] as $permission) {
+            $recipients = $recipients->merge(User::permission($permission)->get());
+        }
+
+        Notification::send($recipients->unique('id'), new OfferSubmittedNotification($offer));
     }
 
     public function transitionOffer(Offer $offer, OfferStatus $status, User $actor): Offer

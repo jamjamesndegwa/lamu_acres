@@ -71,7 +71,9 @@ class Offer extends Model
 
     public function scopeVisibleToStaff(Builder $query, User $user): Builder
     {
-        if ($user->hasPermission('staff.buyers') || $user->hasPermission('staff.sales')) {
+        if ($user->hasPermission('staff.buyers')
+            || $user->hasPermission('staff.sales')
+            || $user->hasPermission('staff.properties')) {
             return $query;
         }
 

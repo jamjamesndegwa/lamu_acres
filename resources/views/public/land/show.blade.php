@@ -275,6 +275,17 @@
                 <h2 id="enquiry-heading" class="home-serif mt-2 text-3xl font-semibold text-lamu-900">{{ $listing['price'] ?? ($listing['is_lease'] ? 'Rent on request' : 'Price on request') }}</h2>
                 <p class="mt-2 text-sm text-stone-600">{{ collect([$listing['price_basis'], $listing['price_negotiable'] ? 'Negotiable' : null])->filter()->implode(' · ') }}</p>
                 <div class="mt-5 rounded-xl bg-sand-50 p-4"><p class="font-medium text-lamu-900">Interested in this property?</p><p class="mt-2 text-sm leading-relaxed text-stone-600">Speak with the Lamu Acres desk for more information, document access or a guided site visit.</p></div>
+        <div id="make-offer" class="mt-5 scroll-mt-24">
+            <p class="text-sm font-medium text-lamu-900">Make an offer</p>
+            <p class="mt-1 text-sm text-stone-600">Submit a price you are willing to pay. Lamu Acres will follow up with you.</p>
+            @auth
+                @can('offer', $property)
+                    <a href="{{ route('land.offers.create', $property) }}" data-turbo-frame="modal" class="mt-3 inline-block w-full rounded-full bg-lamu-900 px-5 py-3 text-center text-sm font-medium text-white">Make an offer</a>
+                @endcan
+            @else
+                <a href="{{ route('login', ['return_to' => route('land.offers.create', $property)]) }}" class="mt-3 inline-block w-full rounded-full bg-lamu-900 px-5 py-3 text-center text-sm font-medium text-white">Login to make an offer</a>
+            @endauth
+        </div>
         <div id="save-property" class="mt-5 grid gap-3 scroll-mt-24 [&_a]:text-center [&_button]:w-full">
             @auth
                 @can('save', $property)

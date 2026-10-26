@@ -64,7 +64,12 @@ Route::middleware(['auth', 'private.cache'])->group(function () {
     Route::post('/land/{property}/visits', [ListingInterestController::class, 'storeVisit'])->name('land.visits.store');
     Route::get('/land/{property}/documents', [ListingInterestController::class, 'createDocuments'])->name('land.documents.create');
     Route::post('/land/{property}/documents', [ListingInterestController::class, 'storeDocuments'])->name('land.documents.store');
+    Route::post('/land/{property}/offers', [ListingInterestController::class, 'storeOffer'])
+        ->middleware('throttle:enquiries')
+        ->name('land.offers.store');
 });
+
+Route::get('/land/{property}/offers', [ListingInterestController::class, 'createOffer'])->name('land.offers.create');
 
 Route::get('/land/{county}/{locality}/{property}/videos/{propertyMedia}', [PropertyPhotoController::class, 'video'])->name('land.videos.show');
 Route::get('/land/{county}/{locality}/{property}/photos/{propertyMedia}', [PropertyPhotoController::class, 'show'])->name('land.photos.show');

@@ -39,6 +39,14 @@
 
     @include('seller.properties.partials.submission-guide')
 
+    @if (($canViewOffers ?? false) && $property->status === PropertyStatus::Published)
+        <section id="listing-offers" class="mt-6 max-w-3xl scroll-mt-24">
+            <h2 class="font-semibold text-lamu-900">Offers on this listing</h2>
+            <p class="mt-1 text-sm text-stone-600">Buyers and brokers can submit offers from the public land directory. Contact them directly; Lamu Acres staff are also notified.</p>
+            @include('partials.property-offers-list', ['offers' => $property->offers])
+        </section>
+    @endif
+
     @if ($openRequests->isNotEmpty() && $isSubmitter)
         <section id="requests" class="mt-6 max-w-3xl space-y-3">
             <h2 class="font-semibold text-lamu-900">Requests from staff</h2>

@@ -17,7 +17,9 @@ class OfferController extends Controller
     {
         $this->authorize('viewAny', Offer::class);
         abort_unless(
-            $request->user()->hasPermission('staff.buyers') || $request->user()->hasPermission('staff.sales'),
+            $request->user()->hasPermission('staff.buyers')
+            || $request->user()->hasPermission('staff.sales')
+            || $request->user()->hasPermission('staff.properties'),
             403,
         );
 

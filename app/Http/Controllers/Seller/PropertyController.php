@@ -47,6 +47,7 @@ class PropertyController extends Controller
                     ->where('status', OwnerLinkStatus::Verified)
                     ->whereIn('relationship', OwnerRelationship::sellerFacing())))
             ->withExists(['informationRequests as has_open_request' => fn ($query) => $query->whereNull('responded_at')])
+            ->withCount('offers')
             ->latest()
             ->get();
 
@@ -88,8 +89,10 @@ class PropertyController extends Controller
             'informationRequests' => fn ($query) => $query->latest(),
             'ownershipDocuments' => fn ($query) => $query->latest(),
             'media' => fn ($query) => $query->where('kind', 'photo')->orderBy('position'),
+            'offers' => fn ($query) => $query->with('buyer:id,name,email,phone')->latest(),
         ]);
         $isSubmitter = $portal->isSubmitter($request->user(), $property);
+        $canViewOffers = $request->user()->can('viewOffers', $property);
 
         return view('seller.properties.show', [
             'property' => $property,
@@ -105,6 +108,7 @@ class PropertyController extends Controller
             'photos' => $property->media
                 ->filter(fn (PropertyMedia $media): bool => PropertyMediaLibrary::isPublicDerivative($property, $media))
                 ->values(),
+            'canViewOffers' => $canViewOffers,
         ]);
     }
 

@@ -321,4 +321,24 @@ class VerificationDesk
             ->latest('expires_at')
             ->first();
     }
+
+    public function recordStaffIntakeChecks(Property $property, User $staff): void
+    {
+        $this->seed($property);
+
+        foreach (VerificationCategory::cases() as $category) {
+            if (! $category->critical()) {
+                continue;
+            }
+
+            $item = $property->verificationItems()->where('category', $category)->firstOrFail();
+
+            $this->review($item, $staff, [
+                'state' => VerificationItemState::NotApplicable->value,
+                'evidence_note' => 'Staff-registered listing; critical checks recorded at intake.',
+            ]);
+        }
+
+        $property->unsetRelation('verificationItems')->unsetRelation('passport');
+    }
 }

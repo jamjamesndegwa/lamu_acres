@@ -33,6 +33,7 @@ class PropertyInventoryController extends Controller
         $properties = Property::query()
             ->with(['areaCounty:id,name,slug', 'areaLocality:id,name,slug'])
             ->withSum(['portions as sold_portion_acreage' => fn ($query) => $query->where('status', PropertyStatus::Sold)], 'acreage')
+            ->withCount('offers')
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $like = '%'.addcslashes((string) $request->query('q'), '%_\\').'%';
                 $query->where(fn ($inner) => $inner->where('title', 'like', $like)->orWhere('reference', 'like', $like));
@@ -93,9 +94,11 @@ class PropertyInventoryController extends Controller
             $library->storePhoto($request->user(), $property, $photo);
         }
 
+        $property = $portal->finalizeStaffRegistration($request->user(), $property->fresh(['media', 'owners', 'authorities']));
+
         return redirect()
             ->route('staff.properties.show', $property)
-            ->with('status', 'Property draft saved. Add media or ownership documents from the property record when ready.');
+            ->with('status', 'Property registered and published to the land directory.');
     }
 
     public function edit(Request $request, Property $property): View
@@ -131,6 +134,7 @@ class PropertyInventoryController extends Controller
             'owners.user:id,name,email',
             'authorities.seller:id,name',
             'enquiries.buyer:id,name',
+            'offers.buyer:id,name,email,phone',
             'transactions.confirmer:id,name',
             'salesTransactions',
             'saleInstructions.seller:id,name',
@@ -155,7 +159,7 @@ class PropertyInventoryController extends Controller
 
         $tab = (string) $request->query('tab', 'overview');
 
-        if (! in_array($tab, ['overview', 'owners', 'verification', 'marketing', 'enquiries', 'transactions', 'history'], true)) {
+        if (! in_array($tab, ['overview', 'owners', 'verification', 'marketing', 'enquiries', 'offers', 'transactions', 'history'], true)) {
             $tab = 'overview';
         }
 

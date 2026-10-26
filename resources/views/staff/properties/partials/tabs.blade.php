@@ -7,6 +7,7 @@
         'verification' => ['Verification', route('staff.properties.show', [$property, 'tab' => 'verification'])],
         'marketing' => ['Marketing', route('staff.properties.show', [$property, 'tab' => 'marketing'])],
         'enquiries' => ['Enquiries', route('staff.properties.show', [$property, 'tab' => 'enquiries'])],
+        'offers' => ['Offers', route('staff.properties.show', [$property, 'tab' => 'offers'])],
         'transactions' => ['Transactions', route('staff.properties.show', [$property, 'tab' => 'transactions'])],
         'history' => ['History', route('staff.properties.show', [$property, 'tab' => 'history'])],
     ];

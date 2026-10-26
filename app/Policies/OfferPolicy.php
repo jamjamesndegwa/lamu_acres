@@ -11,7 +11,8 @@ class OfferPolicy
     {
         return $user->canUseBuyerFeatures()
             || $user->hasPermission('staff.buyers')
-            || $user->hasPermission('staff.sales');
+            || $user->hasPermission('staff.sales')
+            || $user->hasPermission('staff.properties');
     }
 
     public function view(User $user, Offer $offer): bool
@@ -20,13 +21,17 @@ class OfferPolicy
             return true;
         }
 
-        return $user->hasPermission('staff.buyers') || $user->hasPermission('staff.sales');
+        return $user->hasPermission('staff.buyers')
+            || $user->hasPermission('staff.sales')
+            || $user->hasPermission('staff.properties');
     }
 
     public function updateStatus(User $user, Offer $offer): bool
     {
         return ! $offer->isOwnedBy($user)
-            && ($user->hasPermission('staff.buyers') || $user->hasPermission('staff.sales'));
+            && ($user->hasPermission('staff.buyers')
+                || $user->hasPermission('staff.sales')
+                || $user->hasPermission('staff.properties'));
     }
 
     public function withdraw(User $user, Offer $offer): bool

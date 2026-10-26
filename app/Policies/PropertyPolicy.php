@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\OwnerLinkStatus;
 use App\Enums\PropertyStatus;
 use App\Models\Property;
 use App\Models\User;
@@ -45,6 +46,28 @@ class PropertyPolicy
     public function enquire(User $user, Property $property): bool
     {
         return $this->save($user, $property);
+    }
+
+    public function offer(User $user, Property $property): bool
+    {
+        return $this->save($user, $property);
+    }
+
+    public function viewOffers(User $user, Property $property): bool
+    {
+        if ($user->hasPermission('staff.properties')) {
+            return true;
+        }
+
+        if (! $user->canUseSellerFeatures()) {
+            return false;
+        }
+
+        return (int) $property->submitted_by === (int) $user->id
+            || $property->owners()
+                ->where('user_id', $user->id)
+                ->where('status', OwnerLinkStatus::Verified)
+                ->exists();
     }
 
     public function visit(User $user, Property $property): bool

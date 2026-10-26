@@ -16,11 +16,11 @@
             </select>
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Filter</button>
         </x-filter-bar>
-        <a href="{{ route('staff.properties.create') }}" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add property</a>
+        <a href="{{ route('staff.properties.create') }}" data-turbo-frame="_top" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Add property</a>
     </div>
 
     <div class="mt-6">
-        <x-workspace.table :columns="['Reference', 'Property', 'Status', 'Acreage left', 'Price per acre', '']">
+        <x-workspace.table :columns="['Reference', 'Property', 'Status', 'Offers', 'Acreage left', 'Price per acre', '']">
             @forelse ($properties as $property)
                 <tr class="border-b border-sand-200 last:border-b-0">
                     <td class="px-4 py-4 text-sm">{{ $property->reference }}</td>
@@ -29,6 +29,13 @@
                         <span class="mt-1 block text-xs text-stone-500">{{ $property->locationLabel() }}</span>
                     </td>
                     <td class="px-4 py-4 text-sm"><x-status-badge :label="$property->status->label()" /></td>
+                    <td class="px-4 py-4 text-sm">
+                        @if ($property->offers_count > 0)
+                            <a href="{{ route('staff.properties.show', [$property, 'tab' => 'offers']) }}" class="font-medium text-lamu-800 hover:underline">{{ $property->offers_count }} {{ \Illuminate\Support\Str::plural('offer', $property->offers_count) }}</a>
+                        @else
+                            —
+                        @endif
+                    </td>
                     <td class="px-4 py-4 text-sm">{{ number_format($property->remainingAcreage(), 2) }}</td>
                     <td class="px-4 py-4 text-sm">{{ $property->pricePerAcre() ? 'KSh '.number_format($property->pricePerAcre()) : '—' }}</td>
                     <td class="px-4 py-4 text-right text-sm">
@@ -39,7 +46,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8">
+                    <td colspan="7" class="px-4 py-8">
                         <x-workspace.empty title="No properties" message="Published inventory is empty until a property is recorded here." />
                     </td>
                 </tr>
