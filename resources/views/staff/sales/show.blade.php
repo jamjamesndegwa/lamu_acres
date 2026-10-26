@@ -20,6 +20,9 @@
 <x-workspace-layout :heading="$transaction->reference">
     <p class="mt-3 text-sm text-stone-600">{{ $transaction->property->title }} · {{ $transaction->origin->label() }} · {{ $transaction->stage->label() }}</p>
     <p class="mt-1 text-sm">{{ $transaction->buyer?->name ?? 'Buyer not linked' }} · {{ $transaction->agent?->name ?? 'Unassigned' }}</p>
+    @if (! empty($reassessmentMessage))
+        <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{{ $reassessmentMessage }}</p>
+    @endif
 
     <nav class="subnav-scroll mt-6 border-b border-sand-200" aria-label="Sale details">
         <div class="flex w-max min-w-full gap-1">
@@ -160,8 +163,9 @@
         <article class="mt-6 rounded-2xl border border-sand-200 bg-white p-5">
             <h2 class="font-semibold text-lamu-900">{{ $transaction->property->title }}</h2>
             <p class="mt-2 text-sm text-stone-600">{{ $transaction->property->locationLabel() }}</p>
+            @php($stock = $transaction->property->inventorySnapshot())
             @if ($transaction->property->acreage)
-                <p class="mt-1 text-sm">{{ $transaction->property->acreage }} acres on the property record</p>
+                <p class="mt-1 text-sm">{{ number_format($stock['registered_acreage'], 2) }} acres registered · {{ number_format($stock['sold_acreage'], 2) }} sold · {{ number_format($stock['remaining_acreage'], 2) }} remaining · {{ number_format($stock['available_acreage'], 2) }} available to market</p>
             @endif
             @if ($transaction->acreage)
                 <p class="mt-1 text-sm">{{ $transaction->acreage }} acres on this transaction</p>

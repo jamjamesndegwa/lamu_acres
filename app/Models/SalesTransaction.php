@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'reference',
@@ -76,6 +77,11 @@ class SalesTransaction extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function soldInventoryRecord(): HasOne
+    {
+        return $this->hasOne(Property::class, 'sales_transaction_id');
     }
 
     public function offers(): HasMany

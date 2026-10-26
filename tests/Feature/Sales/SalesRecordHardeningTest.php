@@ -8,6 +8,7 @@ use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyStatus;
+use App\Enums\SaleMode;
 use App\Enums\SalesStage;
 use App\Models\Enquiry;
 use App\Models\Offer;
@@ -20,6 +21,7 @@ use App\Services\Sales\ClosingDesk;
 use App\Services\Sales\CommissionDesk;
 use App\Services\Sales\SalesPipeline;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class SalesRecordHardeningTest extends FoundationTestCase
@@ -35,6 +37,8 @@ class SalesRecordHardeningTest extends FoundationTestCase
             'title' => 'Forty acre holding',
             'acreage' => 40,
             'offered_acreage' => 40,
+            'minimum_acreage' => 5,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
             'submitted_by' => $seller->id,
         ]);
 
@@ -82,7 +86,9 @@ class SalesRecordHardeningTest extends FoundationTestCase
         $this->assertEquals(8.0, $property->remainingAcreage());
         $this->assertSame(PropertyStatus::Published, $property->status);
         $this->assertSame(1, $property->portions()->where('status', PropertyStatus::Sold)->count());
-        $this->assertEquals(32.0, (float) $property->portions()->first()->acreage);
+        $portion = $property->portions()->first();
+        $this->assertEquals(32.0, (float) $portion->acreage);
+        $this->assertSame($transaction->id, $portion->sales_transaction_id);
 
         $this->actingAs($buyer)
             ->get(route('buyer.enquiries.show', $enquiry))
@@ -140,7 +146,12 @@ class SalesRecordHardeningTest extends FoundationTestCase
         Notification::fake();
 
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
-        $property = Property::factory()->published()->create(['acreage' => 40, 'offered_acreage' => 40]);
+        $property = Property::factory()->published()->create([
+            'acreage' => 40,
+            'offered_acreage' => 40,
+            'minimum_acreage' => 5,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+        ]);
         $pipeline = app(SalesPipeline::class);
 
         $first = $pipeline->open($sales, [
@@ -158,19 +169,13 @@ class SalesRecordHardeningTest extends FoundationTestCase
 
         $this->assertEquals(8.0, $property->refresh()->remainingAcreage());
 
-        $second = $pipeline->open($sales, [
+        $this->expectException(ValidationException::class);
+        $pipeline->open($sales, [
             'origin' => 'instruction',
             'property_id' => $property->id,
             'sale_instruction_id' => $property->saleInstructions()->first()->id,
             'acreage' => 10,
         ]);
-        $second = $this->prepareForClosing($second, $sales, 2_000_000);
-        $this->actingAs($sales)
-            ->post(route('staff.sales.complete', $second), ['lock_version' => $second->lock_version])
-            ->assertSessionHasErrors('acreage');
-
-        $this->assertEquals(8.0, $property->refresh()->remainingAcreage());
-        $this->assertSame(SalesStage::CompletionPending, $second->refresh()->stage);
     }
 
     public function test_whole_property_closing_removes_it_from_available_listings(): void
@@ -307,6 +312,8 @@ class SalesRecordHardeningTest extends FoundationTestCase
         $property = Property::factory()->published()->create([
             'acreage' => 40,
             'offered_acreage' => 40,
+            'minimum_acreage' => 5,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
             'price_basis' => PriceBasis::PerAcre,
             'price_rate' => 100_000,
             'price_amount' => 4_000_000,
@@ -337,7 +344,12 @@ class SalesRecordHardeningTest extends FoundationTestCase
         Notification::fake();
 
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
-        $property = Property::factory()->published()->create(['acreage' => 40]);
+        $property = Property::factory()->published()->create([
+            'acreage' => 40,
+            'offered_acreage' => 40,
+            'minimum_acreage' => 5,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+        ]);
         $pipeline = app(SalesPipeline::class);
 
         $left = $this->prepareForClosing($pipeline->open($sales, [
@@ -389,5 +401,4 @@ class SalesRecordHardeningTest extends FoundationTestCase
 
         return $transaction->refresh();
     }
-
 }

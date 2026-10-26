@@ -10,6 +10,7 @@ use App\Models\Enquiry;
 use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Services\Sales\SaleModeTerms;
 use App\Services\Sales\SalesPipeline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,8 @@ class EnquiryRecorder
         Request $request,
         SalesPipeline $pipeline,
     ): Enquiry {
+        app(SaleModeTerms::class)->validatePurchaseAcreage($property, $requestedAcreage);
+
         $area = $requestedAcreage ?? $property->offeredAcreage();
         $message = 'Buyer request to purchase '.$property->title.'. Proposed price: KSh '.number_format($requestedPrice).'. Requested area: '.rtrim(rtrim(number_format($area, 4, '.', ''), '0'), '.').' acres.';
 
@@ -138,6 +141,7 @@ class EnquiryRecorder
             'purchase_request' => $purchaseRequest,
             'requested_price' => $requestedPrice,
             'requested_acreage' => $requestedAcreage,
+            'sale_mode_at_request' => $purchaseRequest ? $property->saleMode()->value : null,
             'referrer_url' => $this->referrer($request, $property),
             'campaign' => $this->campaign($request),
             'source' => 'website',

@@ -38,6 +38,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:seller'])
         Route::get('/offers', [SalesController::class, 'offers'])->name('offers.index');
         Route::post('/offers/{offerPresentation}', [SalesController::class, 'respond'])->name('offers.respond');
         Route::get('/transactions', [SalesController::class, 'transactions'])->name('transactions.index');
+        Route::get('/sales/{salesTransaction}', [SalesController::class, 'showCompletedSale'])->name('sales.show');
         Route::get('/transactions/{propertyTransaction}', [SalesController::class, 'statement'])->name('transactions.show');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');

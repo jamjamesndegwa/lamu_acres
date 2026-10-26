@@ -29,6 +29,8 @@ class SalesPipeline
         $property = Property::query()->findOrFail($data['property_id']);
         $buyerId = $data['buyer_id'] ?? null;
         $links = $this->links($origin, $property, $buyerId, $data);
+        $acreage = (float) ($data['acreage'] ?? $property->remainingAcreage());
+        app(SaleModeTerms::class)->validateTransactionAcreage($property, $acreage);
 
         $transaction = SalesTransaction::query()->create([
             'reference' => $this->reference(),
@@ -41,7 +43,7 @@ class SalesPipeline
             'sale_instruction_id' => $links['sale_instruction_id'],
             'assigned_to' => $data['assigned_to'] ?? $actor->id,
             'stage' => SalesStage::Enquiry,
-            'acreage' => $data['acreage'] ?? $property->remainingAcreage(),
+            'acreage' => $acreage,
             'lock_version' => 0,
             'opened_at' => now(),
         ]);
@@ -204,6 +206,8 @@ class SalesPipeline
                     'acreage' => 'The agreed acreage cannot exceed the land still held.',
                 ]);
             }
+
+            app(SaleModeTerms::class)->validateTransactionAcreage($locked->property->fresh(), $requested);
 
             $locked->acreage = $requested;
             $this->timeline($locked, $actor, 'Agreed acreage recorded as '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.', true);

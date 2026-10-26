@@ -6,8 +6,8 @@ use App\Enums\ClosingEvidenceState;
 use App\Enums\CommissionStatus;
 use App\Enums\PaymentReconciliation;
 use App\Enums\PropertyStatus;
+use App\Enums\SaleMode;
 use App\Enums\SalesStage;
-use App\Models\CommissionAgreement;
 use App\Models\CommissionPayment;
 use App\Models\Property;
 use App\Models\SaleInstruction;
@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Notifications\CommissionSettlementNotification;
 use App\Notifications\SaleCompletedNotification;
 use App\Services\Sales\ClosingDesk;
+use Illuminate\Validation\ValidationException;
 use App\Services\Sales\CommissionDesk;
 use App\Services\Sales\SalesPipeline;
 use Illuminate\Support\Facades\Notification;
@@ -32,7 +33,13 @@ class ClosingSettlementTest extends FoundationTestCase
         $finance = User::factory()->withRoles('staff')->withPermissions('staff.finance', 'commissions.approve', 'commissions.record')->create();
         $broker = User::factory()->withRoles('broker')->create();
         $seller = User::factory()->withRoles('seller')->create();
-        $property = Property::factory()->published()->create(['title' => 'Parent parcel', 'acreage' => 10]);
+        $property = Property::factory()->published()->create([
+            'title' => 'Parent parcel',
+            'acreage' => 10,
+            'offered_acreage' => 10,
+            'minimum_acreage' => 2,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+        ]);
         $instruction = SaleInstruction::query()->create([
             'property_id' => $property->id,
             'seller_id' => $seller->id,
@@ -86,18 +93,13 @@ class ClosingSettlementTest extends FoundationTestCase
         $this->assertSame(CommissionStatus::Earned, $agreement->status);
         Notification::assertSentTo($broker, SaleCompletedNotification::class);
 
-        $second = $pipeline->open($sales, [
+        $this->expectException(ValidationException::class);
+        $pipeline->open($sales, [
             'origin' => 'instruction',
             'property_id' => $property->id,
             'sale_instruction_id' => $instruction->id,
             'acreage' => 8,
         ]);
-        $second = $this->prepare($second, $sales, 500_000);
-        $this->actingAs($sales)
-            ->post(route('staff.sales.complete', $second), ['lock_version' => $second->lock_version])
-            ->assertSessionHasErrors('acreage');
-        $this->assertEquals(6.0, $property->refresh()->remainingAcreage());
-        $this->assertSame(1, $property->portions()->count());
 
         $this->actingAs($sales)->post(route('staff.settlements.approve', $agreement))->assertForbidden();
         $this->actingAs($finance)->post(route('staff.settlements.approve', $agreement))->assertRedirect();

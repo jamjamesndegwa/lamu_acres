@@ -90,10 +90,17 @@
                 @endif
             </div>
             <div>
-                <dt class="text-sm text-stone-500">{{ $listing['is_lease'] ? 'Area offered for lease' : 'Area offered' }}</dt>
+                <dt class="text-sm text-stone-500">Sale arrangement</dt>
+                <dd class="font-medium text-lamu-900">{{ $listing['sale_mode'] ?? 'Entire parcel only' }}</dd>
+            </div>
+            <div>
+                <dt class="text-sm text-stone-500">{{ $listing['is_lease'] ? 'Area offered for lease' : 'Area currently available' }}</dt>
                 <dd class="font-medium text-lamu-900">{{ $listing['acreage'] === 'Not stated' ? 'Not stated' : $listing['acreage'].' acres' }}</dd>
+                @if (! empty($listing['registered_acreage']) && $listing['registered_acreage'] !== $listing['acreage'])
+                    <dd class="text-sm text-stone-600">{{ $listing['registered_acreage'] }} acres on the title parcel</dd>
+                @endif
                 @if ($listing['minimum_acreage'])
-                    <dd class="text-sm text-stone-600">Portions from {{ $listing['minimum_acreage'] }} acres considered</dd>
+                    <dd class="text-sm text-stone-600">Minimum purchase {{ $listing['minimum_acreage'] }} acres</dd>
                 @endif
             </div>
             @if ($listing['lease_term'])

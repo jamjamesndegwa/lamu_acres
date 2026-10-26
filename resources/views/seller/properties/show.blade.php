@@ -60,7 +60,9 @@
         <dl class="mt-3 grid gap-4 rounded-2xl border border-sand-200 bg-white p-5 text-sm sm:grid-cols-2">
             <div><dt class="text-stone-500">{{ $property->isLease() ? 'Asking rent' : 'Asking price' }}</dt><dd>{{ $property->formattedPrice() ?? 'Not set' }}@if ($property->price_negotiable) · negotiable @endif</dd></div>
             <div><dt class="text-stone-500">Location</dt><dd>{{ $property->locality_id ? $property->locationLabel() : 'Not set' }}</dd></div>
-            <div><dt class="text-stone-500">Parcel size</dt><dd>{{ $property->acreage ? number_format((float) $property->acreage, 2).' acres' : 'Not set' }}@if ($property->isPartialOffer()) · {{ number_format((float) $property->offered_acreage, 2) }} acres offered @endif</dd></div>
+            <div><dt class="text-stone-500">Sale mode</dt><dd>{{ $property->saleMode()->label() }}</dd></div>
+            @php($stock = $property->inventorySnapshot())
+            <div><dt class="text-stone-500">Parcel size</dt><dd>{{ $property->acreage ? number_format((float) $property->acreage, 2).' acres registered' : 'Not set' }} · {{ number_format($stock['sold_acreage'], 2) }} sold · {{ number_format($stock['remaining_acreage'], 2) }} remaining · {{ number_format($stock['available_acreage'], 2) }} offered</dd></div>
             <div><dt class="text-stone-500">Tenure</dt><dd>{{ $property->tenure?->label() ?? 'Not set' }}</dd></div>
             @if ($property->isLease())
                 <div><dt class="text-stone-500">Lease term</dt><dd>{{ $property->lease_min_months ? $property->lease_min_months.' months minimum' : 'Not set' }}@if ($property->lease_max_months) · up to {{ $property->lease_max_months }} months @endif</dd></div>

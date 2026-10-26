@@ -662,6 +662,94 @@ document.addEventListener('keydown', (event) => {
     }
 })
 
+function formatAcres(value) {
+    if (!Number.isFinite(value) || value <= 0) {
+        return ''
+    }
+
+    return String(value)
+        .replace(/(\.\d*?[1-9])0+$/u, '$1')
+        .replace(/\.0+$/u, '')
+}
+
+function indicativePurchaseTotal(form, acreage) {
+    const basis = form.dataset.priceBasis || 'total'
+    const rate = Number(form.dataset.priceRate)
+    const amount = Number(form.dataset.priceAmount)
+    const offered = Number(form.dataset.offeredAcreage)
+
+    if (!Number.isFinite(acreage) || acreage <= 0) {
+        return null
+    }
+
+    if (basis === 'per_acre' && Number.isFinite(rate) && rate > 0) {
+        return Math.round(rate * acreage)
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(offered) || offered <= 0) {
+        return null
+    }
+
+    return Math.round(amount * (acreage / offered))
+}
+
+function refreshPurchasePricing(form) {
+    const acreageInput = form.querySelector('[data-purchase-acreage]')
+    const output = form.querySelector('[data-purchase-indicative-price]')
+    if (!output) {
+        return
+    }
+
+    const available = Number(form.dataset.availableAcreage)
+    const whole = form.dataset.wholeAcreage
+    let acreage = whole !== '' ? Number(whole) : Number(acreageInput?.value)
+
+    if ((!Number.isFinite(acreage) || acreage <= 0) && acreageInput && whole === '') {
+        acreage = available
+    }
+
+    const total = indicativePurchaseTotal(form, acreage)
+    const rate = Number(form.dataset.priceRate)
+    const basis = form.dataset.priceBasis || 'total'
+
+    if (total === null) {
+        output.hidden = true
+        output.textContent = ''
+
+        return
+    }
+
+    const acresLabel = formatAcres(acreage)
+    const parts = [
+        `Selected: ${acresLabel} acres`,
+        `Available: ${formatAcres(available)} acres`,
+    ]
+
+    if (basis === 'per_acre' && Number.isFinite(rate) && rate > 0) {
+        parts.push(`Asking: KSh ${rate.toLocaleString()} per acre`)
+    }
+
+    parts.push(`Indicative asking total: KSh ${total.toLocaleString()} (estimate only, not agreed price)`)
+    output.textContent = parts.join(' · ')
+    output.hidden = false
+}
+
+function bindPurchasePricing(root = document) {
+    root.querySelectorAll('form[data-purchase-pricing]').forEach((form) => {
+        refreshPurchasePricing(form)
+        const acreageInput = form.querySelector('[data-purchase-acreage]')
+        acreageInput?.addEventListener('input', () => refreshPurchasePricing(form))
+        acreageInput?.addEventListener('change', () => refreshPurchasePricing(form))
+    })
+}
+
+document.addEventListener('DOMContentLoaded', () => bindPurchasePricing())
+document.addEventListener('turbo:frame-load', (event) => {
+    if (event.target instanceof HTMLElement) {
+        bindPurchasePricing(event.target)
+    }
+})
+
 window.LamuAcres = {
     notify,
     confirm: confirmAction,

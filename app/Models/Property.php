@@ -15,8 +15,11 @@ use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\RoadAccess;
+use App\Enums\SaleMode;
 use App\Enums\SubdivisionStatus;
 use App\Enums\VerificationLevel;
+use App\Services\Inventory\PropertyInventory;
+use App\Services\Sales\SaleModeTerms;
 use Database\Factories\PropertyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +27,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'reference',
@@ -54,6 +58,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'seller_name',
     'seller_contact',
     'parent_id',
+    'sales_transaction_id',
     'portion_label',
     'amenities',
     'price_basis',
@@ -141,6 +146,11 @@ class Property extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function authorizingSale(): BelongsTo
+    {
+        return $this->belongsTo(SalesTransaction::class, 'sales_transaction_id');
     }
 
     public function portions(): HasMany
@@ -260,6 +270,35 @@ class Property extends Model
     {
         return $this->offered_acreage !== null
             && (float) $this->offered_acreage + 0.0001 < (float) $this->acreage;
+    }
+
+    public function saleMode(): SaleMode
+    {
+        return app(SaleModeTerms::class)->resolve($this);
+    }
+
+    public function allowsPartialPurchases(): bool
+    {
+        return $this->saleMode() === SaleMode::Partial;
+    }
+
+    public function indicativePriceForAcreage(float $acreage): ?int
+    {
+        return app(SaleModeTerms::class)->indicativePrice($this, $acreage);
+    }
+
+    /**
+     * @return array{
+     *     registered_acreage: float,
+     *     sold_acreage: float,
+     *     remaining_acreage: float,
+     *     offered_acreage: float,
+     *     available_acreage: float,
+     * }
+     */
+    public function inventorySnapshot(): array
+    {
+        return app(PropertyInventory::class)->inventorySnapshot($this);
     }
 
     /**
@@ -501,7 +540,7 @@ class Property extends Model
         return $this->hasMany(PropertyTransaction::class)->latest();
     }
 
-    public function passport(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function passport(): HasOne
     {
         return $this->hasOne(VerificationPassport::class);
     }

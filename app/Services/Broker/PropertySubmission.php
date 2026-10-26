@@ -4,6 +4,7 @@ namespace App\Services\Broker;
 
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
+use App\Enums\SaleMode;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\PropertyAudit;
@@ -34,6 +35,12 @@ class PropertySubmission
         $locality = Locality::query()->with('county')->findOrFail($data['locality_id']);
         $title = trim((string) $data['title']);
 
+        $saleMode = SaleMode::tryFrom((string) ($data['sale_mode'] ?? '')) ?? SaleMode::Whole;
+        $listingTerms = ['sale_mode' => $saleMode->value];
+        if (! empty($data['seller_sale_instructions'])) {
+            $listingTerms['seller_instructions'] = trim((string) $data['seller_sale_instructions']);
+        }
+
         $property = Property::query()->create([
             'reference' => $this->reference(),
             'slug' => Str::slug($title).'-'.Str::lower(Str::random(5)),
@@ -45,7 +52,12 @@ class PropertySubmission
             'county' => $locality->county->name,
             'locality' => $locality->name,
             'acreage' => $data['acreage'],
+            'offered_acreage' => $saleMode === SaleMode::Partial
+                ? ($data['offered_acreage'] ?? $data['acreage'])
+                : null,
+            'minimum_acreage' => $saleMode === SaleMode::Partial ? ($data['minimum_acreage'] ?? null) : null,
             'price_amount' => $data['price_amount'],
+            'listing_terms' => $listingTerms,
             'price_currency' => 'KES',
             'purpose' => $data['purpose'],
             'property_type' => $data['property_type'],

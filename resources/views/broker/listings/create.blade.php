@@ -25,8 +25,22 @@
                 @endforeach
             </select>
         </label>
+        <fieldset class="space-y-2">
+            <legend class="text-sm font-medium">Owner’s intended sale mode</legend>
+            <div class="flex flex-wrap gap-3">
+                @foreach (\App\Enums\SaleMode::cases() as $mode)
+                    <label class="flex items-center gap-2 rounded-full border border-sand-200 px-4 py-2 text-sm">
+                        <input type="radio" name="sale_mode" value="{{ $mode->value }}" @checked(old('sale_mode', 'whole') === $mode->value) required>
+                        {{ $mode->label() }}
+                    </label>
+                @endforeach
+            </div>
+            <p class="text-xs text-stone-600">This records the owner’s instructions for staff review. It does not replace marketing authority or seller verification.</p>
+        </fieldset>
         <div class="grid gap-4 sm:grid-cols-2">
-            <x-measure-field name="acreage" label="Acreage" unit="acres" :value="old('acreage')" required />
+            <x-measure-field name="acreage" label="Registered acreage" unit="acres" :value="old('acreage')" required />
+            <x-measure-field name="offered_acreage" label="Acreage offered now (partial listings)" unit="acres" :value="old('offered_acreage')" />
+            <x-measure-field name="minimum_acreage" label="Minimum portion (partial listings)" unit="acres" :value="old('minimum_acreage')" />
             <x-measure-field name="price_amount" label="Price" unit="KSh" :value="old('price_amount')" inputmode="numeric" required />
             <label class="block text-sm">
                 <span class="font-medium">Purpose</span>
@@ -45,6 +59,10 @@
                 </select>
             </label>
         </div>
+        <label class="block text-sm">
+            <span class="font-medium">Owner sale instructions (optional)</span>
+            <textarea name="seller_sale_instructions" rows="2" maxlength="1000" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">{{ old('seller_sale_instructions') }}</textarea>
+        </label>
         <label class="block text-sm">
             <span class="font-medium">Parcel identifier</span>
             <input name="parcel_identifier" value="{{ old('parcel_identifier') }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">

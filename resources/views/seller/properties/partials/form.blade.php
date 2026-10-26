@@ -137,7 +137,21 @@
             </label>
         </div>
 
+        @php($saleMode = old('sale_mode', $property->purpose?->value === 'sale' ? $property->saleMode()->value : 'whole'))
         <h3 class="pt-2 font-medium text-lamu-900">Parcel</h3>
+        <fieldset class="space-y-2" data-purpose-section="sale" @if ($purpose !== 'sale') hidden @endif>
+            <legend class="text-sm font-medium">How do you want to sell? *</legend>
+            <div class="flex flex-wrap gap-3">
+                @foreach (\App\Enums\SaleMode::cases() as $mode)
+                    <label class="flex items-center gap-2 rounded-full border border-sand-200 px-4 py-2 text-sm">
+                        <input type="radio" name="sale_mode" value="{{ $mode->value }}" @checked($saleMode === $mode->value) data-sale-mode-choice>
+                        {{ $mode->label() }}
+                    </label>
+                @endforeach
+            </div>
+            @error('sale_mode')<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
+            <p class="text-xs text-stone-600">Whole-parcel listings require buyers to purchase all land currently offered. Partial listings let buyers request a specific acreage above your minimum.</p>
+        </fieldset>
         <div class="grid gap-4 sm:grid-cols-2">
             <label class="block text-sm">
                 <span class="font-medium">Title or land reference number *</span>
@@ -162,8 +176,10 @@
                 </label>
             @endforeach
             <x-measure-field name="acreage" label="Registered parcel size *" unit="acres" :value="old('acreage', $property->acreage)" />
-            <x-measure-field name="offered_acreage" label="Area offered (if not the whole parcel)" unit="acres" :value="old('offered_acreage', $property->offered_acreage)" />
-            <x-measure-field name="minimum_acreage" label="Smallest portion you would accept" unit="acres" :value="old('minimum_acreage', $property->minimum_acreage)" />
+            <div data-partial-sale-fields @if ($saleMode !== 'partial') hidden @endif class="contents">
+                <x-measure-field name="offered_acreage" label="Total acreage available for sale now" unit="acres" :value="old('offered_acreage', $property->offered_acreage ?? $property->acreage)" />
+                <x-measure-field name="minimum_acreage" label="Minimum purchase size *" unit="acres" :value="old('minimum_acreage', $property->minimum_acreage)" />
+            </div>
         </div>
         @foreach (['acreage', 'offered_acreage', 'minimum_acreage'] as $name)
             @error($name)<span class="block text-sm text-red-700">{{ $message }}</span>@enderror
@@ -324,5 +340,15 @@
         if (county && locality) {
             filterLocalities();
         }
+
+        const partialFields = form.querySelector('[data-partial-sale-fields]');
+        const showSaleMode = () => {
+            const chosen = form.querySelector('[data-sale-mode-choice]:checked')?.value;
+            if (partialFields) {
+                partialFields.hidden = chosen !== 'partial';
+            }
+        };
+        form.querySelectorAll('[data-sale-mode-choice]').forEach((input) => input.addEventListener('change', showSaleMode));
+        showSaleMode();
     })();
 </script>

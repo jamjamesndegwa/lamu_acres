@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'purchase_request',
     'requested_price',
     'requested_acreage',
+    'sale_mode_at_request',
     'responded_at',
     'closed_at',
 ])]

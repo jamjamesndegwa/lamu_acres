@@ -124,7 +124,12 @@ class ClosingDesk
                 ]);
             }
 
-            $this->inventory->closeSale($actor, $locked->property, (float) $locked->acreage, (int) $locked->agreed_price);
+            app(SalesReassessment::class)->blockIfStale($locked);
+
+            $property = $locked->property()->lockForUpdate()->firstOrFail();
+            app(SaleModeTerms::class)->validateTransactionAcreage($property, (float) $locked->acreage);
+
+            $this->inventory->closeSale($actor, $property, (float) $locked->acreage, (int) $locked->agreed_price, $locked);
 
             $locked->stage = SalesStage::Completed;
             $locked->completed_at = now();

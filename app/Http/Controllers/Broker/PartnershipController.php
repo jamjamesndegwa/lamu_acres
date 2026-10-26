@@ -162,7 +162,12 @@ class PartnershipController extends Controller
             ->whereIn('status', [BrokerIntroductionStatus::Accepted, BrokerIntroductionStatus::Active])
             ->pluck('id');
 
-        return SalesTransaction::query()->whereIn('broker_introduction_id', $introductions);
+        $brokerId = $request->user()->id;
+
+        return SalesTransaction::query()->where(function ($query) use ($introductions, $brokerId): void {
+            $query->whereIn('broker_introduction_id', $introductions)
+                ->orWhereHas('property', fn ($property) => $property->where('submitted_by', $brokerId));
+        });
     }
 
     private function visibleAgreements(Request $request)

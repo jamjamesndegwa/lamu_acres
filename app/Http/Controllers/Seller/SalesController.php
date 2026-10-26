@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Models\OfferPresentation;
 use App\Models\Property;
 use App\Models\PropertyTransaction;
+use App\Models\SalesTransaction;
 use App\Models\SiteVisit;
 use App\Services\Seller\SellerPortal;
+use App\Services\Seller\SellerSalesHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -70,15 +72,28 @@ class SalesController extends Controller
         return back()->with('status', 'Offer response recorded. The property remains unsold until staff complete a sale.');
     }
 
-    public function transactions(Request $request): View
+    public function transactions(Request $request, SellerSalesHistory $history): View
     {
-        $transactions = PropertyTransaction::query()
-            ->whereIn('property_id', $this->properties($request)->pluck('id'))
-            ->with('property')
-            ->latest()
-            ->paginate(12);
+        $propertyIds = $this->properties($request)->pluck('id');
 
-        return view('seller.sales.transactions', ['transactions' => $transactions]);
+        return view('seller.sales.transactions', [
+            'completedSales' => $history->completedSalesQuery($request->user())->paginate(12, ['*'], 'sales_page'),
+            'legacyTransactions' => PropertyTransaction::query()
+                ->whereIn('property_id', $propertyIds)
+                ->with('property')
+                ->latest()
+                ->paginate(12, ['*'], 'legacy_page'),
+        ]);
+    }
+
+    public function showCompletedSale(
+        Request $request,
+        SalesTransaction $salesTransaction,
+        SellerSalesHistory $history,
+    ): View {
+        abort_unless($history->canView($request->user(), $salesTransaction), 403);
+
+        return view('seller.sales.completed-sale', $history->presentCompletedSale($salesTransaction));
     }
 
     public function statement(Request $request, PropertyTransaction $propertyTransaction, SellerPortal $portal): View

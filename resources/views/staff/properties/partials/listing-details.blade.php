@@ -15,7 +15,10 @@
         <div><dt class="text-stone-500">Land reference</dt><dd>{{ $property->parcel_identifier ?? 'Not recorded' }}@if ($property->parcel_reference_type) ({{ $property->parcel_reference_type->label() }})@endif</dd></div>
         <div><dt class="text-stone-500">Survey, RIM or deed plan</dt><dd>{{ $property->survey_reference ?? 'Not recorded' }}</dd></div>
         <div><dt class="text-stone-500">Registered acreage</dt><dd>{{ $property->acreage !== null ? number_format((float) $property->acreage, 2).' acres' : 'Not recorded' }}</dd></div>
-        <div><dt class="text-stone-500">Acreage offered</dt><dd>{{ $property->offered_acreage !== null ? number_format((float) $property->offered_acreage, 2).' acres (portion)' : 'Whole parcel' }}</dd></div>
+        <div><dt class="text-stone-500">Sale mode</dt><dd>{{ $property->saleMode()->label() }}</dd></div>
+        <div><dt class="text-stone-500">Registered acreage</dt><dd>{{ $property->acreage !== null ? number_format((float) $property->acreage, 2).' acres' : 'Not stated' }}</dd></div>
+        @php($stock = $property->inventorySnapshot())
+        <div><dt class="text-stone-500">Currently available</dt><dd>{{ number_format($stock['available_acreage'], 2) }} acres ({{ number_format($stock['remaining_acreage'], 2) }} remaining@if ($property->offered_acreage !== null), {{ number_format($stock['offered_acreage'], 2) }} offered@endif)</dd></div>
         <div><dt class="text-stone-500">Minimum portion</dt><dd>{{ $property->minimum_acreage !== null ? number_format((float) $property->minimum_acreage, 2).' acres' : 'Not stated' }}</dd></div>
         <div><dt class="text-stone-500">Subdivision</dt><dd>{{ $property->subdivision_status?->label() ?? 'Not stated' }}</dd></div>
         <div><dt class="text-stone-500">Boundaries</dt><dd>{{ $property->boundary_status?->label() ?? 'Not stated' }}</dd></div>

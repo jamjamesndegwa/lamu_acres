@@ -15,6 +15,7 @@ use App\Enums\ParcelReferenceType;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyType;
 use App\Enums\RoadAccess;
+use App\Enums\SaleMode;
 use App\Enums\SubdivisionStatus;
 use App\Models\Locality;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -104,6 +105,7 @@ class SellerListingRequest extends FormRequest
             'parcel_identifier' => ['nullable', 'string', 'max:80'],
             'parcel_reference_type' => ['nullable', Rule::enum(ParcelReferenceType::class)],
             'survey_reference' => ['nullable', 'string', 'max:80'],
+            'sale_mode' => $sale(['nullable', Rule::enum(SaleMode::class)]),
             'acreage' => ['nullable', 'numeric', 'gt:0', 'max:100000'],
             'offered_acreage' => ['nullable', 'numeric', 'gt:0', 'max:100000'],
             'minimum_acreage' => ['nullable', 'numeric', 'gt:0', 'max:100000'],

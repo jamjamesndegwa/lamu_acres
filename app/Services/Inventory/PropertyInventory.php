@@ -15,6 +15,7 @@ use App\Models\PropertyAudit;
 use App\Models\PropertyTransaction;
 use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Services\Sales\SaleModeTerms;
 use App\Services\Verification\VerificationOperations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -190,8 +191,13 @@ class PropertyInventory
         });
     }
 
-    public function sellPortion(User $actor, Property $portion, ?string $correctionReason = null, bool $fromAuthorizedClosing = false): Property
-    {
+    public function sellPortion(
+        User $actor,
+        Property $portion,
+        ?string $correctionReason = null,
+        bool $fromAuthorizedClosing = false,
+        ?SalesTransaction $salesTransaction = null,
+    ): Property {
         if ($portion->parent_id === null) {
             throw ValidationException::withMessages([
                 'portion' => 'Only a subdivided portion can be sold on its own.',
@@ -223,6 +229,7 @@ class PropertyInventory
         }
 
         $this->transition($actor, $portion, PropertyStatus::Sold, true);
+        $this->linkSoldPortionToTransaction($portion, $salesTransaction);
 
         $parent = $portion->parent()->first();
 
@@ -233,24 +240,38 @@ class PropertyInventory
         return $portion->refresh();
     }
 
-    public function closeSale(User $actor, Property $property, float $acreage, ?int $price = null): Property
+    public function closeSale(
+        User $actor,
+        Property $property,
+        float $acreage,
+        ?int $price = null,
+        ?SalesTransaction $salesTransaction = null,
+    ): Property {
     {
         $locked = Property::query()->whereKey($property->id)->lockForUpdate()->firstOrFail();
         $requested = round($acreage, 4);
         $remaining = round($locked->remainingAcreage(), 4);
 
-        if ($requested <= 0 || $requested > $remaining + 0.0001) {
-            throw ValidationException::withMessages([
-                'acreage' => 'The sale acreage is larger than the land still held.',
-            ]);
-        }
+        app(SaleModeTerms::class)->validateTransactionAcreage($locked, $requested);
 
         if (abs($requested - $remaining) < 0.0001) {
             if ($locked->parent_id !== null) {
-                return $this->sellPortion($actor, $locked, null, true);
+                return $this->sellPortion($actor, $locked, null, true, $salesTransaction);
             }
 
-            return $this->transition($actor, $locked, PropertyStatus::Sold, true);
+            $sold = $this->transition($actor, $locked, PropertyStatus::Sold, true);
+            $this->linkSoldPortionToTransaction($sold, $salesTransaction);
+
+            return $sold;
+        }
+
+        $existingPortion = $locked->portions()
+            ->where('status', '!=', PropertyStatus::Sold)
+            ->get()
+            ->first(fn (Property $child): bool => abs((float) $child->acreage - $requested) < 0.0001);
+
+        if ($existingPortion !== null) {
+            return $this->sellPortion($actor, $existingPortion, null, true, $salesTransaction);
         }
 
         $portion = $locked->replicate(['published_at']);
@@ -273,14 +294,84 @@ class PropertyInventory
         ]));
 
         $this->syncOfferedAcreageAfterSale($locked);
+        $this->linkSoldPortionToTransaction($portion, $salesTransaction);
 
         return $portion;
+    }
+
+    /**
+     * @return array{
+     *     registered_acreage: float,
+     *     sold_acreage: float,
+     *     remaining_acreage: float,
+     *     offered_acreage: float,
+     *     available_acreage: float,
+     * }
+     */
+    public function inventorySnapshot(Property $property): array
+    {
+        $root = $property->parent_id
+            ? ($property->parent ?? $property)
+            : $property;
+
+        $registered = (float) ($root->acreage ?? 0);
+        $sold = $root->soldPortionAcreage();
+        $remaining = max(0, $registered - $sold);
+        $offered = $root->offered_acreage !== null ? (float) $root->offered_acreage : $remaining;
+        $available = min($offered, $remaining);
+
+        return [
+            'registered_acreage' => $registered,
+            'sold_acreage' => $sold,
+            'remaining_acreage' => $remaining,
+            'offered_acreage' => $offered,
+            'available_acreage' => $available,
+        ];
+    }
+
+    private function linkSoldPortionToTransaction(Property $soldProperty, ?SalesTransaction $salesTransaction): void
+    {
+        if ($salesTransaction === null) {
+            return;
+        }
+
+        if ($soldProperty->sales_transaction_id !== null
+            && (int) $soldProperty->sales_transaction_id !== (int) $salesTransaction->id) {
+            throw ValidationException::withMessages([
+                'portion' => 'This sold portion is already linked to another completed sale.',
+            ]);
+        }
+
+        $duplicate = Property::query()
+            ->where('sales_transaction_id', $salesTransaction->id)
+            ->whereKeyNot($soldProperty->id)
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'portion' => 'This sale is already recorded against a sold inventory portion.',
+            ]);
+        }
+
+        if ((int) $soldProperty->sales_transaction_id === (int) $salesTransaction->id) {
+            return;
+        }
+
+        $soldProperty->sales_transaction_id = $salesTransaction->id;
+        $soldProperty->save();
     }
 
     private function hasAuthorizingCompletedSale(Property $portion): bool
     {
         if ($portion->parent_id === null) {
             return false;
+        }
+
+        if ($portion->sales_transaction_id !== null) {
+            return SalesTransaction::query()
+                ->whereKey($portion->sales_transaction_id)
+                ->where('stage', SalesStage::Completed)
+                ->exists();
         }
 
         $acreage = round((float) $portion->acreage, 4);
@@ -301,18 +392,23 @@ class PropertyInventory
     {
         $parent->refresh();
 
-        if ($parent->offered_acreage === null) {
-            return;
-        }
-
         $remaining = round($parent->remainingAcreage(), 4);
-        $offered = round((float) $parent->offered_acreage, 4);
 
-        if ($offered <= $remaining + 0.0001) {
-            return;
+        if (! $parent->allowsPartialPurchases()) {
+            if ($parent->offered_acreage === null) {
+                return;
+            }
+
+            $offered = round((float) $parent->offered_acreage, 4);
+
+            if ($offered <= $remaining + 0.0001) {
+                return;
+            }
+
+            $parent->offered_acreage = $remaining > 0 ? $remaining : null;
+        } else {
+            $parent->offered_acreage = $remaining > 0 ? $remaining : null;
         }
-
-        $parent->offered_acreage = $remaining > 0 ? $remaining : null;
 
         if ($parent->priceBasis()->isPerAcre() && $parent->price_rate !== null && $parent->offered_acreage !== null) {
             $parent->price_amount = Property::computePriceAmount(

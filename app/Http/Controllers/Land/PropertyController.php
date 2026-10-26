@@ -74,7 +74,10 @@ class PropertyController extends Controller
             return redirect()->to($property->publicUrl());
         }
 
-        return view('land.purchase-request', ['property' => $property]);
+        return view('land.purchase-request', [
+            'property' => $property,
+            'inventory' => $property->inventorySnapshot(),
+        ]);
     }
 
     public function storePurchaseRequest(

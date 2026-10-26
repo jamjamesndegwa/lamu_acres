@@ -19,6 +19,7 @@ use App\Enums\PriceBasis;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Enums\SaleInstructionKind;
+use App\Enums\SalesStage;
 use App\Enums\SubdivisionStatus;
 use App\Enums\VerificationItemState;
 use App\Http\Requests\Seller\SellerListingRequest;
@@ -32,12 +33,15 @@ use App\Models\PropertyAudit;
 use App\Models\PropertyInformationRequest;
 use App\Models\PropertyOwner;
 use App\Models\SaleInstruction;
+use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Inventory\PropertyInventory;
+use App\Services\Sales\SaleModeTerms;
+use App\Services\Sales\SalesPipeline;
 use App\Services\Verification\VerificationDesk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -115,9 +119,35 @@ class SellerPortal
 
         return DB::transaction(function () use ($seller, $property, $data): Property {
             $relationship = OwnerRelationship::tryFrom((string) ($data['relationship'] ?? '')) ?? OwnerRelationship::Owner;
+            $previousMode = $property->exists ? $property->saleMode() : null;
             $this->fillListing($property, $data);
             $property->marketing_role = $this->marketingRole($relationship);
             $property->save();
+
+            if ($previousMode !== null && $previousMode !== $property->saleMode()) {
+                PropertyAudit::query()->create([
+                    'property_id' => $property->id,
+                    'actor_id' => $seller->id,
+                    'action' => 'sale_mode_changed',
+                    'changes' => [
+                        'from' => $previousMode->value,
+                        'to' => $property->saleMode()->value,
+                    ],
+                ]);
+
+                $pipeline = app(SalesPipeline::class);
+                SalesTransaction::query()
+                    ->where('property_id', $property->id)
+                    ->where('stage', '!=', SalesStage::Completed)
+                    ->each(function (SalesTransaction $transaction) use ($pipeline, $seller, $previousMode, $property): void {
+                        $pipeline->timeline(
+                            $transaction,
+                            $seller,
+                            'Listing sale mode changed from '.$previousMode->label().' to '.$property->saleMode()->label().'. Review acreage and terms before progressing.',
+                            true,
+                        );
+                    });
+            }
 
             $property->owners()
                 ->where('user_id', $seller->id)
@@ -218,7 +248,11 @@ class SellerPortal
             $gaps['offered_acreage'] = 'The acreage offered is larger than the land still held.';
         }
 
-        if ($property->isPartialOffer() && $property->subdivision_status === null) {
+        if ($property->allowsPartialPurchases() && $property->minimum_acreage === null) {
+            $gaps['minimum_acreage'] = 'State the smallest portion you would sell.';
+        }
+
+        if ($property->allowsPartialPurchases() && $property->subdivision_status === null) {
             $gaps['subdivision_status'] = 'Say whether the portion offered has been subdivided.';
         }
 
@@ -642,6 +676,8 @@ class SellerPortal
             ->map(fn ($value) => trim((string) $value))
             ->all();
 
+        app(SaleModeTerms::class)->applyListingInput($property, $data);
+
         $property->fill([
             'title' => trim((string) $data['title']),
             'summary' => $data['summary'] ?? null,
@@ -661,8 +697,8 @@ class SellerPortal
             'parcel_reference_type' => $data['parcel_reference_type'] ?? null,
             'survey_reference' => $data['survey_reference'] ?? null,
             'acreage' => $acreage,
-            'offered_acreage' => $offered,
-            'minimum_acreage' => filled($data['minimum_acreage'] ?? null) ? (float) $data['minimum_acreage'] : null,
+            'offered_acreage' => $property->offered_acreage,
+            'minimum_acreage' => $property->minimum_acreage,
             'subdivision_status' => $data['subdivision_status'] ?? null,
             'boundary_status' => $data['boundary_status'] ?? null,
             'tenure' => $data['tenure'] ?? null,
@@ -670,7 +706,7 @@ class SellerPortal
             'occupation_status' => $data['occupation_status'] ?? null,
             'price_basis' => $basis,
             'price_rate' => $rate,
-            'price_amount' => Property::computePriceAmount($basis, $rate, $offered ?? $acreage),
+            'price_amount' => Property::computePriceAmount($basis, $rate, $property->offered_acreage ?? $offered ?? $acreage),
             'price_negotiable' => (bool) ($section['negotiable'] ?? false),
             'available_from' => $section['available_from'] ?? null,
             'lease_min_months' => $purpose === ListingPurpose::Lease ? ($section['min_months'] ?? null) : null,

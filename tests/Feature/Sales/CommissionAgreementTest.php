@@ -3,6 +3,7 @@
 namespace Tests\Feature\Sales;
 
 use App\Enums\CommissionStatus;
+use App\Enums\SaleMode;
 use App\Models\CommissionAgreement;
 use App\Models\Property;
 use App\Models\SalesTransaction;
@@ -83,7 +84,12 @@ class CommissionAgreementTest extends FoundationTestCase
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'commissions.propose')->create();
         $broker = User::factory()->withRoles('broker')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
-        $property = Property::factory()->published()->create(['acreage' => 10]);
+        $property = Property::factory()->published()->create([
+            'acreage' => 10,
+            'offered_acreage' => 10,
+            'minimum_acreage' => 2,
+            'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+        ]);
         $seller = User::factory()->withRoles('seller')->create();
         $instruction = \App\Models\SaleInstruction::query()->create([
             'property_id' => $property->id,

@@ -7,6 +7,7 @@ use App\Enums\ListingPurpose;
 use App\Enums\MarketingRole;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
+use App\Enums\SaleMode;
 use App\Http\Controllers\Controller;
 use App\Models\Locality;
 use App\Models\Property;
@@ -59,6 +60,10 @@ class ListingController extends Controller
             'description' => ['nullable', 'string', 'max:5000'],
             'locality_id' => ['required', 'exists:localities,id'],
             'acreage' => ['required', 'numeric', 'gt:0'],
+            'sale_mode' => ['required', Rule::enum(SaleMode::class)],
+            'offered_acreage' => ['nullable', 'numeric', 'gt:0'],
+            'minimum_acreage' => ['nullable', 'numeric', 'gt:0'],
+            'seller_sale_instructions' => ['nullable', 'string', 'max:1000'],
             'price_amount' => ['required', 'integer', 'min:0'],
             'purpose' => ['required', Rule::enum(ListingPurpose::class)],
             'property_type' => ['required', Rule::enum(PropertyType::class)],

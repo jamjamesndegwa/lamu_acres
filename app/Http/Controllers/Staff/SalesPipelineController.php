@@ -96,8 +96,11 @@ class SalesPipelineController extends Controller
             'audits.actor',
         ]);
 
+        $reassessment = app(\App\Services\Sales\SalesReassessment::class);
+
         return view('staff.sales.show', [
             'transaction' => $salesTransaction,
+            'reassessmentMessage' => $reassessment->message($salesTransaction),
             'stages' => $salesTransaction->stage->transitions(),
             'outcomes' => SalesOutcome::cases(),
             'agents' => User::permission('staff.sales')->orderBy('name')->get(['id', 'name']),

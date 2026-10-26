@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Buyer;
 
 use App\Models\Property;
+use App\Services\Sales\SaleModeTerms;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
 
 class StorePurchaseRequest extends FormRequest
 {
@@ -49,18 +51,21 @@ class StorePurchaseRequest extends FormRequest
 
             $property = $this->route('property');
 
-            if (! $property instanceof Property || ! $this->filled('requested_acreage')) {
+            if (! $property instanceof Property) {
                 return;
             }
 
-            $requestedAcreage = (float) $this->input('requested_acreage');
-            $maximumAcreage = $property->offeredAcreage();
-            $minimumAcreage = (float) ($property->minimum_acreage ?? 0);
-
-            if ($requestedAcreage > $maximumAcreage + 0.0001) {
-                $validator->errors()->add('requested_acreage', 'The requested acreage exceeds the area offered for sale.');
-            } elseif ($minimumAcreage > 0 && $requestedAcreage + 0.0001 < $minimumAcreage) {
-                $validator->errors()->add('requested_acreage', 'The requested acreage is below the seller’s minimum portion.');
+            try {
+                app(SaleModeTerms::class)->validatePurchaseAcreage(
+                    $property,
+                    $this->filled('requested_acreage') ? (float) $this->input('requested_acreage') : null,
+                );
+            } catch (ValidationException $exception) {
+                foreach ($exception->errors() as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
             }
         }];
     }

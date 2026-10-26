@@ -8,12 +8,17 @@ use App\Enums\DocumentCheckState;
 use App\Models\Property;
 use App\Models\PropertyMedia;
 use App\Services\Geography\LocationDirectory;
+use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
 use App\Services\Verification\VerificationDesk;
 
 class PublicListing
 {
-    public function __construct(private LocationDirectory $locations, private VerificationDesk $verification) {}
+    public function __construct(
+        private LocationDirectory $locations,
+        private VerificationDesk $verification,
+        private PropertyInventory $inventory,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -63,6 +68,7 @@ class PublicListing
         $map = $this->map($property);
         $property->loadMissing(['passport', 'verificationItems']);
         $review = $this->verification->publicSummary($property);
+        $stock = $this->inventory->inventorySnapshot($property);
 
         return [
             'title' => $property->title,
@@ -72,7 +78,13 @@ class PublicListing
             'purpose' => $property->purpose?->label(),
             'type' => $property->property_type?->label(),
             'is_lease' => $property->isLease(),
-            'acreage' => $this->acreage($property),
+            'registered_acreage' => $property->acreage !== null
+                ? rtrim(rtrim(number_format((float) $property->acreage, 2), '0'), '.')
+                : null,
+            'acreage' => $this->acreage($stock['available_acreage']),
+            'inventory' => $stock,
+            'sale_mode' => $property->saleMode()->label(),
+            'allows_partial_purchases' => $property->allowsPartialPurchases(),
             'minimum_acreage' => $property->minimum_acreage !== null ? rtrim(rtrim(number_format((float) $property->minimum_acreage, 2), '0'), '.') : null,
             'price_label' => $property->isLease() ? 'Asking rent' : 'Asking price',
             'price' => $property->formattedPrice(),
@@ -122,7 +134,7 @@ class PublicListing
             'price' => $property->price_amount !== null ? (int) $property->price_amount : null,
             'price_suffix' => $property->price_amount !== null ? $property->priceBasis()->periodSuffix() : '',
             'price_per_acre' => $property->pricePerAcre(),
-            'acres' => $property->offeredAcreage(),
+            'acres' => $this->inventory->inventorySnapshot($property)['available_acreage'],
             'image' => $cover !== null
                 ? route('land.photos.show', [$property->areaCounty, $property->areaLocality, $property, $cover])
                 : 'images/default_land_image.jpg',
@@ -141,10 +153,8 @@ class PublicListing
             : 'From '.$property->lease_min_months.' months';
     }
 
-    private function acreage(Property $property): string
+    private function acreage(float $acres): string
     {
-        $acres = $property->offeredAcreage();
-
         if ($acres <= 0) {
             return 'Not stated';
         }
