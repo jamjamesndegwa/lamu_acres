@@ -22,6 +22,9 @@
                     <p class="mt-2 text-sm text-stone-600">
                         <x-status-badge :label="$offer->status->label()" />
                         · Submitted {{ $offer->created_at?->timezone(config('app.timezone'))->format('j M Y g:i A') }}
+                        @if ($offer->requested_acreage !== null)
+                            · {{ rtrim(rtrim(number_format((float) $offer->requested_acreage, 4, '.', ''), '0'), '.') }} acres requested
+                        @endif
                     </p>
                 </div>
                 @if ($asking)
@@ -142,7 +145,19 @@
             <h2 class="font-semibold text-lamu-900">Next steps</h2>
             <p class="mt-1 text-sm text-stone-600">Contact the offerer, then update the offer status or present it to the landowner.</p>
 
+            @if ($offer->submittedByBroker)
+                <p class="mt-4 text-sm text-stone-700">Submitted by broker <span class="font-medium text-lamu-900">{{ $offer->submittedByBroker->name }}</span>@if ($offer->brokerIntroduction) · introduction {{ $offer->brokerIntroduction->reference }}@endif.</p>
+            @endif
+
             <div class="mt-4 flex flex-wrap gap-3">
+                @if ($offer->salesTransaction)
+                    <a href="{{ route('staff.sales.show', $offer->salesTransaction) }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">View sales case</a>
+                @else
+                    <form method="POST" action="{{ route('staff.offers.sales-case', $offer) }}" data-turbo-frame="_top" data-confirm="Open or link a sales case for this offer?">
+                        @csrf
+                        <button type="submit" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Open / link sales case</button>
+                    </form>
+                @endif
                 @if ($buyer->email)
                     <a href="mailto:{{ $buyer->email }}?subject={{ rawurlencode('Your offer on '.$property->title) }}" class="rounded-full border border-lamu-900 px-4 py-2 text-sm font-medium text-lamu-900">Email offerer</a>
                 @endif

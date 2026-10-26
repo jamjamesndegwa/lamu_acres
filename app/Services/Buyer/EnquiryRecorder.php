@@ -7,6 +7,7 @@ use App\Enums\LeadStatus;
 use App\Events\EnquirySubmitted;
 use App\Models\BrokerIntroduction;
 use App\Models\Enquiry;
+use App\Models\Offer;
 use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
@@ -65,6 +66,23 @@ class EnquiryRecorder
             ->open()
             ->with('enquiry')
             ->first();
+
+        if ($openCase === null) {
+            $linkedOffer = Offer::query()
+                ->where('buyer_id', $buyer->id)
+                ->where('property_id', $property->id)
+                ->whereNotNull('sales_transaction_id')
+                ->latest()
+                ->first();
+
+            if ($linkedOffer !== null) {
+                $openCase = SalesTransaction::query()
+                    ->whereKey($linkedOffer->sales_transaction_id)
+                    ->open()
+                    ->with('enquiry')
+                    ->first();
+            }
+        }
 
         if ($openCase !== null && $openCase->enquiry_id !== null) {
             throw ValidationException::withMessages([

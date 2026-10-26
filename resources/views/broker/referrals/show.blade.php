@@ -30,6 +30,12 @@
         </div>
         <div class="sm:col-span-2"><dt class="text-sm text-stone-500">Properties</dt><dd>{{ $referral->properties->pluck('title')->join(', ') }}</dd></div>
     </dl>
+    @if ($referral->buyer_id)
+        <p class="mt-6">
+            <a href="{{ route('broker.offers.create', ['introduction' => $referral->id]) }}" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Submit offer for buyer</a>
+        </p>
+    @endif
+
     <h2 class="mt-8 font-semibold text-lamu-900">Decision</h2>
     <p class="mt-2 text-sm text-stone-700">{{ $referral->status->label() }}@if ($referral->reviewed_at) · reviewed {{ $referral->reviewed_at->toFormattedDateString() }}@endif. Closing and payment stay with staff.</p>
 

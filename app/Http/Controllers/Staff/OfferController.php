@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\UpdateOfferStatusRequest;
 use App\Models\Offer;
 use App\Services\Buyer\InterestWorkflow;
+use App\Services\Sales\OfferSalesOrigination;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -49,6 +50,9 @@ class OfferController extends Controller
             'property.areaLocality:id,name,slug',
             'presentations',
             'match',
+            'brokerIntroduction.broker',
+            'submittedByBroker',
+            'salesTransaction',
         ]);
 
         return view('staff.offers.show', [
@@ -56,6 +60,17 @@ class OfferController extends Controller
             'property' => $offer->property,
             'buyer' => $offer->buyer,
         ]);
+    }
+
+    public function openSalesCase(Request $request, Offer $offer, OfferSalesOrigination $origination): RedirectResponse
+    {
+        $this->authorize('updateStatus', $offer);
+
+        $transaction = $origination->openOrLinkSalesCase($offer, $request->user());
+
+        return redirect()
+            ->route('staff.sales.show', $transaction)
+            ->with('status', 'Sales case '.$transaction->reference.' is ready for negotiation.');
     }
 
     public function update(UpdateOfferStatusRequest $request, Offer $offer, InterestWorkflow $workflow): RedirectResponse

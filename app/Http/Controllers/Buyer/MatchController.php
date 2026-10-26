@@ -103,6 +103,7 @@ class MatchController extends Controller
             $propertyMatch,
             $request->user(),
             $request->integer('amount'),
+            $request->filled('requested_acreage') ? (float) $request->input('requested_acreage') : null,
             $request->string('message')->toString() ?: null,
         );
 

@@ -144,7 +144,7 @@ class SellerPortalTest extends FoundationTestCase
         $property->refresh();
         $this->assertSame(PropertyStatus::Published, $property->status);
         $this->assertSame(0, PropertyTransaction::query()->count());
-        $this->assertSame('submitted', $offer->refresh()->status->value);
+        $this->assertSame('accepted', $offer->refresh()->status->value);
 
         $this->actingAs($sales)
             ->post(route('staff.properties.transactions.store', $property), [

@@ -10,6 +10,7 @@ use App\Enums\LandTenure;
 use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\MarketingRole;
+use App\Enums\OfferStatus;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
 use App\Enums\OwnershipDocumentType;
@@ -35,10 +36,12 @@ use App\Models\PropertyOwner;
 use App\Models\SaleInstruction;
 use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Notifications\OfferPresentedNotification;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
+use App\Services\Buyer\InterestWorkflow;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Sales\SaleModeTerms;
 use App\Services\Sales\SalesPipeline;
@@ -50,6 +53,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class SellerPortal
 {
@@ -569,7 +573,7 @@ class SellerPortal
                 'document_type' => $type,
                 'state' => VerificationItemState::Received,
             ]);
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             Storage::disk($disk)->delete($path);
 
             throw $throwable;
@@ -719,18 +723,53 @@ class SellerPortal
 
     public function presentOffer(Offer $offer, User $staff, string $summary): OfferPresentation
     {
-        return $offer->presentations()->create([
+        $offer->loadMissing('property');
+        $presentation = $offer->presentations()->create([
             'property_id' => $offer->property_id,
             'presented_by' => $staff->id,
             'amount' => $offer->amount,
             'summary' => $summary,
         ]);
+
+        $sellers = $offer->property->owners()
+            ->where('status', OwnerLinkStatus::Verified)
+            ->whereIn('relationship', OwnerRelationship::sellerFacing())
+            ->with('user')
+            ->get()
+            ->pluck('user')
+            ->filter();
+
+        if ($sellers->isEmpty() && $offer->property->submitted_by !== null) {
+            $submitter = User::query()->find($offer->property->submitted_by);
+            if ($submitter !== null && $submitter->canUseSellerFeatures()) {
+                $sellers = collect([$submitter]);
+            }
+        }
+
+        try {
+            Notification::send($sellers->unique('id'), new OfferPresentedNotification($presentation));
+        } catch (Throwable) {
+            // Presentation remains valid if notification delivery fails.
+        }
+
+        return $presentation;
     }
 
     public function respondToOffer(OfferPresentation $presentation, User $seller, string $response): OfferPresentation
     {
         if (! in_array($response, ['accept', 'decline'], true)) {
             throw ValidationException::withMessages(['seller_response' => 'Accept or decline the presented offer.']);
+        }
+
+        $presentation->loadMissing('offer.presentations');
+
+        if ($presentation->seller_response !== null) {
+            throw ValidationException::withMessages(['seller_response' => 'This presentation has already been answered.']);
+        }
+
+        $latest = $presentation->offer->presentations()->latest('id')->first();
+        if ($latest !== null && (int) $latest->id !== (int) $presentation->id) {
+            throw ValidationException::withMessages(['seller_response' => 'A newer offer presentation is waiting for your response.']);
         }
 
         $presentation->seller_response = $response;
@@ -742,6 +781,12 @@ class SellerPortal
             'kind' => SaleInstructionKind::OfferResponse,
             'body' => 'Seller '.$response.'d the presented offer of KSh '.number_format((int) $presentation->amount).'.',
         ]);
+
+        app(InterestWorkflow::class)->reflectSellerPresentation(
+            $presentation->offer,
+            $response === 'accept' ? OfferStatus::Accepted : OfferStatus::Declined,
+            $seller,
+        );
 
         return $presentation;
     }

@@ -8,6 +8,7 @@ enum SalesOrigin: string
     case Sourcing = 'sourcing';
     case Introduction = 'introduction';
     case Instruction = 'instruction';
+    case Offer = 'offer';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum SalesOrigin: string
             self::Sourcing => 'Buyer sourcing request',
             self::Introduction => 'Broker introduction',
             self::Instruction => 'Seller instruction',
+            self::Offer => 'Buyer offer',
         };
     }
 }

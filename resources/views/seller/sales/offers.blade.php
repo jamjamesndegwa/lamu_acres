@@ -5,6 +5,9 @@
             <article class="rounded-2xl border border-sand-200 bg-white p-5 text-sm">
                 <p class="font-medium text-lamu-900">{{ $presentation->property->title }}</p>
                 <p class="mt-1">KSh {{ number_format($presentation->amount) }}</p>
+                @if ($presentation->offer?->requested_acreage !== null)
+                    <p class="mt-1 text-stone-600">{{ rtrim(rtrim(number_format((float) $presentation->offer->requested_acreage, 4, '.', ''), '0'), '.') }} acres requested</p>
+                @endif
                 <p class="mt-2">{{ $presentation->summary }}</p>
                 @if ($presentation->seller_response)
                     <p class="mt-2">Your response: {{ $presentation->seller_response }}</p>

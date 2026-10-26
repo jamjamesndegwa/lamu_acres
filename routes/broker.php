@@ -3,6 +3,7 @@
 use App\Http\Controllers\Account\MembershipController;
 use App\Http\Controllers\Broker\ListingController;
 use App\Http\Controllers\Broker\ListingMediaController;
+use App\Http\Controllers\Broker\OfferController;
 use App\Http\Controllers\Broker\PartnershipController;
 use App\Http\Controllers\Broker\ReferralController;
 use App\Http\Controllers\ProfileController;
@@ -24,6 +25,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:broker'])
         Route::put('/listings/{property}/media/order', [ListingMediaController::class, 'reorder'])->name('listings.media.order');
         Route::delete('/listings/{property}/media/{propertyMedia}', [ListingMediaController::class, 'destroy'])->name('listings.media.destroy');
         Route::post('/listings/{property}/requests/{informationRequest}', [ListingController::class, 'respond'])->name('listings.respond');
+        Route::get('/offers/create', [OfferController::class, 'create'])->name('offers.create');
+        Route::post('/offers', [OfferController::class, 'store'])->name('offers.store');
         Route::get('/referrals', [ReferralController::class, 'index'])->name('referrals.index');
         Route::get('/referrals/create', [ReferralController::class, 'create'])->name('referrals.create');
         Route::post('/referrals', [ReferralController::class, 'store'])->name('referrals.store');

@@ -20,7 +20,15 @@
                         @endif
                         <p class="text-xs text-stone-500">{{ $offer->property->reference }}</p>
                     </td>
-                    <td class="px-4 py-4 text-sm">KSh {{ number_format($offer->amount) }}</td>
+                    <td class="px-4 py-4 text-sm">
+                        KSh {{ number_format($offer->amount) }}
+                        @if ($offer->requested_acreage !== null)
+                            <p class="text-xs text-stone-500">{{ rtrim(rtrim(number_format((float) $offer->requested_acreage, 4, '.', ''), '0'), '.') }} acres</p>
+                        @endif
+                        @if ($offer->sales_transaction_id)
+                            <p class="text-xs text-stone-500">Linked to a sales case</p>
+                        @endif
+                    </td>
                     <td class="px-4 py-4 text-sm text-stone-700">{{ $offer->message ? \Illuminate\Support\Str::limit($offer->message, 80) : '—' }}</td>
                     <td class="px-4 py-4 text-sm"><x-status-badge :label="$offer->status->label()" /></td>
                     <td class="px-4 py-4 text-right text-sm">

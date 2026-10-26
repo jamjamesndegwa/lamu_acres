@@ -31,7 +31,12 @@ class ListingInterestController extends Controller
             return redirect()->to($property->publicUrl().'#make-offer');
         }
 
-        return view('public.land.offer', ['property' => $this->publicProperty($property)]);
+        $property = $this->publicProperty($property);
+
+        return view('public.land.offer', [
+            'property' => $property,
+            'inventory' => $property->inventorySnapshot(),
+        ]);
     }
 
     public function storeOffer(StorePublicOfferRequest $request, Property $property, InterestWorkflow $workflow): RedirectResponse
@@ -42,6 +47,7 @@ class ListingInterestController extends Controller
             $request->user(),
             $property,
             (int) $request->validated('amount'),
+            $request->filled('requested_acreage') ? (float) $request->validated('requested_acreage') : null,
             $request->validated('message'),
         );
 

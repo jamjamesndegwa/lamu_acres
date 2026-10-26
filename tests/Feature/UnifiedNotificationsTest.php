@@ -185,7 +185,7 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $buyer = User::factory()->withRoles('buyer')->create(['notify_by_email' => false]);
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
         $match = PropertyMatch::query()->create(['buyer_id' => $buyer->id, 'property_id' => Property::factory()->published()->create()->id, 'status' => 'shortlisted', 'approved_at' => now()]);
-        $offer = app(InterestWorkflow::class)->submitOffer($match, $buyer, 1000000, null);
+        $offer = app(InterestWorkflow::class)->submitOffer($match, $buyer, 1000000, null, null);
         app(InterestWorkflow::class)->transitionOffer($offer, OfferStatus::UnderReview, $staff);
         $this->assertSame(1, $buyer->notifications()->count());
         $this->assertSame(1, $staff->notifications()->count());

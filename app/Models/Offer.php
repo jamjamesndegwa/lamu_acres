@@ -16,7 +16,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'property_id',
     'property_match_id',
     'enquiry_id',
+    'broker_introduction_id',
+    'submitted_by_broker_id',
+    'sales_transaction_id',
     'amount',
+    'requested_acreage',
     'currency',
     'message',
     'status',
@@ -30,6 +34,7 @@ class Offer extends Model
     {
         return [
             'amount' => 'integer',
+            'requested_acreage' => 'decimal:4',
             'status' => OfferStatus::class,
         ];
     }
@@ -52,6 +57,21 @@ class Offer extends Model
     public function enquiry(): BelongsTo
     {
         return $this->belongsTo(Enquiry::class);
+    }
+
+    public function brokerIntroduction(): BelongsTo
+    {
+        return $this->belongsTo(BrokerIntroduction::class);
+    }
+
+    public function submittedByBroker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by_broker_id');
+    }
+
+    public function salesTransaction(): BelongsTo
+    {
+        return $this->belongsTo(SalesTransaction::class);
     }
 
     public function presentations(): HasMany

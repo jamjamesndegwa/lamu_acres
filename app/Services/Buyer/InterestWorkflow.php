@@ -7,6 +7,7 @@ use App\Enums\MessageEvent;
 use App\Enums\OfferStatus;
 use App\Enums\PropertyMatchStatus;
 use App\Enums\SiteVisitStatus;
+use App\Models\BrokerIntroduction;
 use App\Models\BuyerTimelineEntry;
 use App\Models\DocumentAccessRequest;
 use App\Models\Enquiry;
@@ -24,6 +25,7 @@ use App\Notifications\OfferSubmittedNotification;
 use App\Notifications\SiteVisitUpdatedNotification;
 use App\Notifications\ViewingAcknowledgedNotification;
 use App\Services\Communications\MessageDesk;
+use App\Services\Sales\SaleModeTerms;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -297,21 +299,18 @@ class InterestWorkflow
         return $visit;
     }
 
-    public function submitOffer(PropertyMatch $match, User $buyer, int $amount, ?string $message): Offer
+    public function submitOffer(PropertyMatch $match, User $buyer, int $amount, ?float $requestedAcreage, ?string $message): Offer
     {
-        $open = $match->offers()->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])->exists();
-
-        if ($open) {
-            throw ValidationException::withMessages([
-                'amount' => 'An offer for this property is already open.',
-            ]);
-        }
+        $match->loadMissing('property');
+        $this->guardOpenOffer($buyer->id, $match->property_id);
+        $acreage = $this->normalizeOfferAcreage($match->property, $requestedAcreage);
 
         $offer = $match->offers()->create([
             'buyer_id' => $buyer->id,
             'property_id' => $match->property_id,
             'enquiry_id' => $match->enquiry_id,
             'amount' => $amount,
+            'requested_acreage' => $acreage,
             'currency' => 'KES',
             'message' => $message,
             'status' => OfferStatus::Submitted,
@@ -323,7 +322,7 @@ class InterestWorkflow
         return $offer;
     }
 
-    public function submitListingOffer(User $buyer, Property $property, int $amount, ?string $message): Offer
+    public function submitListingOffer(User $buyer, Property $property, int $amount, ?float $requestedAcreage, ?string $message): Offer
     {
         if (! $property->isPubliclyListed()) {
             throw ValidationException::withMessages([
@@ -331,17 +330,8 @@ class InterestWorkflow
             ]);
         }
 
-        $open = Offer::query()
-            ->where('buyer_id', $buyer->id)
-            ->where('property_id', $property->id)
-            ->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])
-            ->exists();
-
-        if ($open) {
-            throw ValidationException::withMessages([
-                'amount' => 'You already have an open offer on this listing.',
-            ]);
-        }
+        $this->guardOpenOffer($buyer->id, $property->id);
+        $acreage = $this->normalizeOfferAcreage($property, $requestedAcreage);
 
         $match = PropertyMatch::query()->firstOrCreate(
             [
@@ -360,6 +350,7 @@ class InterestWorkflow
             'property_match_id' => $match->id,
             'enquiry_id' => $match->enquiry_id,
             'amount' => $amount,
+            'requested_acreage' => $acreage,
             'currency' => 'KES',
             'message' => $message,
             'status' => OfferStatus::Submitted,
@@ -371,6 +362,108 @@ class InterestWorkflow
         return $offer;
     }
 
+    public function submitBrokerOffer(
+        User $broker,
+        BrokerIntroduction $introduction,
+        Property $property,
+        int $amount,
+        ?float $requestedAcreage,
+        ?string $message,
+    ): Offer {
+        if (! $broker->canUseBrokerFeatures()) {
+            throw ValidationException::withMessages([
+                'broker' => 'Broker capability is required to submit an offer for a buyer.',
+            ]);
+        }
+
+        if ((int) $introduction->broker_id !== (int) $broker->id) {
+            throw ValidationException::withMessages([
+                'introduction' => 'This introduction does not belong to your brokerage account.',
+            ]);
+        }
+
+        if ($introduction->buyer_id === null) {
+            throw ValidationException::withMessages([
+                'introduction' => 'The buyer must be linked to a registered account before you can submit an offer.',
+            ]);
+        }
+
+        if (! BrokerIntroduction::query()
+            ->whereKey($introduction->id)
+            ->activeForBuyer($introduction->buyer, $property)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'introduction' => 'This introduction is not authorized for this property.',
+            ]);
+        }
+
+        if (! $property->isPubliclyListed()) {
+            throw ValidationException::withMessages([
+                'listing' => 'Offers can only be made on published listings.',
+            ]);
+        }
+
+        $buyer = $introduction->buyer;
+        $this->guardOpenOffer($buyer->id, $property->id);
+        $acreage = $this->normalizeOfferAcreage($property, $requestedAcreage);
+
+        $match = PropertyMatch::query()->firstOrCreate(
+            [
+                'buyer_id' => $buyer->id,
+                'property_id' => $property->id,
+            ],
+            [
+                'status' => PropertyMatchStatus::Shortlisted,
+                'approved_at' => now(),
+            ],
+        );
+
+        $offer = Offer::query()->create([
+            'buyer_id' => $buyer->id,
+            'property_id' => $property->id,
+            'property_match_id' => $match->id,
+            'broker_introduction_id' => $introduction->id,
+            'submitted_by_broker_id' => $broker->id,
+            'amount' => $amount,
+            'requested_acreage' => $acreage,
+            'currency' => 'KES',
+            'message' => $message,
+            'status' => OfferStatus::Submitted,
+        ]);
+
+        $this->timeline($buyer, 'Offer submitted by broker on '.$property->title.'.', $match, $broker);
+        $this->notifyOfferSubmitted($offer);
+
+        return $offer;
+    }
+
+    private function guardOpenOffer(int $buyerId, int $propertyId): void
+    {
+        $open = Offer::query()
+            ->where('buyer_id', $buyerId)
+            ->where('property_id', $propertyId)
+            ->whereIn('status', [OfferStatus::Submitted, OfferStatus::UnderReview])
+            ->exists();
+
+        if ($open) {
+            throw ValidationException::withMessages([
+                'amount' => 'An open offer already exists for this buyer on this property.',
+            ]);
+        }
+    }
+
+    private function normalizeOfferAcreage(Property $property, ?float $requestedAcreage): float
+    {
+        app(SaleModeTerms::class)->validatePurchaseAcreage($property, $requestedAcreage);
+        $available = round($property->offeredAcreage(), 4);
+
+        if ($requestedAcreage !== null) {
+            return round($requestedAcreage, 4);
+        }
+
+        return $available;
+    }
+
     private function notifyOfferSubmitted(Offer $offer): void
     {
         $recipients = collect();
@@ -380,6 +473,35 @@ class InterestWorkflow
         }
 
         Notification::send($recipients->unique('id'), new OfferSubmittedNotification($offer));
+    }
+
+    public function reflectSellerPresentation(Offer $offer, OfferStatus $status, User $seller): Offer
+    {
+        if (! in_array($status, [OfferStatus::Accepted, OfferStatus::Declined], true)) {
+            throw ValidationException::withMessages(['status' => 'Seller responses can only accept or decline.']);
+        }
+
+        if (! in_array($status, $offer->status->transitions(), true)) {
+            return $offer;
+        }
+
+        $offer->status = $status;
+        $offer->save();
+
+        $summary = 'The seller '.$status->label().' your offer for '.$offer->property->title.'.';
+        $this->timeline($offer->buyer, $summary, $offer->match, $seller);
+
+        app(MessageDesk::class)->send($offer->buyer, MessageEvent::OfferStatus, [
+            'name' => $offer->buyer->name,
+            'title' => $offer->property->title,
+            'status' => $status->label(),
+            'summary' => $summary,
+            'url' => route('buyer.offers.index'),
+        ], 'offer:'.$offer->id.':seller:'.$status->value, new OfferStatusNotification($offer));
+
+        $this->notifyDesk(new OfferStatusNotification($offer));
+
+        return $offer;
     }
 
     public function transitionOffer(Offer $offer, OfferStatus $status, User $actor): Offer

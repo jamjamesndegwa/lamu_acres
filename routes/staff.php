@@ -60,6 +60,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         Route::get('/offers', [OfferController::class, 'index'])->name('offers.index');
         Route::get('/offers/{offer}', [OfferController::class, 'show'])->name('offers.show');
         Route::put('/offers/{offer}', [OfferController::class, 'update'])->name('offers.update');
+        Route::post('/offers/{offer}/sales-case', [OfferController::class, 'openSalesCase'])->name('offers.sales-case');
         Route::get('/documents', [DocumentAccessController::class, 'index'])->name('documents.index');
         Route::put('/documents/{documentAccessRequest}', [DocumentAccessController::class, 'update'])->name('documents.update');
 

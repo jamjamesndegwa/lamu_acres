@@ -366,6 +366,21 @@ class SalesPipeline
             $links['sale_instruction_id'] = $instruction->id;
         }
 
+        if ($origin === SalesOrigin::Offer) {
+            if ($buyerId === null) {
+                throw ValidationException::withMessages(['buyer_id' => 'Link the buyer who submitted this offer.']);
+            }
+            $links['buyer_id'] = (int) $buyerId;
+            if (filled($data['broker_introduction_id'] ?? null)) {
+                $introduction = BrokerIntroduction::query()->findOrFail($data['broker_introduction_id']);
+                if ($introduction->property_id !== null) {
+                    $this->sameProperty($introduction->property_id, $property->id, 'broker_introduction_id');
+                }
+                $links['broker_introduction_id'] = $introduction->id;
+                $links['buyer_id'] = (int) ($introduction->buyer_id ?? $links['buyer_id']);
+            }
+        }
+
         if ($origin !== SalesOrigin::Instruction && $links['buyer_id'] === null) {
             throw ValidationException::withMessages(['buyer_id' => 'Link the buyer who is party to this sale.']);
         }
