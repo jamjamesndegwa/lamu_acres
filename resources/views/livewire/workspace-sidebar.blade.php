@@ -55,6 +55,7 @@
                     'brokerage' => 'fa-handshake',
                     'listings' => 'fa-building',
                     'referrals' => 'fa-user-plus',
+                    'submit-offer' => 'fa-file-contract',
                     'deals' => 'fa-briefcase',
                     'sales' => 'fa-file-signature',
                     'verification' => 'fa-shield-halved',

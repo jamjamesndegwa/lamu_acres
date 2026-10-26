@@ -152,6 +152,13 @@ return [
                 ],
             ],
             [
+                'key' => 'submit-offer',
+                'label' => 'Submit Offer for Buyer',
+                'items' => [
+                    ['label' => 'Submit Offer for Buyer', 'route' => 'broker.offers.create', 'active' => 'broker.offers.*'],
+                ],
+            ],
+            [
                 'key' => 'requirements',
                 'label' => 'Buyer Requirements Board',
                 'items' => [

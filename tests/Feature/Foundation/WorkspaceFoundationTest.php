@@ -372,6 +372,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('data-module="listings"', false)
             ->assertSee('data-module="referrals"', false)
+            ->assertSee('data-module="submit-offer"', false)
             ->assertSee('data-module="deals"', false)
             ->assertSee('Submit Property')
             ->assertSee('Buyer Requirements Board')
