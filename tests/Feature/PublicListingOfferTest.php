@@ -70,6 +70,32 @@ class PublicListingOfferTest extends FoundationTestCase
             ->assertSee('offerer@example.test', false);
     }
 
+    public function test_staff_offer_notification_opens_even_when_stored_url_host_mismatches_app_url(): void
+    {
+        config(['app.url' => 'http://localhost']);
+
+        $property = $this->publishedProperty();
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+
+        $this->actingAs($buyer)->post(route('land.offers.store', $property), [
+            'amount' => 2_500_000,
+            'message' => 'Ready to proceed.',
+        ]);
+
+        $offer = Offer::query()->where('property_id', $property->id)->firstOrFail();
+        $notice = $staff->fresh()->notifications()->firstOrFail();
+        $notice->forceFill([
+            'data' => array_merge($notice->data, [
+                'url' => 'http://lamuacres.test'.route('staff.offers.show', $offer, false),
+            ]),
+        ])->save();
+
+        $this->actingAs($staff)
+            ->get(route('staff.notifications.open', $notice->id))
+            ->assertRedirect(route('staff.offers.show', $offer));
+    }
+
     public function test_staff_property_register_lists_offer_counts(): void
     {
         $property = $this->publishedProperty();

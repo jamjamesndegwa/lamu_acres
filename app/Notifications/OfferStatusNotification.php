@@ -27,11 +27,15 @@ class OfferStatusNotification extends Notification
     {
         $this->offer->loadMissing('property');
 
+        $isBuyer = (int) $notifiable->id === (int) $this->offer->buyer_id;
+
         return [
             'offer_id' => $this->offer->id,
             'title' => 'Offer '.$this->offer->status->label(),
             'message' => $this->offer->property->title,
-            'url' => route((int) $notifiable->id === (int) $this->offer->buyer_id ? 'buyer.offers.index' : 'staff.offers.index', ['record' => $this->offer->id]).'#offer-'.$this->offer->id,
+            'url' => $isBuyer
+                ? route('buyer.offers.index', ['record' => $this->offer->id], false).'#offer-'.$this->offer->id
+                : route('staff.offers.show', $this->offer, false),
         ];
     }
 }

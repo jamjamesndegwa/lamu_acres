@@ -85,11 +85,26 @@ class NotificationInbox
 
     public function destination(DatabaseNotification $notification, User $user): ?string
     {
+        $data = $notification->data;
+
+        if (str_ends_with($notification->type, '\\OfferSubmittedNotification') || str_ends_with($notification->type, '\\OfferStatusNotification')) {
+            $offer = Offer::query()->find($data['offer_id'] ?? null);
+            if ($offer === null || ! $user->can('view', $offer)) {
+                return null;
+            }
+
+            $path = (int) $offer->buyer_id === (int) $user->id
+                ? route('buyer.offers.index', ['record' => $offer->id], false).'#offer-'.$offer->id
+                : route('staff.offers.show', $offer, false);
+
+            return $this->validatedDestinationPath($path, $user);
+        }
+
         $path = $this->safePath($notification->data['url'] ?? null);
         if ($path === null) {
             return null;
         }
-        $data = $notification->data;
+
         if (str_ends_with($notification->type, '\\DocumentAccessDecidedNotification')) {
             $record = DocumentAccessRequest::query()->find($data['document_access_request_id'] ?? null);
             if ($record === null || ! $user->can('view', $record)) {
@@ -106,15 +121,13 @@ class NotificationInbox
             $path = (int) $record->buyer_id === (int) $user->id
                 ? route('buyer.matches.show', $record->property_match_id, false)
                 : route('staff.visits.index', ['record' => $record->id], false).'#visit-'.$record->id;
-        } elseif (str_ends_with($notification->type, '\\OfferSubmittedNotification') || str_ends_with($notification->type, '\\OfferStatusNotification')) {
-            $record = Offer::query()->find($data['offer_id'] ?? null);
-            if ($record === null || ! $user->can('view', $record)) {
-                return null;
-            }
-            $path = (int) $record->buyer_id === (int) $user->id
-                ? route('buyer.offers.index', ['record' => $record->id], false).'#offer-'.$record->id
-                : route('staff.offers.show', $record, false);
         }
+
+        return $this->validatedDestinationPath($path, $user);
+    }
+
+    private function validatedDestinationPath(string $path, User $user): ?string
+    {
         try {
             $router = app('router');
             $route = $router->getRoutes()->match(Request::create($path, 'GET'));
@@ -228,8 +241,10 @@ class NotificationInbox
         if (isset($parts['host'])) {
             $host = strtolower($parts['host']);
             $appHost = strtolower((string) parse_url(config('app.url'), PHP_URL_HOST));
+            $requestHost = app()->runningInConsole() ? null : strtolower((string) request()->getHost());
             $loopback = in_array($appHost, ['localhost', '127.0.0.1'], true) && in_array($host, ['localhost', '127.0.0.1'], true);
-            if ((! $loopback && $host !== $appHost) || ($parts['port'] ?? null) !== parse_url(config('app.url'), PHP_URL_PORT)) {
+            $allowedHosts = array_values(array_unique(array_filter([$appHost, $requestHost])));
+            if ((! $loopback && ! in_array($host, $allowedHosts, true)) || ($parts['port'] ?? null) !== parse_url(config('app.url'), PHP_URL_PORT)) {
                 return null;
             }
         }
