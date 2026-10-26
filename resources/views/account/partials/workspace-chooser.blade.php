@@ -96,9 +96,12 @@
         @endif
 
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
-            @foreach ($partnerApplications as [$label, $capability, $application])
-                @if ($canApplyForPartnerCapability || $application)
+            @foreach ($partnerApplications as $partner)
+                @if ($canApplyForPartnerCapability || $partner['application'])
                     @php
+                        $label = $partner['label'];
+                        $capability = $partner['capability'];
+                        $application = $partner['application'];
                         $status = $application?->status === \App\Enums\CapabilityApplicationStatus::Pending
                             ? 'Under Review'
                             : ($application?->status?->label() ?? 'Not Applied');

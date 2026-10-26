@@ -24,7 +24,7 @@ class FindLandTest extends TestCase
         config(['app.url' => 'http://localhost:8000']);
 
         $this->get('http://127.0.0.1:8000/land')->assertOk()
-            ->assertSee('href="http://localhost:8000/find-land"', false);
+            ->assertSee('href="http://127.0.0.1:8000/find-land"', false);
     }
 
     public function test_guests_can_search_and_both_navigation_links_open_the_dedicated_page(): void

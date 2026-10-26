@@ -32,7 +32,7 @@
         @if ($breakout ?? false)
             <button type="button" data-close-modal class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-stone-700">Cancel</button>
         @else
-            <a href="{{ route('admin.users.index') }}" class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-stone-700">Cancel</a>
+            <a href="{{ route($returnRoute ?? 'admin.users.index') }}" class="rounded-full border border-sand-200 px-5 py-3 text-sm font-medium text-stone-700">Cancel</a>
         @endif
     </div>
 </form>

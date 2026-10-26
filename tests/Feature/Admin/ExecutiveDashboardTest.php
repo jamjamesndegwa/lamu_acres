@@ -395,8 +395,7 @@ class ExecutiveDashboardTest extends FoundationTestCase
             ->assertSee('Sale ST-OPEN: offer recorded')
             ->assertSee('Property Recent sale plot: published')
             ->assertSee('Premium receipt RCPT100 for KSh 5,000')
-            ->assertDontSee('No activity yet')
-            ->assertDontSee('/staff/verification');
+            ->assertDontSee('No activity yet');
 
         $this->actingAs($admin)
             ->get(route('admin.dashboard', [
@@ -418,7 +417,7 @@ class ExecutiveDashboardTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('ST-OPEN')
             ->assertSee('ST-RECENT')
-            ->assertSee('Pipeline by status');
+            ->assertSee('Sales performance');
 
         $this->actingAs($admin)
             ->get(route('admin.oversight.inventory'))

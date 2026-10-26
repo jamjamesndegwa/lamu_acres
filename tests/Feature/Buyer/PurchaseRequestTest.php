@@ -62,6 +62,7 @@ class PurchaseRequestTest extends FoundationTestCase
             ->get(route('buyer.enquiries.show', $enquiry))
             ->assertOk()
             ->assertSee('Purchase request progress')
+            ->assertSee($transaction->reference)
             ->assertSee('KSh 4,200,000')
             ->assertSee('2.5 acres');
     }

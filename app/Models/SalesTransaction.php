@@ -6,6 +6,7 @@ use App\Enums\SalesOrigin;
 use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -119,6 +120,17 @@ class SalesTransaction extends Model
 
     public function isOpen(): bool
     {
-        return $this->outcome === null && $this->stage !== SalesStage::Completed;
+        return $this->stage !== SalesStage::Completed
+            && ($this->outcome === null || $this->outcome === SalesOutcome::Disputed);
+    }
+
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query
+            ->where('stage', '!=', SalesStage::Completed)
+            ->where(function (Builder $query): void {
+                $query->whereNull('outcome')
+                    ->orWhere('outcome', SalesOutcome::Disputed);
+            });
     }
 }

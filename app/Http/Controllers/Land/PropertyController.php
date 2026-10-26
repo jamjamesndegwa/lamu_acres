@@ -87,9 +87,7 @@ class PropertyController extends Controller
             ->where('buyer_id', $request->user()->id)
             ->where('property_id', $property->id)
             ->where('purchase_request', true)
-            ->whereHas('salesTransaction', fn ($query) => $query
-                ->where('stage', '!=', 'completed')
-                ->where(fn ($query) => $query->whereNull('outcome')->orWhere('outcome', 'disputed')))
+            ->whereHas('salesTransaction', fn ($query) => $query->open())
             ->latest()
             ->first();
 
@@ -109,9 +107,13 @@ class PropertyController extends Controller
             $pipeline,
         );
 
+        $reference = $enquiry->salesTransaction?->reference;
+
         return redirect()
             ->route('buyer.enquiries.show', $enquiry)
-            ->with('status', 'Your purchase request has been sent to the Lamu Acres sales desk.');
+            ->with('status', $reference
+                ? 'Your purchase request '.$reference.' has been sent to the Lamu Acres sales desk.'
+                : 'Your purchase request has been sent to the Lamu Acres sales desk.');
     }
 
     public function save(Request $request, Property $property, SavedPropertyService $saved): RedirectResponse

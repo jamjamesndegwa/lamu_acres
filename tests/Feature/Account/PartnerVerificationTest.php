@@ -380,6 +380,13 @@ class PartnerVerificationTest extends FoundationTestCase
         $broker = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
         $staff = $this->reviewer();
         $application = $broker->capabilityApplications()->firstOrFail();
+        $this->actingAs($staff)->put(route('staff.applications.update', $application), [
+            'status' => 'information_required',
+            'decision_reason' => 'Upload a renewed practising certificate before credentials are restored.',
+        ])->assertSessionHasNoErrors();
+
+        $application->refresh();
+        $this->assertSame(CapabilityApplicationStatus::InformationRequired, $application->status);
 
         $this->actingAs($broker)->post(route('account.applications.store'), $this->payload('broker'))->assertSessionHasNoErrors();
         $this->assertSame(CapabilityApplicationStatus::Pending, $application->fresh()->status);

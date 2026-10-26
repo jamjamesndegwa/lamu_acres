@@ -8,6 +8,7 @@ use App\Events\EnquirySubmitted;
 use App\Models\BrokerIntroduction;
 use App\Models\Enquiry;
 use App\Models\Property;
+use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\SalesPipeline;
 use Illuminate\Http\Request;
@@ -42,18 +43,29 @@ class EnquiryRecorder
         $area = $requestedAcreage ?? $property->offeredAcreage();
         $message = 'Buyer request to purchase '.$property->title.'. Proposed price: KSh '.number_format($requestedPrice).'. Requested area: '.rtrim(rtrim(number_format($area, 4, '.', ''), '0'), '.').' acres.';
 
-        $existingRequest = Enquiry::query()
+        $activePurchase = Enquiry::query()
             ->where('buyer_id', $buyer->id)
             ->where('property_id', $property->id)
             ->where('purchase_request', true)
-            ->whereHas('salesTransaction', fn ($query) => $query
-                ->whereNull('outcome')
-                ->where('stage', '!=', 'completed'))
-            ->exists();
+            ->whereHas('salesTransaction', fn ($query) => $query->open())
+            ->first();
 
-        if ($existingRequest) {
+        if ($activePurchase !== null) {
             throw ValidationException::withMessages([
                 'requested_price' => 'You already have an active purchase request for this property. Open it from your enquiries to review its progress.',
+            ]);
+        }
+
+        $openCase = SalesTransaction::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('property_id', $property->id)
+            ->open()
+            ->with('enquiry')
+            ->first();
+
+        if ($openCase !== null && $openCase->enquiry_id !== null) {
+            throw ValidationException::withMessages([
+                'requested_price' => 'You already have an open sales case for this property. Open it from your enquiries to review its progress.',
             ]);
         }
 
@@ -64,7 +76,7 @@ class EnquiryRecorder
         $this->guardAgainstDuplicate($buyer, $property, $message);
         $this->guardAgainstSpam($message);
 
-        return DB::transaction(function () use ($buyer, $property, $requestedPrice, $requestedAcreage, $area, $message, $request, $pipeline): Enquiry {
+        return DB::transaction(function () use ($buyer, $property, $requestedPrice, $requestedAcreage, $area, $message, $request, $pipeline, $openCase): Enquiry {
             $enquiry = $this->createEnquiry(
                 $buyer,
                 $property,
@@ -75,22 +87,31 @@ class EnquiryRecorder
                 $requestedAcreage,
             );
 
-            $assignedTo = User::permission('staff.sales')->orderBy('id')->value('id')
-                ?? User::permission('staff.buyers')->orderBy('id')->value('id')
-                ?? $buyer->id;
+            if ($openCase !== null) {
+                $openCase->update(['enquiry_id' => $enquiry->id]);
+                $transaction = $openCase->fresh();
+                $pipeline->recordOffer($transaction, $buyer, (int) $transaction->lock_version, [
+                    'amount' => $requestedPrice,
+                    'note' => 'Buyer-submitted purchase request',
+                ]);
+            } else {
+                $assignedTo = User::permission('staff.sales')->orderBy('id')->value('id')
+                    ?? User::permission('staff.buyers')->orderBy('id')->value('id')
+                    ?? $buyer->id;
 
-            $transaction = $pipeline->open($buyer, [
-                'origin' => 'enquiry',
-                'property_id' => $property->id,
-                'enquiry_id' => $enquiry->id,
-                'assigned_to' => $assignedTo,
-                'acreage' => $area,
-            ]);
+                $transaction = $pipeline->open($buyer, [
+                    'origin' => 'enquiry',
+                    'property_id' => $property->id,
+                    'enquiry_id' => $enquiry->id,
+                    'assigned_to' => $assignedTo,
+                    'acreage' => $area,
+                ]);
 
-            $pipeline->recordOffer($transaction, $buyer, 0, [
-                'amount' => $requestedPrice,
-                'note' => 'Buyer-submitted purchase request',
-            ]);
+                $pipeline->recordOffer($transaction, $buyer, 0, [
+                    'amount' => $requestedPrice,
+                    'note' => 'Buyer-submitted purchase request',
+                ]);
+            }
 
             event(new EnquirySubmitted($enquiry));
 

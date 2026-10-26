@@ -1,8 +1,8 @@
 <turbo-frame id="modal">
-    <x-modal title="Request to buy {{ $property->title }}">
-        <p class="text-sm text-stone-600">{{ $property->reference }} · {{ $property->locationLabel() }}</p>
-        <p class="mt-2 text-sm text-stone-600">Asking price: {{ $property->formattedPrice() ?: 'Price on request' }}. The sales desk will contact you to discuss your proposal.</p>
-        <form method="POST" action="{{ route('land.purchase-requests.store', $property) }}" data-turbo-frame="_top" data-confirm="Send this purchase request to the Lamu Acres sales desk?" class="mt-5 space-y-4">
+    <x-modal title="I'm interested in buying">
+        <p class="text-sm text-stone-600">{{ $property->title }} · {{ $property->reference }} · {{ $property->locationLabel() }}</p>
+        <p class="mt-2 text-sm text-stone-600">Asking price: {{ $property->formattedPrice() ?: 'Price on request' }}. This records your interest and proposed terms. It is not a binding purchase agreement.</p>
+        <form method="POST" action="{{ route('land.purchase-requests.store', $property) }}" data-turbo-frame="_top" data-confirm="Send this purchase interest to the Lamu Acres sales desk?" class="mt-5 space-y-4">
             @csrf
             <div>
                 <label for="requested_price" class="block text-sm font-medium">Your proposed total price (KSh)</label>
@@ -27,7 +27,7 @@
                 @enderror
             </div>
             <input type="text" name="website" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
-            <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Send purchase request</button>
+            <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Send purchase interest</button>
         </form>
     </x-modal>
 </turbo-frame>

@@ -11,7 +11,8 @@
             <h2 class="font-semibold text-lamu-900">Purchase request progress</h2>
             @if ($enquiry->salesTransaction)
                 @php($transaction = $enquiry->salesTransaction)
-                <p class="mt-2 text-sm text-lamu-900">{{ $transaction->outcome?->label() ?? $transaction->stage->label() }}</p>
+                <p class="mt-2 text-sm text-stone-600">Reference {{ $transaction->reference }}</p>
+                <p class="mt-1 text-sm text-lamu-900">{{ $transaction->outcome?->label() ?? $transaction->stage->label() }}</p>
                 <dl class="mt-3 grid gap-2 text-sm text-stone-700 sm:grid-cols-2">
                     <div><dt class="font-medium text-lamu-900">Your proposed price</dt><dd>KSh {{ number_format($enquiry->requested_price) }}</dd></div>
                     <div><dt class="font-medium text-lamu-900">Area requested</dt><dd>{{ rtrim(rtrim(number_format((float) ($enquiry->requested_acreage ?? $transaction->acreage), 4, '.', ''), '0'), '.') }} acres</dd></div>

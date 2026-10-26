@@ -96,7 +96,7 @@
                 </details>
                 <details class="rounded-lg border border-sand-200 bg-white p-3">
                     <summary class="cursor-pointer text-sm font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Are there listing fees?</summary>
-                    <p class="mt-2 text-xs leading-relaxed text-stone-600">No public listing fee is published on this site. The Investor Pass subscription is separate and does not replace listing or application review.</p>
+                    <p class="mt-2 text-xs leading-relaxed text-stone-600">No. Lamu Acres does not charge sellers or brokers a fee to submit or publish approved land listings. Revenue comes from transaction-specific sale commissions and optional Investor Pass subscriptions—not from listing payments.</p>
                 </details>
             </div>
         </section>

@@ -85,7 +85,7 @@
                             'Who can apply?' => 'Licensed brokers and agencies marketing land on behalf of sellers. Owners selling their own land should use List Property and apply as a seller.',
                             'How long does verification take?' => 'Timing depends on staff review volume. Track your status and any requests through Your applications.',
                             'Can I publish immediately after approval?' => 'Each property still requires marketing authority, verification and staff approval before publication.',
-                            'Are there listing fees?' => 'No separate broker listing fee is published on this page. Staff confirms any applicable commercial terms directly.',
+                            'Are there listing fees?' => 'No. Broker listings are submitted and published without a listing fee. Commissions are agreed per completed sale; Investor Pass is separate.',
                         ] as $question => $answer)
                             <details class="py-3"><summary class="cursor-pointer text-sm font-medium text-lamu-900">{{ $question }}</summary><p class="mt-2 text-xs leading-relaxed text-stone-600">{{ $answer }}</p></details>
                         @endforeach
