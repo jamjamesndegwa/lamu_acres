@@ -45,6 +45,31 @@ class PublicListingOfferTest extends FoundationTestCase
         Notification::assertSentTo($staff, OfferSubmittedNotification::class);
     }
 
+    public function test_staff_notification_opens_the_offer_workspace(): void
+    {
+        $property = $this->publishedProperty();
+        $buyer = User::factory()->withRoles('buyer')->create(['email' => 'offerer@example.test']);
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+
+        $this->actingAs($buyer)->post(route('land.offers.store', $property), [
+            'amount' => 2_500_000,
+            'message' => 'Ready to proceed.',
+        ]);
+
+        $offer = Offer::query()->where('property_id', $property->id)->firstOrFail();
+        $notice = $staff->fresh()->notifications()->firstOrFail();
+
+        $this->actingAs($staff)
+            ->get(route('staff.notifications.open', $notice->id))
+            ->assertRedirect(route('staff.offers.show', $offer));
+
+        $this->actingAs($staff)
+            ->get(route('staff.offers.show', $offer))
+            ->assertOk()
+            ->assertSee('KSh '.number_format(2_500_000), false)
+            ->assertSee('offerer@example.test', false);
+    }
+
     public function test_staff_property_register_lists_offer_counts(): void
     {
         $property = $this->publishedProperty();

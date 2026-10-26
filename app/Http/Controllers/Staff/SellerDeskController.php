@@ -236,7 +236,12 @@ class SellerDeskController extends Controller
 
     public function presentOffer(Request $request, Offer $offer, SellerPortal $portal): RedirectResponse
     {
-        abort_unless($request->user()->hasPermission('staff.sales') || $request->user()->hasPermission('staff.buyers'), 403);
+        abort_unless(
+            $request->user()->hasPermission('staff.sales')
+            || $request->user()->hasPermission('staff.buyers')
+            || $request->user()->hasPermission('staff.properties'),
+            403,
+        );
 
         $data = $request->validate(['summary' => ['required', 'string', 'min:5', 'max:2000']]);
         $portal->presentOffer($offer, $request->user(), $data['summary']);

@@ -14,7 +14,7 @@
                     <a class="font-medium text-lamu-800 hover:underline" href="tel:{{ preg_replace('/\s+/', '', $offer->buyer->phone) }}">Call {{ $offer->buyer->phone }}</a>
                 @endif
                 @if (($showStaffActions ?? false) && auth()->user()?->can('updateStatus', $offer))
-                    <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.offers.index', ['record' => $offer->id]) }}#offer-{{ $offer->id }}">Manage in offers desk</a>
+                    <a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.offers.show', $offer) }}">Open offer workspace</a>
                 @endif
             </div>
         </li>

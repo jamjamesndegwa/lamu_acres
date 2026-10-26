@@ -54,7 +54,7 @@ class NotificationInbox
             if ($user->hasPermission('staff.buyers')) {
                 $rules[] = ['DocumentAccessDecidedNotification', 'document_access_request_id', DocumentAccessRequest::query()->where('status', 'requested')];
             }
-            if ($user->hasPermission('staff.sales') || $user->hasPermission('staff.buyers')) {
+            if ($user->hasPermission('staff.sales') || $user->hasPermission('staff.buyers') || $user->hasPermission('staff.properties')) {
                 $rules[] = ['OfferSubmittedNotification', 'offer_id', Offer::query()->whereIn('status', ['submitted', 'under_review'])];
             }
             if ($user->hasPermission('staff.sales')) {
@@ -111,7 +111,9 @@ class NotificationInbox
             if ($record === null || ! $user->can('view', $record)) {
                 return null;
             }
-            $path = route((int) $record->buyer_id === (int) $user->id ? 'buyer.offers.index' : 'staff.offers.index', ['record' => $record->id], false).'#offer-'.$record->id;
+            $path = (int) $record->buyer_id === (int) $user->id
+                ? route('buyer.offers.index', ['record' => $record->id], false).'#offer-'.$record->id
+                : route('staff.offers.show', $record, false);
         }
         try {
             $router = app('router');
@@ -136,7 +138,7 @@ class NotificationInbox
             $router->substituteBindings($route);
             $router->substituteImplicitBindings($route);
             $recordClass = match ($name) {
-                'staff.offers.index', 'buyer.offers.index' => Offer::class,
+                'staff.offers.index', 'staff.offers.show', 'buyer.offers.index' => Offer::class,
                 'staff.documents.index' => DocumentAccessRequest::class,
                 'staff.visits.index' => SiteVisit::class,
                 default => null,
@@ -198,7 +200,7 @@ class NotificationInbox
             }
             $permission = match ($name) {
                 'staff.documents.index' => $user->hasPermission('staff.buyers'),
-                'staff.offers.index' => $user->hasPermission('staff.buyers') || $user->hasPermission('staff.sales'),
+                'staff.offers.index', 'staff.offers.show' => $user->hasPermission('staff.buyers') || $user->hasPermission('staff.sales') || $user->hasPermission('staff.properties'),
                 'staff.visits.index' => $user->can('viewAny', SiteVisit::class),
                 default => true,
             };

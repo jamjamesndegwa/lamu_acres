@@ -58,6 +58,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
         Route::put('/visits/{siteVisit}', [SiteVisitController::class, 'update'])->name('visits.update');
         Route::put('/visits/{siteVisit}/reschedule', [SiteVisitController::class, 'resolveReschedule'])->name('visits.reschedule.resolve');
         Route::get('/offers', [OfferController::class, 'index'])->name('offers.index');
+        Route::get('/offers/{offer}', [OfferController::class, 'show'])->name('offers.show');
         Route::put('/offers/{offer}', [OfferController::class, 'update'])->name('offers.update');
         Route::get('/documents', [DocumentAccessController::class, 'index'])->name('documents.index');
         Route::put('/documents/{documentAccessRequest}', [DocumentAccessController::class, 'update'])->name('documents.update');

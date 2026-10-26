@@ -39,10 +39,31 @@ class OfferController extends Controller
         ]);
     }
 
+    public function show(Request $request, Offer $offer): View
+    {
+        $this->authorize('view', $offer);
+
+        $offer->load([
+            'buyer.buyerProfile',
+            'property.areaCounty:id,name,slug',
+            'property.areaLocality:id,name,slug',
+            'presentations',
+            'match',
+        ]);
+
+        return view('staff.offers.show', [
+            'offer' => $offer,
+            'property' => $offer->property,
+            'buyer' => $offer->buyer,
+        ]);
+    }
+
     public function update(UpdateOfferStatusRequest $request, Offer $offer, InterestWorkflow $workflow): RedirectResponse
     {
         $workflow->transitionOffer($offer, $request->enum('status', OfferStatus::class), $request->user());
 
-        return back()->with('status', 'Offer status updated.');
+        return redirect()
+            ->route('staff.offers.show', $offer)
+            ->with('status', 'Offer status updated.');
     }
 }

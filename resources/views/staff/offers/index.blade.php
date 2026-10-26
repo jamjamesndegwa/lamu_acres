@@ -3,7 +3,10 @@
     <div class="mt-6 space-y-4">
         @forelse ($offers as $offer)
             <article id="offer-{{ $offer->id }}" class="rounded-2xl border border-sand-200 bg-white p-5">
-                <p class="font-medium text-lamu-900">{{ $offer->property->title }}</p>
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                    <p class="font-medium text-lamu-900">{{ $offer->property->title }}</p>
+                    <a href="{{ route('staff.offers.show', $offer) }}" class="text-sm font-medium text-lamu-800 hover:underline">Open offer</a>
+                </div>
                 <p class="mt-1 text-sm text-stone-600">{{ $offer->buyer->name }} · KSh {{ number_format($offer->amount) }} · {{ $offer->status->label() }}</p>
                 <p class="mt-2 flex flex-wrap gap-3 text-sm">
                     @if ($offer->buyer->email)
