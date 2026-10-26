@@ -118,6 +118,7 @@ class SalesPipelineController extends Controller
             'reason' => ['nullable', 'string', 'max:2000'],
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'agreed_price' => ['nullable', 'integer', 'min:0'],
+            'acreage' => ['nullable', 'numeric', 'gt:0'],
         ]);
 
         $version = (int) $data['lock_version'];
@@ -129,6 +130,11 @@ class SalesPipelineController extends Controller
 
         if (filled($data['agreed_price'] ?? null)) {
             $salesTransaction = $pipeline->agreePrice($salesTransaction, (int) $data['agreed_price'], $request->user(), $version);
+            $version = $salesTransaction->lock_version;
+        }
+
+        if (filled($data['acreage'] ?? null)) {
+            $salesTransaction = $pipeline->agreeAcreage($salesTransaction, (float) $data['acreage'], $request->user(), $version);
             $version = $salesTransaction->lock_version;
         }
 

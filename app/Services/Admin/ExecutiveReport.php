@@ -30,6 +30,7 @@ use App\Models\SubscriptionReceipt;
 use App\Models\User;
 use App\Models\VerificationItem;
 use App\Support\Reporting\ReportingWindow;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -58,6 +59,8 @@ class ExecutiveReport
             $this->listingChart(),
             $this->pipelinePolygon(),
             $this->financePolygon(),
+            $this->brokerPolygon(),
+            $this->subscriptionChart(),
             $this->activityGraph(),
             $this->locationChart(),
         ]));
@@ -262,7 +265,7 @@ class ExecutiveReport
             $this->metric('Active subscribers', $this->activeSubscriptions()->count(), $href),
             $this->metric('Pending payment attempts', SubscriptionPayment::query()->where('status', PaymentStatus::Pending)->count(), $href),
             $this->metric('Expiring within 30 days', $this->activeSubscriptions()->whereBetween('ends_at', [now(), now()->addDays(30)])->count(), $href),
-            $this->metric('Subscription renewals', SubscriptionEvent::query()->where('action', 'renewed')->whereBetween('created_at', [$this->window->from, $this->window->to])->count(), $href),
+            $this->metric('Subscription renewals', $this->constrainToWindow(SubscriptionEvent::query()->where('action', 'renewed'), 'created_at')->count(), $href),
         ], $this->subscriptionChart());
     }
 
@@ -355,9 +358,10 @@ class ExecutiveReport
 
     private function completedSales(): Builder
     {
-        return SalesTransaction::query()
-            ->where('stage', SalesStage::Completed)
-            ->whereBetween('completed_at', [$this->window->from, $this->window->to]);
+        return $this->constrainToWindow(
+            SalesTransaction::query()->where('stage', SalesStage::Completed),
+            'completed_at',
+        );
     }
 
     private function openSourcing(): Builder
@@ -367,7 +371,16 @@ class ExecutiveReport
 
     private function enquiriesInPeriod(): Builder
     {
-        return Enquiry::query()->whereBetween('created_at', [$this->window->from, $this->window->to]);
+        return $this->constrainToWindow(Enquiry::query(), 'created_at');
+    }
+
+    private function constrainToWindow(Builder $query, string $column): Builder
+    {
+        if ($this->window->isAllRecords()) {
+            return $query;
+        }
+
+        return $query->whereBetween($column, [$this->window->from, $this->window->to]);
     }
 
     /**
@@ -463,12 +476,12 @@ class ExecutiveReport
 
         return [
             'type' => 'line',
-            'heading' => 'Activity over the period',
+            'heading' => $this->window->isAllRecords() ? 'Activity over time' : 'Activity over the period',
             'series' => [
                 ['label' => 'Enquiries', 'points' => $this->points($this->countsByDay($this->enquiriesInPeriod(), 'created_at'))],
                 ['label' => 'Completed sales', 'points' => $this->points($this->countsByDay($this->completedSales(), 'completed_at'))],
                 ['label' => 'Premium receipts', 'points' => $this->points($this->countsByDay(
-                    SubscriptionReceipt::query()->where('currency', 'KES')->whereBetween('issued_at', [$this->window->from, $this->window->to]),
+                    $this->constrainToWindow(SubscriptionReceipt::query()->where('currency', 'KES'), 'issued_at'),
                     'issued_at',
                 ))],
             ],
@@ -509,7 +522,7 @@ class ExecutiveReport
                 ['label' => 'Active', 'count' => $this->activeSubscriptions()->count()],
                 ['label' => 'Pending payments', 'count' => SubscriptionPayment::query()->where('status', PaymentStatus::Pending)->count()],
                 ['label' => 'Expiring in 30 days', 'count' => $this->activeSubscriptions()->whereBetween('ends_at', [now(), now()->addDays(30)])->count()],
-                ['label' => 'Renewals', 'count' => SubscriptionEvent::query()->where('action', 'renewed')->whereBetween('created_at', [$this->window->from, $this->window->to])->count()],
+                ['label' => 'Renewals', 'count' => $this->constrainToWindow(SubscriptionEvent::query()->where('action', 'renewed'), 'created_at')->count()],
             ],
         ];
     }
@@ -537,6 +550,10 @@ class ExecutiveReport
      */
     private function points(array $counts): array
     {
+        if ($this->window->isAllRecords()) {
+            return $this->monthlyPoints($counts);
+        }
+
         $start = $this->window->from->startOfDay();
         $end = $this->window->to->startOfDay();
         $days = (int) $start->diffInDays($end) + 1;
@@ -565,12 +582,39 @@ class ExecutiveReport
     }
 
     /**
+     * @param  array<string, int>  $counts
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function monthlyPoints(array $counts): array
+    {
+        if ($counts === []) {
+            return [];
+        }
+
+        $buckets = [];
+
+        foreach ($counts as $day => $total) {
+            $month = CarbonImmutable::parse($day)->format('Y-m');
+            $buckets[$month] = ($buckets[$month] ?? 0) + (int) $total;
+        }
+
+        ksort($buckets);
+
+        return collect($buckets)
+            ->map(fn (int $count, string $month): array => [
+                'label' => CarbonImmutable::parse($month.'-01')->format('M Y'),
+                'count' => $count,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array{type: string, heading: string, rows: array<int, array{label: string, count: int}>}|null
      */
     private function locationChart(): ?array
     {
-        $rows = SourcingRequest::query()
-            ->whereBetween('created_at', [$this->window->from, $this->window->to])
+        $rows = $this->constrainToWindow(SourcingRequest::query(), 'created_at')
             ->whereNotNull('location_label')
             ->where('location_label', '!=', '')
             ->selectRaw('location_label, count(*) as total')
@@ -616,18 +660,18 @@ class ExecutiveReport
 
     private function commissionPaid(): int
     {
-        return (int) CommissionPayment::query()
-            ->where('status', 'paid')
-            ->whereBetween('paid_at', [$this->window->from, $this->window->to])
-            ->sum('amount');
+        return (int) $this->constrainToWindow(
+            CommissionPayment::query()->where('status', 'paid'),
+            'paid_at',
+        )->sum('amount');
     }
 
     private function premiumReceived(): int
     {
-        return (int) SubscriptionReceipt::query()
-            ->where('currency', 'KES')
-            ->whereBetween('issued_at', [$this->window->from, $this->window->to])
-            ->sum('amount');
+        return (int) $this->constrainToWindow(
+            SubscriptionReceipt::query()->where('currency', 'KES'),
+            'issued_at',
+        )->sum('amount');
     }
 
     private function activeSubscriptions(): Builder
@@ -972,9 +1016,10 @@ class ExecutiveReport
 
         if ($this->ready('sales_audits')) {
             $items = $items->concat(
-                SalesAudit::query()
-                    ->with('transaction:id,reference')
-                    ->whereBetween('created_at', [$this->window->from, $this->window->to])
+                $this->constrainToWindow(
+                    SalesAudit::query()->with('transaction:id,reference'),
+                    'created_at',
+                )
                     ->latest()
                     ->limit(12)
                     ->get()
@@ -988,9 +1033,10 @@ class ExecutiveReport
 
         if ($this->ready('property_audits')) {
             $items = $items->concat(
-                PropertyAudit::query()
-                    ->with('property:id,title,slug')
-                    ->whereBetween('created_at', [$this->window->from, $this->window->to])
+                $this->constrainToWindow(
+                    PropertyAudit::query()->with('property:id,title,slug'),
+                    'created_at',
+                )
                     ->latest()
                     ->limit(12)
                     ->get()
@@ -1004,9 +1050,10 @@ class ExecutiveReport
 
         if ($this->ready('subscription_events')) {
             $items = $items->concat(
-                SubscriptionEvent::query()
-                    ->with('subscription.user:id,name')
-                    ->whereBetween('created_at', [$this->window->from, $this->window->to])
+                $this->constrainToWindow(
+                    SubscriptionEvent::query()->with('subscription.user:id,name'),
+                    'created_at',
+                )
                     ->latest()
                     ->limit(12)
                     ->get()
@@ -1024,8 +1071,7 @@ class ExecutiveReport
 
         if ($this->ready('subscription_receipts')) {
             $items = $items->concat(
-                SubscriptionReceipt::query()
-                    ->whereBetween('issued_at', [$this->window->from, $this->window->to])
+                $this->constrainToWindow(SubscriptionReceipt::query(), 'issued_at')
                     ->latest('issued_at')
                     ->limit(12)
                     ->get()
@@ -1039,9 +1085,10 @@ class ExecutiveReport
 
         if ($this->ready('commission_payments')) {
             $items = $items->concat(
-                CommissionPayment::query()
-                    ->where('status', 'paid')
-                    ->whereBetween('paid_at', [$this->window->from, $this->window->to])
+                $this->constrainToWindow(
+                    CommissionPayment::query()->where('status', 'paid'),
+                    'paid_at',
+                )
                     ->latest('paid_at')
                     ->limit(12)
                     ->get()

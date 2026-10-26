@@ -79,7 +79,6 @@
 
     @if ($executive ?? null)
         @include('admin.partials.executive', [
-            'window' => $window,
             'report' => $executive,
             'activity' => $executive->activity(),
         ])
@@ -130,7 +129,7 @@
                 @endforeach
             </x-workspace.table>
             @if (auth()->user()->hasPermission('admin.users'))
-                <a href="{{ route('admin.users.index') }}" class="mt-4 inline-block text-sm font-medium text-lamu-700">User directory</a>
+                <a href="{{ route('admin.users.index') }}" class="mt-4 inline-block text-sm font-medium text-lamu-700">Partner accounts</a>
             @endif
         </section>
     @endif

@@ -14,6 +14,20 @@ final class ReportingWindow
         public readonly string $range,
     ) {}
 
+    public static function allRecords(): self
+    {
+        return new self(
+            CarbonImmutable::parse('1970-01-01')->startOfDay(),
+            CarbonImmutable::now()->endOfDay(),
+            'all',
+        );
+    }
+
+    public function isAllRecords(): bool
+    {
+        return $this->range === 'all';
+    }
+
     public static function fromRequest(Request $request): self
     {
         $range = $request->string('range')->toString();
@@ -53,6 +67,10 @@ final class ReportingWindow
 
     public function label(): string
     {
+        if ($this->isAllRecords()) {
+            return 'All records';
+        }
+
         return $this->from->toFormattedDateString().' – '.$this->to->toFormattedDateString();
     }
 
@@ -61,6 +79,10 @@ final class ReportingWindow
      */
     public function query(): array
     {
+        if ($this->isAllRecords()) {
+            return [];
+        }
+
         $query = ['range' => $this->range];
 
         if ($this->range === 'custom') {

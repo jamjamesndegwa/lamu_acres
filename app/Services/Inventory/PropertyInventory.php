@@ -6,11 +6,14 @@ use App\Enums\ListingPurpose;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
+use App\Enums\SalesStage;
 use App\Enums\TransactionStatus;
 use App\Events\PropertyInventoryChanged;
 use App\Models\Locality;
 use App\Models\Property;
+use App\Models\PropertyAudit;
 use App\Models\PropertyTransaction;
+use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Verification\VerificationOperations;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +64,10 @@ class PropertyInventory
         return $property;
     }
 
-    public function transition(User $actor, Property $property, PropertyStatus $status): Property
+    public function transition(User $actor, Property $property, PropertyStatus $status, bool $authorizedSaleClosure = false): Property
     {
         if ($status === PropertyStatus::Published && DB::transactionLevel() === 0) {
-            return DB::transaction(fn (): Property => $this->transition($actor, $property, $status), 3);
+            return DB::transaction(fn (): Property => $this->transition($actor, $property, $status, $authorizedSaleClosure), 3);
         }
         if ($status === PropertyStatus::Published) {
             abort_unless($actor->can('update', $property), 403);
@@ -73,6 +76,12 @@ class PropertyInventory
         }
 
         $from = $property->status;
+
+        if ($status === PropertyStatus::Sold && ! $authorizedSaleClosure) {
+            throw ValidationException::withMessages([
+                'status' => 'Marking a listing sold requires completing the sale through the sales desk or an authorized inventory correction.',
+            ]);
+        }
 
         if (! in_array($status, $property->allowedTransitions(), true)) {
             throw ValidationException::withMessages([
@@ -181,7 +190,7 @@ class PropertyInventory
         });
     }
 
-    public function sellPortion(User $actor, Property $portion): Property
+    public function sellPortion(User $actor, Property $portion, ?string $correctionReason = null, bool $fromAuthorizedClosing = false): Property
     {
         if ($portion->parent_id === null) {
             throw ValidationException::withMessages([
@@ -189,12 +198,36 @@ class PropertyInventory
             ]);
         }
 
-        $this->transition($actor, $portion, PropertyStatus::Sold);
+        if (! $fromAuthorizedClosing && ! $this->hasAuthorizingCompletedSale($portion)) {
+            if (! $actor->hasPermission('staff.inventory.correct')) {
+                throw ValidationException::withMessages([
+                    'portion' => 'This portion can be marked sold only after staff complete the linked sales transaction, or through an authorized inventory correction.',
+                ]);
+            }
+
+            $reason = trim((string) $correctionReason);
+            if (strlen($reason) < 8) {
+                throw ValidationException::withMessages([
+                    'correction_reason' => 'Record why this inventory correction is being applied.',
+                ]);
+            }
+
+            PropertyAudit::query()->create([
+                'property_id' => $portion->id,
+                'actor_id' => $actor->id,
+                'action' => 'inventory_sale_correction',
+                'from_status' => $portion->status->value,
+                'to_status' => PropertyStatus::Sold->value,
+                'changes' => ['reason' => $reason, 'acreage' => (string) $portion->acreage],
+            ]);
+        }
+
+        $this->transition($actor, $portion, PropertyStatus::Sold, true);
 
         $parent = $portion->parent()->first();
 
         if ($parent !== null && $parent->remainingAcreage() <= 0 && in_array(PropertyStatus::Sold, $parent->allowedTransitions(), true)) {
-            $this->transition($actor, $parent, PropertyStatus::Sold);
+            $this->transition($actor, $parent, PropertyStatus::Sold, true);
         }
 
         return $portion->refresh();
@@ -214,10 +247,10 @@ class PropertyInventory
 
         if (abs($requested - $remaining) < 0.0001) {
             if ($locked->parent_id !== null) {
-                return $this->sellPortion($actor, $locked);
+                return $this->sellPortion($actor, $locked, null, true);
             }
 
-            return $this->transition($actor, $locked, PropertyStatus::Sold);
+            return $this->transition($actor, $locked, PropertyStatus::Sold, true);
         }
 
         $portion = $locked->replicate(['published_at']);
@@ -239,7 +272,57 @@ class PropertyInventory
             'acreage' => $requested,
         ]));
 
+        $this->syncOfferedAcreageAfterSale($locked);
+
         return $portion;
+    }
+
+    private function hasAuthorizingCompletedSale(Property $portion): bool
+    {
+        if ($portion->parent_id === null) {
+            return false;
+        }
+
+        $acreage = round((float) $portion->acreage, 4);
+
+        return SalesTransaction::query()
+            ->where('stage', SalesStage::Completed)
+            ->where(function ($query) use ($portion, $acreage): void {
+                $query->where('property_id', $portion->id)
+                    ->orWhere(function ($query) use ($portion, $acreage): void {
+                        $query->where('property_id', $portion->parent_id)
+                            ->whereRaw('round(acreage, 4) = ?', [$acreage]);
+                    });
+            })
+            ->exists();
+    }
+
+    private function syncOfferedAcreageAfterSale(Property $parent): void
+    {
+        $parent->refresh();
+
+        if ($parent->offered_acreage === null) {
+            return;
+        }
+
+        $remaining = round($parent->remainingAcreage(), 4);
+        $offered = round((float) $parent->offered_acreage, 4);
+
+        if ($offered <= $remaining + 0.0001) {
+            return;
+        }
+
+        $parent->offered_acreage = $remaining > 0 ? $remaining : null;
+
+        if ($parent->priceBasis()->isPerAcre() && $parent->price_rate !== null && $parent->offered_acreage !== null) {
+            $parent->price_amount = Property::computePriceAmount(
+                $parent->priceBasis(),
+                (int) $parent->price_rate,
+                (float) $parent->offered_acreage,
+            );
+        }
+
+        $parent->save();
     }
 
     /**

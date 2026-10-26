@@ -46,7 +46,7 @@ class WorkspaceDashboardController extends Controller
         $executive = null;
 
         if ($workspace === Workspace::Admin && $request->user()->hasPermission('admin.oversight')) {
-            $window = ReportingWindow::fromRequest($request);
+            $window = ReportingWindow::allRecords();
             $executive = ExecutiveReport::make($request->user(), $window);
         }
         $panels = $navigation->panels($request->user(), $workspace);
@@ -62,7 +62,7 @@ class WorkspaceDashboardController extends Controller
             'workspace' => $workspace,
             'heading' => $header['heading'],
             'intro' => $executive
-                ? 'Published listings, sales, demand, brokers, commissions, and subscriptions from the records you are allowed to see.'
+                ? 'Charts below use every record you are allowed to see. Open Business Oversight when you need a filtered period or detailed tables.'
                 : $header['intro'],
             'panels' => $panels,
             'executive' => $executive,

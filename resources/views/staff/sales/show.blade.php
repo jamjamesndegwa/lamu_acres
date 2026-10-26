@@ -92,6 +92,7 @@
                 </label>
                 <input name="reason" placeholder="Reason, required for an outcome" class="rounded-lg border border-sand-200 px-3 py-2">
                 <input name="agreed_price" placeholder="Agreed price" class="rounded-lg border border-sand-200 px-3 py-2">
+                <input name="acreage" placeholder="Agreed acreage" class="rounded-lg border border-sand-200 px-3 py-2">
                 <label class="text-sm font-medium text-stone-700">Agent
                     <select name="assigned_to" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
                         <option value="">Keep the agent</option>

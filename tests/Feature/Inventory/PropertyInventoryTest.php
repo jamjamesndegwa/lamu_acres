@@ -2,12 +2,17 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Enums\AuthorityScope;
+use App\Enums\AuthorityStatus;
+use App\Enums\OwnerLinkStatus;
+use App\Enums\OwnerRelationship;
 use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\PropertyAudit;
 use App\Models\User;
+use App\Services\Seller\SellerPortal;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PropertyInventoryTest extends FoundationTestCase
@@ -43,9 +48,22 @@ class PropertyInventoryTest extends FoundationTestCase
         $this->actingAs($staff)->put(route('staff.properties.transition', $property), ['status' => 'published'])->assertSessionHasErrors('listing');
         $this->assertSame(PropertyStatus::Review, $property->refresh()->status);
 
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $property->owners()->create([
+            'user_id' => $seller->id,
+            'relationship' => OwnerRelationship::Owner,
+            'status' => OwnerLinkStatus::Verified,
+        ]);
+        $property->authorities()->create([
+            'seller_id' => $seller->id,
+            'scope' => AuthorityScope::Sale,
+            'status' => AuthorityStatus::Active,
+            'terms' => 'Authorised to market this property for sale.',
+        ]);
+        app(SellerPortal::class)->verifyLink($property->owners()->firstOrFail(), $staff, null, 'Test review: identity and authority match.', true);
         $this->attachPublicPhoto($property, $staff);
         $this->clearCriticalVerification($property, $staff);
-        $this->actingAs($staff)->put(route('staff.properties.transition', $property), ['status' => 'published'])->assertRedirect();
+        $this->actingAs($staff)->post(route('staff.properties.listing', $property))->assertSessionHasNoErrors();
 
         $property->refresh();
         $this->assertSame(PropertyStatus::Published, $property->status);
@@ -68,22 +86,21 @@ class PropertyInventoryTest extends FoundationTestCase
             'description' => 'Parent holding.',
         ]);
 
-        $this->actingAs($staff)->post(route('staff.properties.store'), $this->payload($locality, [
+        $portion = Property::factory()->published()->listedIn($locality)->create([
             'title' => 'North portion',
+            'parent_id' => $parent->id,
             'acreage' => 4,
             'price_amount' => 400_000,
-            'parent_id' => $parent->id,
             'portion_label' => 'North',
-        ]))->assertRedirect();
-
-        $portion = Property::query()->where('title', 'North portion')->firstOrFail();
+            'description' => 'North portion holding.',
+        ]);
         $this->assertSame(100_000, $portion->pricePerAcre());
+        $this->actingAs($staff)->post(route('staff.properties.sell-portion', $portion))->assertSessionHasErrors('portion');
 
-        $this->actingAs($staff)->put(route('staff.properties.transition', $portion), ['status' => 'review']);
-        $this->attachPublicPhoto($portion, $staff);
-        $this->clearCriticalVerification($portion, $staff);
-        $this->actingAs($staff)->put(route('staff.properties.transition', $portion), ['status' => 'published'])->assertSessionHasNoErrors();
-        $this->actingAs($staff)->post(route('staff.properties.sell-portion', $portion))->assertRedirect();
+        $corrector = User::factory()->withRoles('staff')->withPermissions('staff.properties', 'staff.inventory.correct')->create();
+        $this->actingAs($corrector)->post(route('staff.properties.sell-portion', $portion), [
+            'correction_reason' => 'Legacy portion sale imported before the sales desk went live.',
+        ])->assertRedirect();
 
         $this->assertSame(PropertyStatus::Sold, $portion->fresh()->status);
         $this->assertSame(PropertyStatus::Published, $parent->fresh()->status);

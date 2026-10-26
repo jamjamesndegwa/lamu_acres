@@ -45,18 +45,18 @@ class ExecutiveDashboardTest extends FoundationTestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Published and available')
+            ->assertSee('Overview charts')
             ->assertSee('Listings by status')
             ->assertSee('Sales pipeline')
             ->assertSee('Commission and premium revenue')
-            ->assertSee('Activity over the period')
-            ->assertSee('Completed sales')
-            ->assertSee('Open sourcing requests')
+            ->assertSee('Broker position')
+            ->assertSee('Subscription position')
+            ->assertSee('Activity over time')
             ->assertSee('Approved brokers')
-            ->assertSee('Commission earned')
-            ->assertSee('Premium revenue received')
-            ->assertSee('Active subscribers')
-            ->assertSee('Awaiting verification')
+            ->assertSee('Active')
             ->assertSee('No activity yet')
+            ->assertDontSee('Reporting period')
+            ->assertDontSee('7 days')
             ->assertDontSee('Unavailable')
             ->assertDontSee('Not available yet');
 
@@ -362,55 +362,37 @@ class ExecutiveDashboardTest extends FoundationTestCase
             'state' => VerificationItemState::Failed,
         ]);
 
-        $dashboard = $this->actingAs($admin)->get(route('admin.dashboard', ['range' => '30']));
+        $dashboard = $this->actingAs($admin)->get(route('admin.dashboard'));
 
         $dashboard->assertOk()
-            ->assertSeeInOrder(['Published and available', '5'])
-            ->assertSeeInOrder(['Reserved', '1'])
-            ->assertSeeInOrder(['Sold', '1'])
-            ->assertSeeInOrder(['Pending review', '1'])
-            ->assertSeeInOrder(['Completed value', 'KSh 1,500,000'])
-            ->assertDontSee('KSh 9,000,000')
-            ->assertSeeInOrder(['Open sourcing requests', '3'])
-            ->assertSeeInOrder(['Unmatched requirements', '2'])
             ->assertSee('Shela')
-            ->assertDontSee('Faza')
+            ->assertSee('Faza')
             ->assertSeeInOrder(['Approved brokers', '1'])
-            ->assertSeeInOrder(['Accepted introductions', '1'])
-            ->assertSeeInOrder(['Deals in progress', '1'])
-            ->assertSeeInOrder(['Completed referred deals', '0'])
-            ->assertSeeInOrder(['Commission earned', 'KSh 100,000'])
-            ->assertSeeInOrder(['Commission payable', 'KSh 50,000'])
-            ->assertSeeInOrder(['Commission paid', 'KSh 25,000'])
-            ->assertDontSee('KSh 80,000')
-            ->assertSeeInOrder(['Premium revenue received', 'KSh 5,000'])
-            ->assertDontSee('KSh 9,000')
-            ->assertSeeInOrder(['Active subscribers', '2'])
-            ->assertSeeInOrder(['Pending payment attempts', '1'])
-            ->assertSeeInOrder(['Expiring within 30 days', '1'])
-            ->assertSeeInOrder(['Subscription renewals', '1'])
-            ->assertSeeInOrder(['Awaiting verification', '1'])
-            ->assertSeeInOrder(['Failed or expired critical checks', '2'])
-            ->assertSeeInOrder(['Verification workload', '1'])
+            ->assertSeeInOrder(['Completed referred deals', '1'])
+            ->assertSee('Paid')
+            ->assertSee('KSh 105,000')
+            ->assertSee('Premium receipts')
             ->assertSee('Sale ST-OPEN: offer recorded')
             ->assertSee('Property Recent sale plot: published')
             ->assertSee('Premium receipt RCPT100 for KSh 5,000')
-            ->assertDontSee('No activity yet');
+            ->assertDontSee('No activity yet')
+            ->assertDontSee('Reporting period');
 
         $this->actingAs($admin)
-            ->get(route('admin.dashboard', [
+            ->get(route('admin.oversight.sales', ['range' => '30']))
+            ->assertOk()
+            ->assertSeeInOrder(['Completed value', 'KSh 1,500,000'])
+            ->assertDontSee('KSh 9,000,000');
+
+        $this->actingAs($admin)
+            ->get(route('admin.oversight.sales', [
                 'range' => 'custom',
                 'from' => now()->subDays(45)->toDateString(),
                 'to' => now()->subDays(35)->toDateString(),
             ]))
             ->assertOk()
             ->assertSee('KSh 9,000,000')
-            ->assertDontSee('KSh 1,500,000')
-            ->assertSee('KSh 80,000')
-            ->assertDontSee('KSh 25,000')
-            ->assertSee('Faza')
-            ->assertDontSee('Shela')
-            ->assertSeeInOrder(['Completed referred deals', '1']);
+            ->assertDontSee('KSh 1,500,000');
 
         $this->actingAs($admin)
             ->get(route('admin.oversight.sales'))
@@ -463,7 +445,7 @@ class ExecutiveDashboardTest extends FoundationTestCase
         $admin = User::factory()->withRoles('admin')->create();
 
         $this->actingAs($admin)
-            ->get(route('admin.dashboard', ['range' => 'custom']))
+            ->get(route('admin.oversight.sales', ['range' => 'custom']))
             ->assertSessionHasErrors(['from', 'to']);
     }
 }

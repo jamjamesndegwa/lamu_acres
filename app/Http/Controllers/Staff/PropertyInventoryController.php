@@ -160,7 +160,10 @@ class PropertyInventoryController extends Controller
     public function sellPortion(Request $request, Property $property, PropertyInventory $inventory): RedirectResponse
     {
         $this->authorize('update', $property);
-        $inventory->sellPortion($request->user(), $property);
+        $data = $request->validate([
+            'correction_reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $inventory->sellPortion($request->user(), $property, $data['correction_reason'] ?? null);
 
         return back()->with('status', 'Portion marked sold. The parent parcel stays open while acreage remains.');
     }

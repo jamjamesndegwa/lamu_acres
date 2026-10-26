@@ -9,10 +9,14 @@
                     <p class="font-medium text-lamu-900">{{ $portion->portion_label ?: $portion->title }}</p>
                     <p class="text-stone-600">{{ number_format((float) $portion->acreage, 2) }} acres · {{ $portion->status->label() }}</p>
                     @if ($portion->status !== \App\Enums\PropertyStatus::Sold && in_array(\App\Enums\PropertyStatus::Sold, $portion->status->transitions(), true))
-                        <form method="POST" action="{{ route('staff.properties.sell-portion', $portion) }}" data-turbo-frame="_top" data-confirm="Mark only this portion sold?" class="mt-2">
+                        <form method="POST" action="{{ route('staff.properties.sell-portion', $portion) }}" data-turbo-frame="_top" data-confirm="Mark only this portion sold?" class="mt-2 space-y-2">
                             @csrf
+                            @if (auth()->user()->hasPermission('staff.inventory.correct'))
+                                <input name="correction_reason" placeholder="Correction reason (required without a completed sale)" class="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm">
+                            @endif
                             <button class="font-medium text-lamu-800">Sell this portion</button>
                         </form>
+                        <p class="mt-1 text-xs text-stone-600">Commercial sales close through the sales desk. This action is for a completed sale or an authorized correction.</p>
                     @endif
                 </li>
             @empty

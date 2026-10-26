@@ -192,6 +192,30 @@ class SalesPipeline
         });
     }
 
+    public function agreeAcreage(SalesTransaction $transaction, float $acreage, User $actor, int $version): SalesTransaction
+    {
+        return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($acreage, $actor): void {
+            $this->guardOpen($locked);
+            $requested = round($acreage, 4);
+            $remaining = round($locked->property->remainingAcreage(), 4);
+
+            if ($requested <= 0 || $requested > $remaining + 0.0001) {
+                throw ValidationException::withMessages([
+                    'acreage' => 'The agreed acreage cannot exceed the land still held.',
+                ]);
+            }
+
+            $locked->acreage = $requested;
+            $this->timeline($locked, $actor, 'Agreed acreage recorded as '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.', true);
+            $this->audit($locked, $actor, 'acreage_agreed', ['acreage' => (string) $requested]);
+            $locked->buyer?->notify(new TemplatedDeskNotification(
+                'Agreed acreage updated',
+                'The agreed acreage for your purchase request is '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.',
+                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
+            ));
+        });
+    }
+
     /**
      * @param  array{amount: int, seller_response?: string|null, note?: string|null, offer_id?: int|null}  $data
      */
