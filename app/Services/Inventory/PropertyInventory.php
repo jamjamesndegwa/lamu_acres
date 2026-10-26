@@ -247,7 +247,6 @@ class PropertyInventory
         ?int $price = null,
         ?SalesTransaction $salesTransaction = null,
     ): Property {
-    {
         $locked = Property::query()->whereKey($property->id)->lockForUpdate()->firstOrFail();
         $requested = round($acreage, 4);
         $remaining = round($locked->remainingAcreage(), 4);

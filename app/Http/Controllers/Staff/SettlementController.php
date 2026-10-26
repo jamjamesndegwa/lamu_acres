@@ -40,9 +40,16 @@ class SettlementController extends Controller
         abort_unless($request->user()->hasPermission('commissions.record'), 403);
         $data = $request->validate([
             'reference' => ['required', 'string', 'max:80', Rule::unique('commission_payments', 'reference')],
+            'amount' => ['nullable', 'integer', 'min:1'],
             'reconciliation' => ['required', Rule::enum(PaymentReconciliation::class)],
         ]);
-        $desk->initiatePayment($commissionAgreement, $request->user(), $data['reference'], PaymentReconciliation::from($data['reconciliation']));
+        $desk->initiatePayment(
+            $commissionAgreement,
+            $request->user(),
+            $data['reference'],
+            PaymentReconciliation::from($data['reconciliation']),
+            isset($data['amount']) ? (int) $data['amount'] : null,
+        );
 
         return back()->with('status', 'Commission payment initiated.');
     }
@@ -53,7 +60,12 @@ class SettlementController extends Controller
         $data = $request->validate([
             'reconciliation' => ['required', Rule::enum(PaymentReconciliation::class)],
         ]);
-        $desk->recordPayment($commissionAgreement, $request->user(), PaymentReconciliation::from($data['reconciliation']));
+        $desk->recordPayment(
+            $commissionAgreement,
+            $request->user(),
+            PaymentReconciliation::from($data['reconciliation']),
+            $request->input('payment_reference'),
+        );
 
         return back()->with('status', 'Commission payment recorded.');
     }

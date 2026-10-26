@@ -9,7 +9,7 @@ class SavedPropertyPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('workspace.buyer');
+        return $user->canUseBuyerFeatures();
     }
 
     public function delete(User $user, SavedProperty $savedProperty): bool

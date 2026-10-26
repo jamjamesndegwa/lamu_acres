@@ -44,7 +44,7 @@ class DatabaseSeeder extends Seeder
                 'staff.communications',
             ]],
             ['name' => 'Verification Officer', 'email' => 'verification@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.verification']],
-            ['name' => 'Finance Officer', 'email' => 'finance@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.finance', 'commissions.propose', 'commissions.approve', 'commissions.record']],
+            ['name' => 'Finance Officer', 'email' => 'finance@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.finance', 'commissions.propose', 'commissions.approve', 'commissions.record', 'agency.propose', 'agency.record']],
             ['name' => 'Administrator', 'email' => 'administrator@lamuacres.test', 'roles' => ['admin']],
             ['name' => 'Super Administrator', 'email' => 'admin@lamuacres.test', 'roles' => ['super_admin']],
             ['name' => 'Multi Workspace', 'email' => 'multi@lamuacres.test', 'roles' => ['buyer', 'broker']],

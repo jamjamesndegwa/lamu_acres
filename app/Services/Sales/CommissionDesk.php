@@ -21,6 +21,7 @@ class CommissionDesk
      */
     public function propose(SalesTransaction $transaction, User $actor, array $data): CommissionAgreement
     {
+        $this->guardBrokerAuthority($transaction, (int) $data['broker_id']);
         $this->guardClaim($transaction, (int) $data['broker_id']);
 
         if (blank($data['rate_percent'] ?? null) && blank($data['fixed_amount'] ?? null)) {
@@ -162,6 +163,22 @@ class CommissionDesk
         }
 
         return null;
+    }
+
+    private function guardBrokerAuthority(SalesTransaction $transaction, int $brokerId): void
+    {
+        $property = $transaction->property;
+
+        $introduced = $transaction->broker_introduction_id !== null
+            && $transaction->introduction()->where('broker_id', $brokerId)->exists();
+
+        $submitted = $property !== null && (int) $property->submitted_by === $brokerId;
+
+        if (! $introduced && ! $submitted) {
+            throw ValidationException::withMessages([
+                'broker_id' => 'This broker does not have an authorized introduction or listing mandate for this sale.',
+            ]);
+        }
     }
 
     private function guardClaim(SalesTransaction $transaction, int $brokerId, ?int $exceptId = null): void

@@ -9,7 +9,7 @@ class DocumentAccessRequestPolicy
 {
     public function view(User $user, DocumentAccessRequest $documentAccessRequest): bool
     {
-        if ($documentAccessRequest->isOwnedBy($user) && $user->hasPermission('workspace.buyer')) {
+        if ($documentAccessRequest->isOwnedBy($user) && $user->canUseBuyerFeatures()) {
             return true;
         }
 

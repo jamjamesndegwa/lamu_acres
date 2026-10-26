@@ -39,6 +39,7 @@ class ClosingSettlementTest extends FoundationTestCase
             'offered_acreage' => 10,
             'minimum_acreage' => 2,
             'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+            'submitted_by' => $broker->id,
         ]);
         $instruction = SaleInstruction::query()->create([
             'property_id' => $property->id,

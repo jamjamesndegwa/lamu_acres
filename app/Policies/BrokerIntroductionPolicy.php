@@ -14,7 +14,7 @@ class BrokerIntroductionPolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isSuspended() && $user->hasPermission('workspace.broker');
+        return $user->canUseBrokerFeatures();
     }
 
     public function review(User $user, BrokerIntroduction $introduction): bool

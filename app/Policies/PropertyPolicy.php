@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\PropertyStatus;
 use App\Models\Property;
 use App\Models\User;
 
@@ -33,12 +34,12 @@ class PropertyPolicy
 
     public function delete(User $user, Property $property): bool
     {
-        return $this->manage($user) && $property->status === \App\Enums\PropertyStatus::Draft;
+        return $this->manage($user) && $property->status === PropertyStatus::Draft;
     }
 
     public function save(User $user, Property $property): bool
     {
-        return $property->isPublished() && $user->hasPermission('workspace.buyer');
+        return $property->isPublished() && $user->canUseBuyerFeatures();
     }
 
     public function enquire(User $user, Property $property): bool
@@ -66,16 +67,18 @@ class PropertyPolicy
             return false;
         }
 
-        if ($user->hasPermission('workspace.broker')) {
+        if ($user->canUseBrokerFeatures() && (int) $property->submitted_by === (int) $user->id) {
             return true;
         }
 
-        return $user->hasPermission('workspace.seller') && $property->isEditableBySubmitter();
+        return $user->canUseSellerFeatures()
+            && $user->hasPermission('workspace.seller')
+            && $property->isEditableBySubmitter();
     }
 
     public function submit(User $user): bool
     {
-        return ! $user->isSuspended() && $user->hasPermission('workspace.broker');
+        return $user->canUseBrokerFeatures();
     }
 
     public function viewSubmission(User $user, Property $property): bool

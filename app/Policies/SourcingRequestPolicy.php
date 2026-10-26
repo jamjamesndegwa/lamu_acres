@@ -11,13 +11,13 @@ class SourcingRequestPolicy
     public function viewAny(User $user): bool
     {
         return $user->hasPermission('staff.sourcing')
-            || $user->hasPermission('workspace.buyer')
+            || $user->canUseBuyerFeatures()
             || SourcingRequest::query()->where('assigned_to', $user->id)->exists();
     }
 
     public function view(User $user, SourcingRequest $sourcingRequest): bool
     {
-        if ($sourcingRequest->isOwnedBy($user) && $user->hasPermission('workspace.buyer')) {
+        if ($sourcingRequest->isOwnedBy($user) && $user->canUseBuyerFeatures()) {
             return true;
         }
 
@@ -31,13 +31,13 @@ class SourcingRequestPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasPermission('workspace.buyer');
+        return $user->canUseBuyerFeatures();
     }
 
     public function update(User $user, SourcingRequest $sourcingRequest): bool
     {
         return $sourcingRequest->isOwnedBy($user)
-            && $user->hasPermission('workspace.buyer')
+            && $user->canUseBuyerFeatures()
             && $sourcingRequest->status !== SourcingRequestStatus::Closed;
     }
 

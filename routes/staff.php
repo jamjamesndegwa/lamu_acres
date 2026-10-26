@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Staff\AgencyCollectionController;
+use App\Http\Controllers\Staff\AgencyFeeAgreementController;
 use App\Http\Controllers\Staff\CapabilityApplicationController;
 use App\Http\Controllers\Staff\ClosingController;
 use App\Http\Controllers\Staff\CommissionAgreementController;
@@ -205,7 +207,13 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/sales/{salesTransaction}/evidence', [ClosingController::class, 'evidence'])->name('sales.evidence');
             Route::post('/sales/{salesTransaction}/completion', [ClosingController::class, 'complete'])->name('sales.complete');
             Route::post('/sales/{salesTransaction}/commission', [CommissionAgreementController::class, 'store'])->name('commissions.store');
+            Route::post('/sales/{salesTransaction}/agency-fee', [AgencyFeeAgreementController::class, 'store'])->name('agency-fees.store');
         });
+
+        Route::get('/agency-fees', [AgencyFeeAgreementController::class, 'index'])->name('agency-fees.index');
+        Route::get('/agency-fees/{agencyFeeAgreement}', [AgencyFeeAgreementController::class, 'show'])->name('agency-fees.show');
+        Route::post('/agency-fees/{agencyFeeAgreement}/acceptance', [AgencyFeeAgreementController::class, 'accept'])->name('agency-fees.accept');
+        Route::post('/agency-fees/{agencyFeeAgreement}/revision', [AgencyFeeAgreementController::class, 'revise'])->name('agency-fees.revise');
 
         Route::get('/commissions', [CommissionAgreementController::class, 'index'])->name('commissions.index');
         Route::get('/commissions/{commissionAgreement}', [CommissionAgreementController::class, 'show'])->name('commissions.show');
@@ -218,6 +226,9 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/settlements/{commissionAgreement}/approval', [SettlementController::class, 'approve'])->name('settlements.approve');
             Route::post('/settlements/{commissionAgreement}/payment', [SettlementController::class, 'initiate'])->name('settlements.initiate');
             Route::post('/settlements/{commissionAgreement}/paid', [SettlementController::class, 'pay'])->name('settlements.pay');
+            Route::get('/agency-collections', [AgencyCollectionController::class, 'index'])->name('agency-collections.index');
+            Route::post('/agency-collections/{agencyFeeAgreement}/receipt', [AgencyCollectionController::class, 'initiate'])->name('agency-collections.initiate');
+            Route::post('/agency-collections/receipts/{agencyFeeReceipt}/collected', [AgencyCollectionController::class, 'collect'])->name('agency-collections.collect');
         });
 
         Route::middleware('permission:staff.finance')->group(function () {

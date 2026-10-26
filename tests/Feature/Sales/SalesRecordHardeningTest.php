@@ -31,7 +31,7 @@ class SalesRecordHardeningTest extends FoundationTestCase
         Notification::fake();
 
         $buyer = User::factory()->withRoles('buyer')->create();
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'commissions.propose')->create();
         $property = Property::factory()->published()->create([
             'title' => 'Forty acre holding',
@@ -234,7 +234,11 @@ class SalesRecordHardeningTest extends FoundationTestCase
 
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'commissions.propose')->create();
         $broker = User::factory()->withRoles('broker')->create();
-        $property = Property::factory()->published()->create(['acreage' => 10, 'price_amount' => 20_000_000]);
+        $property = Property::factory()->published()->create([
+            'acreage' => 10,
+            'price_amount' => 20_000_000,
+            'submitted_by' => $broker->id,
+        ]);
         $pipeline = app(SalesPipeline::class);
         $commissions = app(CommissionDesk::class);
 
@@ -272,7 +276,7 @@ class SalesRecordHardeningTest extends FoundationTestCase
 
     public function test_seller_offer_response_stays_on_presentation_and_does_not_complete_sale(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $property = Property::factory()->published()->create(['submitted_by' => $seller->id]);
         PropertyOwner::query()->create([
             'property_id' => $property->id,
@@ -373,7 +377,7 @@ class SalesRecordHardeningTest extends FoundationTestCase
         $this->actingAs($sales)->post(route('staff.sales.complete', $left), ['lock_version' => $left->lock_version])->assertRedirect();
         $this->actingAs($sales)
             ->post(route('staff.sales.complete', $right), ['lock_version' => $right->lock_version])
-            ->assertSessionHasErrors('acreage');
+            ->assertSessionHasErrors('stage');
         $this->assertEquals(8.0, $property->refresh()->remainingAcreage());
     }
 

@@ -119,6 +119,11 @@ class SalesTransaction extends Model
         return $this->hasMany(CommissionAgreement::class);
     }
 
+    public function agencyFeeAgreements(): HasMany
+    {
+        return $this->hasMany(AgencyFeeAgreement::class);
+    }
+
     public function audits(): HasMany
     {
         return $this->hasMany(SalesAudit::class)->latest();

@@ -82,7 +82,7 @@ return [
     'broker' => [
         'eyebrow' => 'Broker Partner',
         'heading' => 'Dashboard',
-        'intro' => 'Submit land, register buyers, and follow the deals and commission records staff have opened for you.',
+        'intro' => 'One workspace for finding land, your enquiries, listings you submit, referrals, and deals staff have opened for you.',
         'activity' => [
             'columns' => ['Activity', 'Detail'],
             'empty' => 'Listing and referral activity will be listed here after you submit one.',
@@ -96,6 +96,24 @@ return [
                 ],
             ],
             [
+                'key' => 'explore',
+                'label' => 'Find Land',
+                'items' => [
+                    ['label' => 'Find Land', 'route' => 'land.index', 'active' => 'land.*'],
+                ],
+            ],
+            [
+                'key' => 'buyer-enquiries',
+                'label' => 'My Enquiries',
+                'items' => [
+                    ['label' => 'My Enquiries', 'route' => 'buyer.enquiries.index', 'active' => 'buyer.enquiries.*'],
+                    ['label' => 'Site Visits', 'route' => 'buyer.visits.index', 'active' => 'buyer.visits.*'],
+                    ['label' => 'My Offers', 'route' => 'buyer.offers.index', 'active' => 'buyer.offers.*'],
+                    ['label' => 'Saved Properties', 'route' => 'buyer.saved.index', 'active' => 'buyer.saved.*'],
+                    ['label' => 'Find Land for Me', 'route' => 'buyer.sourcing.index', 'active' => ['buyer.sourcing.*', 'buyer.matches.*']],
+                ],
+            ],
+            [
                 'key' => 'submit',
                 'label' => 'Submit Property',
                 'items' => [
@@ -106,7 +124,17 @@ return [
                 'key' => 'listings',
                 'label' => 'My Listings',
                 'items' => [
-                    ['label' => 'My Listings', 'route' => 'broker.listings.index', 'active' => 'broker.listings.*'],
+                    ['label' => 'Broker Listings', 'route' => 'broker.listings.index', 'active' => 'broker.listings.*'],
+                    ['label' => 'Landowner Properties', 'route' => 'seller.properties.index', 'active' => 'seller.properties.*', 'permission' => 'workspace.seller'],
+                ],
+            ],
+            [
+                'key' => 'seller-enquiries',
+                'label' => 'Buyer Enquiries',
+                'permission' => 'workspace.seller',
+                'items' => [
+                    ['label' => 'Enquiries on My Land', 'route' => 'seller.enquiries.index', 'active' => 'seller.enquiries.*'],
+                    ['label' => 'Offers Received', 'route' => 'seller.offers.index', 'active' => 'seller.offers.*'],
                 ],
             ],
             [

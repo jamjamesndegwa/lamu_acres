@@ -14,7 +14,7 @@ class BuyerProfilePolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isSuspended() && $user->hasPermission('workspace.buyer');
+        return $user->canUseBuyerFeatures();
     }
 
     public function update(User $user, BuyerProfile $profile): bool

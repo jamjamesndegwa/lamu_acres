@@ -62,6 +62,8 @@ return [
         'commissions.propose' => ['label' => 'Propose commissions', 'group' => 'finance'],
         'commissions.approve' => ['label' => 'Approve commissions', 'group' => 'finance'],
         'commissions.record' => ['label' => 'Record commission payments', 'group' => 'finance'],
+        'agency.propose' => ['label' => 'Propose agency fees', 'group' => 'finance'],
+        'agency.record' => ['label' => 'Record agency fee collections', 'group' => 'finance'],
 
         'intelligence.publish' => ['label' => 'Publish intelligence', 'group' => 'intelligence'],
     ],

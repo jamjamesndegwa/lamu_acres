@@ -4,8 +4,10 @@ namespace Tests\Feature\Sales;
 
 use App\Enums\CommissionStatus;
 use App\Enums\SaleMode;
+use App\Enums\SalesOutcome;
 use App\Models\CommissionAgreement;
 use App\Models\Property;
+use App\Models\SaleInstruction;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\CommissionDesk;
@@ -66,7 +68,7 @@ class CommissionAgreementTest extends FoundationTestCase
         $transaction = $pipeline->agreePrice($transaction, 800_000, $sales, $transaction->lock_version);
         $this->assertNull($desk->eligibleAmount($agreement->refresh(), $transaction->refresh()));
 
-        $transaction = $pipeline->outcome($transaction, \App\Enums\SalesOutcome::Cancelled, $sales, $transaction->lock_version, 'The buyer withdrew before contract.');
+        $transaction = $pipeline->outcome($transaction, SalesOutcome::Cancelled, $sales, $transaction->lock_version, 'The buyer withdrew before contract.');
         $this->assertNull($desk->eligibleAmount($agreement->refresh(), $transaction));
         $this->assertSame(CommissionStatus::Accepted, $agreement->refresh()->status);
 
@@ -81,17 +83,18 @@ class CommissionAgreementTest extends FoundationTestCase
      */
     private function deal(): array
     {
-        $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'commissions.propose')->create();
         $broker = User::factory()->withRoles('broker')->create();
+        $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales', 'commissions.propose')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
         $property = Property::factory()->published()->create([
             'acreage' => 10,
             'offered_acreage' => 10,
             'minimum_acreage' => 2,
             'listing_terms' => ['sale_mode' => SaleMode::Partial->value],
+            'submitted_by' => $broker->id,
         ]);
         $seller = User::factory()->withRoles('seller')->create();
-        $instruction = \App\Models\SaleInstruction::query()->create([
+        $instruction = SaleInstruction::query()->create([
             'property_id' => $property->id,
             'seller_id' => $seller->id,
             'kind' => 'general',

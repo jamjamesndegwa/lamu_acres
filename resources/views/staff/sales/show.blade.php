@@ -9,6 +9,7 @@
         'documents' => 'Documents',
         'closing' => 'Closing',
         'commissions' => 'Commissions',
+        'agency' => 'Agency fee',
         'audit' => 'Audit',
     ];
     if (! array_key_exists($tab, $tabs)) {
@@ -306,6 +307,31 @@
             <p class="mt-2 text-sm text-stone-600">The complete action stays hidden until the stage is Completion Pending.</p>
         @endif
         <p class="mt-4 text-sm"><a class="font-medium text-lamu-800 hover:underline" href="{{ route('staff.sales.completion') }}">Open the completion queue</a></p>
+    @endif
+
+    @if ($tab === 'agency')
+        <h2 class="mt-8 font-semibold text-lamu-900">Agency fee agreement</h2>
+        <ul class="mt-2 space-y-1 text-sm">
+            @forelse ($transaction->agencyFeeAgreements as $fee)
+                <li><a class="text-lamu-800 hover:underline" href="{{ route('staff.agency-fees.show', $fee) }}">{{ $fee->reference }}</a> · {{ $fee->status->label() }}</li>
+            @empty
+                <li class="text-stone-600">No agency-fee agreement on file. Lamu Acres does not earn a fee without an accepted agreement.</li>
+            @endforelse
+        </ul>
+        @if (auth()->user()->hasPermission('agency.propose'))
+            <form method="POST" action="{{ route('staff.agency-fees.store', $transaction) }}" data-turbo-frame="_top" class="mt-3 grid max-w-xl gap-2">
+                @csrf
+                <input type="hidden" name="seller_id" value="{{ $transaction->property->owners()->where('status', \App\Enums\OwnerLinkStatus::Verified)->value('user_id') }}">
+                <select name="fee_payer" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="seller">Seller pays</option>
+                    <option value="buyer">Buyer pays</option>
+                </select>
+                <input name="rate_percent" placeholder="Rate percent" class="rounded-lg border border-sand-200 px-3 py-2">
+                <input name="fixed_amount" placeholder="Or fixed fee (KSh)" class="rounded-lg border border-sand-200 px-3 py-2">
+                <textarea name="terms" rows="2" placeholder="Accepted terms summary" class="rounded-lg border border-sand-200 px-3 py-2"></textarea>
+                <button class="rounded-full border border-sand-200 px-4 py-2 text-sm">Propose agency fee</button>
+            </form>
+        @endif
     @endif
 
     @if ($tab === 'commissions')

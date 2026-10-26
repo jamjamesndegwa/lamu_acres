@@ -10,14 +10,14 @@ class PropertyMatchPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('workspace.buyer')
+        return $user->canUseBuyerFeatures()
             || $user->hasPermission('staff.buyers')
             || $user->hasPermission('staff.sourcing');
     }
 
     public function view(User $user, PropertyMatch $propertyMatch): bool
     {
-        if ($propertyMatch->isOwnedBy($user) && $user->hasPermission('workspace.buyer')) {
+        if ($propertyMatch->isOwnedBy($user) && $user->canUseBuyerFeatures()) {
             return true;
         }
 
@@ -31,7 +31,7 @@ class PropertyMatchPolicy
     public function reject(User $user, PropertyMatch $propertyMatch): bool
     {
         return $propertyMatch->isOwnedBy($user)
-            && $user->hasPermission('workspace.buyer')
+            && $user->canUseBuyerFeatures()
             && $propertyMatch->status === PropertyMatchStatus::Shortlisted;
     }
 

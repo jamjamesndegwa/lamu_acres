@@ -308,12 +308,13 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get('/admin')
             ->assertOk()
             ->assertSee('data-module="users"', false)
-            ->assertDontSee('User Directory');
+            ->assertDontSee('Staff & administration');
 
         $this->actingAs($superAdmin)
             ->get(route('admin.users.index'))
             ->assertOk()
-            ->assertSee('User Directory')
+            ->assertSee('Partner accounts')
+            ->assertSee('Staff & administration')
             ->assertSee('Access History')
             ->assertDontSee('Sales Performance');
 
@@ -321,12 +322,12 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get('/admin')
             ->assertOk()
             ->assertDontSee('data-module="users"', false)
-            ->assertDontSee('User Directory');
+            ->assertDontSee('Partner accounts');
     }
 
     public function test_each_workspace_keeps_submodules_in_the_horizontal_bar(): void
     {
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
 
         $this->actingAs($seller)
             ->get('/seller')

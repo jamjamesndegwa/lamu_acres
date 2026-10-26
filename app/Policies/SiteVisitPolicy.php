@@ -10,14 +10,14 @@ class SiteVisitPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('workspace.buyer')
+        return $user->canUseBuyerFeatures()
             || $user->hasPermission('staff.buyers')
             || SiteVisit::query()->where('assigned_to', $user->id)->exists();
     }
 
     public function view(User $user, SiteVisit $siteVisit): bool
     {
-        if ($siteVisit->isOwnedBy($user) && $user->hasPermission('workspace.buyer')) {
+        if ($siteVisit->isOwnedBy($user) && $user->canUseBuyerFeatures()) {
             return true;
         }
 
@@ -49,14 +49,14 @@ class SiteVisitPolicy
             return false;
         }
 
-        return ($siteVisit->isOwnedBy($user) && $user->hasPermission('workspace.buyer'))
+        return ($siteVisit->isOwnedBy($user) && $user->canUseBuyerFeatures())
             || $this->manage($user, $siteVisit);
     }
 
     public function acknowledge(User $user, SiteVisit $siteVisit): bool
     {
         return $siteVisit->isOwnedBy($user)
-            && $user->hasPermission('workspace.buyer')
+            && $user->canUseBuyerFeatures()
             && $siteVisit->status === SiteVisitStatus::Completed
             && $siteVisit->buyer_acknowledged_at === null;
     }
@@ -64,7 +64,7 @@ class SiteVisitPolicy
     public function confirmDetails(User $user, SiteVisit $siteVisit): bool
     {
         return $siteVisit->isOwnedBy($user)
-            && $user->hasPermission('workspace.buyer')
+            && $user->canUseBuyerFeatures()
             && $siteVisit->status === SiteVisitStatus::Confirmed
             && $siteVisit->buyer_confirmed_at === null;
     }
@@ -72,7 +72,7 @@ class SiteVisitPolicy
     public function requestReschedule(User $user, SiteVisit $siteVisit): bool
     {
         return $siteVisit->isOwnedBy($user)
-            && $user->hasPermission('workspace.buyer')
+            && $user->canUseBuyerFeatures()
             && $siteVisit->status === SiteVisitStatus::Confirmed
             && $siteVisit->reschedule_requested_at === null;
     }

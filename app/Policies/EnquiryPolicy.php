@@ -15,7 +15,7 @@ class EnquiryPolicy
 
     public function view(User $user, Enquiry $enquiry): bool
     {
-        if ($enquiry->isOwnedBy($user) && $user->hasPermission('workspace.buyer')) {
+        if ($enquiry->isOwnedBy($user) && $user->canUseBuyerFeatures()) {
             return true;
         }
 

@@ -34,6 +34,7 @@ class ClosingDesk
     public function __construct(
         private SalesPipeline $pipeline,
         private CommissionDesk $commissions,
+        private AgencyFeeDesk $agencyFees,
         private PropertyInventory $inventory,
     ) {}
 
@@ -142,7 +143,8 @@ class ClosingDesk
                 'acreage' => (string) $locked->acreage,
             ]);
 
-            $this->earn($locked, $actor);
+            $this->earnCommissions($locked, $actor);
+            $this->earnAgencyFees($locked, $actor);
             $this->announce($locked, MessageEvent::ClosingCompleted, 'The sale is completed.', 'sale:'.$locked->id);
 
             return $locked->refresh();
@@ -165,25 +167,36 @@ class ClosingDesk
         return $agreement;
     }
 
-    public function initiatePayment(CommissionAgreement $agreement, User $actor, string $reference, PaymentReconciliation $reconciliation): CommissionAgreement
-    {
+    public function initiatePayment(
+        CommissionAgreement $agreement,
+        User $actor,
+        string $reference,
+        PaymentReconciliation $reconciliation,
+        ?int $amount = null,
+    ): CommissionAgreement {
         if ($agreement->status !== CommissionStatus::Payable) {
             throw ValidationException::withMessages(['status' => 'Payment can be initiated only after finance approval.']);
         }
 
-        if ($agreement->payment()->exists()) {
-            throw ValidationException::withMessages(['reference' => 'A payment has already been initiated for this commission.']);
+        if (CommissionPayment::query()->where('reference', $reference)->exists()) {
+            throw ValidationException::withMessages(['reference' => 'This payment reference was already used.']);
         }
 
-        DB::transaction(function () use ($agreement, $actor, $reference, $reconciliation): void {
+        $payAmount = $amount ?? $agreement->outstandingPayable();
+
+        if ($payAmount <= 0) {
+            throw ValidationException::withMessages(['amount' => 'Nothing remains payable on this commission.']);
+        }
+
+        if ($payAmount > $agreement->outstandingPayable()) {
+            throw ValidationException::withMessages(['amount' => 'This amount exceeds the outstanding commission.']);
+        }
+
+        DB::transaction(function () use ($agreement, $actor, $reference, $reconciliation, $payAmount): void {
             $locked = CommissionAgreement::query()->whereKey($agreement->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->payment()->exists()) {
-                throw ValidationException::withMessages(['reference' => 'A payment has already been initiated for this commission.']);
-            }
-
-            $locked->payment()->create([
-                'amount' => (int) $locked->earned_amount,
+            $locked->payments()->create([
+                'amount' => $payAmount,
                 'reference' => $reference,
                 'status' => 'initiated',
                 'reconciliation' => $reconciliation,
@@ -200,22 +213,34 @@ class ClosingDesk
         return $agreement->refresh();
     }
 
-    public function recordPayment(CommissionAgreement $agreement, User $actor, PaymentReconciliation $reconciliation): CommissionAgreement
-    {
+    public function recordPayment(
+        CommissionAgreement $agreement,
+        User $actor,
+        PaymentReconciliation $reconciliation,
+        ?string $paymentReference = null,
+    ): CommissionAgreement {
         if (! $actor->hasPermission('commissions.record')) {
             throw ValidationException::withMessages(['payment' => 'Recording a commission payment requires finance authority.']);
         }
 
-        return DB::transaction(function () use ($agreement, $actor, $reconciliation): CommissionAgreement {
+        return DB::transaction(function () use ($agreement, $actor, $reconciliation, $paymentReference): CommissionAgreement {
             $locked = CommissionAgreement::query()->whereKey($agreement->id)->lockForUpdate()->firstOrFail();
-            $payment = $locked->payment()->lockForUpdate()->first();
+            $payment = $locked->payments()
+                ->when($paymentReference, fn ($query) => $query->where('reference', $paymentReference))
+                ->where('status', 'initiated')
+                ->lockForUpdate()
+                ->first();
 
-            if ($locked->status === CommissionStatus::Paid || $payment?->status === 'paid') {
-                throw ValidationException::withMessages(['payment' => 'This commission has already been paid.']);
+            if ($payment === null) {
+                throw ValidationException::withMessages(['payment' => 'Initiate the payment before recording it as paid.']);
             }
 
-            if ($locked->status !== CommissionStatus::Payable || $payment === null || $payment->status !== 'initiated') {
-                throw ValidationException::withMessages(['payment' => 'Initiate the payment before recording it as paid.']);
+            if ($locked->status !== CommissionStatus::Payable) {
+                throw ValidationException::withMessages(['payment' => 'Only payable commissions can be settled.']);
+            }
+
+            if ($payment->amount > $locked->outstandingPayable()) {
+                throw ValidationException::withMessages(['amount' => 'This payment exceeds the outstanding commission.']);
             }
 
             $payment->status = 'paid';
@@ -224,7 +249,10 @@ class ClosingDesk
             $payment->paid_at = now();
             $payment->save();
 
-            $locked->status = CommissionStatus::Paid;
+            $locked->paid_amount = (int) $locked->paid_amount + (int) $payment->amount;
+            if ($locked->paid_amount >= (int) $locked->earned_amount) {
+                $locked->status = CommissionStatus::Paid;
+            }
             $locked->save();
 
             $this->pipeline->audit($locked->transaction, $actor, 'commission_paid', [
@@ -232,30 +260,72 @@ class ClosingDesk
                 'amount' => $payment->amount,
                 'reconciliation' => $reconciliation->value,
             ], $locked->id);
-            $this->announceBroker($locked, MessageEvent::CommissionPaid, 'Commission has been paid.');
+
+            if ($locked->status === CommissionStatus::Paid) {
+                $this->announceBroker($locked, MessageEvent::CommissionPaid, 'Commission has been paid.');
+            }
 
             return $locked;
         });
     }
 
-    private function earn(SalesTransaction $transaction, User $actor): void
+    private function earnCommissions(SalesTransaction $transaction, User $actor): void
     {
-        $agreements = $transaction->agreements()->where('status', CommissionStatus::Accepted)->where('open_claim', 'open')->get();
+        $agreements = $transaction->agreements()
+            ->where('status', CommissionStatus::Accepted)
+            ->where('open_claim', 'open')
+            ->get();
 
         foreach ($agreements as $agreement) {
+            if ($agreement->earned_amount !== null) {
+                continue;
+            }
+
             $amount = $this->commissions->eligibleAmount($agreement, $transaction);
-            if ($amount === null) {
+            if ($amount === null || $amount < 0) {
                 continue;
             }
 
             $agreement->status = CommissionStatus::Earned;
             $agreement->earned_amount = $amount;
+            $agreement->paid_amount = 0;
             $agreement->save();
             $this->pipeline->audit($transaction, $actor, 'commission_earned', [
                 'agreement_id' => $agreement->id,
                 'amount' => $amount,
                 'agreed_price' => $transaction->agreed_price,
             ], $agreement->id);
+        }
+    }
+
+    private function earnAgencyFees(SalesTransaction $transaction, User $actor): void
+    {
+        $agreements = $transaction->agencyFeeAgreements()
+            ->where('status', CommissionStatus::Accepted)
+            ->where('open_claim', 'open')
+            ->get();
+
+        foreach ($agreements as $agreement) {
+            if ($agreement->earned_amount !== null) {
+                continue;
+            }
+
+            $amount = $this->agencyFees->eligibleAmount($agreement, $transaction);
+
+            if ($amount === null || $amount < 0) {
+                continue;
+            }
+
+            $agreement->status = CommissionStatus::Earned;
+            $agreement->earned_amount = $amount;
+            $agreement->collected_amount = 0;
+            $agreement->save();
+
+            $this->pipeline->audit($transaction, $actor, 'agency_fee_earned', [
+                'agreement_id' => $agreement->id,
+                'amount' => $amount,
+                'agreed_price' => $transaction->agreed_price,
+            ]);
         }
     }
 

@@ -4,8 +4,8 @@ namespace App\Services\Seller;
 
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
-use App\Enums\PropertyStatus;
 use App\Enums\SalesStage;
+use App\Models\AgencyFeeAgreement;
 use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
@@ -56,6 +56,17 @@ class SellerSalesHistory
         $soldPortion = $transaction->soldInventoryRecord
             ?? $property->portions()->where('sales_transaction_id', $transaction->id)->first();
 
+        $sellerIds = $property->owners()
+            ->where('status', OwnerLinkStatus::Verified)
+            ->whereIn('relationship', OwnerRelationship::sellerFacing())
+            ->pluck('user_id');
+
+        $agencyFee = AgencyFeeAgreement::query()
+            ->where('sales_transaction_id', $transaction->id)
+            ->whereIn('seller_id', $sellerIds)
+            ->latest('version')
+            ->first();
+
         return [
             'reference' => $transaction->reference,
             'property' => $property,
@@ -65,6 +76,7 @@ class SellerSalesHistory
             'completed_at' => $transaction->completed_at,
             'inventory' => $inventory,
             'sold_portion' => $soldPortion,
+            'agency_fee' => $agencyFee,
         ];
     }
 }

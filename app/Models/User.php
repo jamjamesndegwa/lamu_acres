@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Workspace;
 use App\Models\Concerns\StoresFileUrls;
+use App\Services\Access\WorkspaceAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -116,11 +117,22 @@ class User extends Authenticatable
 
     public function canAccessWorkspace(Workspace $workspace): bool
     {
-        if ($workspace === Workspace::Investor) {
-            return $this->hasActiveInvestorPass();
-        }
+        return app(WorkspaceAccess::class)->canAccess($this, $workspace);
+    }
 
-        return $this->hasPermission($workspace->permission());
+    public function canUseBuyerFeatures(): bool
+    {
+        return app(WorkspaceAccess::class)->canUseBuyerFeatures($this);
+    }
+
+    public function canUseSellerFeatures(): bool
+    {
+        return app(WorkspaceAccess::class)->canUseSellerFeatures($this);
+    }
+
+    public function canUseBrokerFeatures(): bool
+    {
+        return app(WorkspaceAccess::class)->canUseBrokerFeatures($this);
     }
 
     /**

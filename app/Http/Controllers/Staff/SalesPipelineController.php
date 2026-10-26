@@ -12,6 +12,7 @@ use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\SalesPipeline;
+use App\Services\Sales\SalesReassessment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -93,10 +94,11 @@ class SalesPipelineController extends Controller
             'closingReviews.reviewer',
             'evidence',
             'agreements.broker',
+            'agencyFeeAgreements.seller',
             'audits.actor',
         ]);
 
-        $reassessment = app(\App\Services\Sales\SalesReassessment::class);
+        $reassessment = app(SalesReassessment::class);
 
         return view('staff.sales.show', [
             'transaction' => $salesTransaction,

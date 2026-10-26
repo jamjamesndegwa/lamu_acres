@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'rate_percent',
     'fixed_amount',
     'earned_amount',
+    'paid_amount',
     'funding_party',
     'protection_starts_at',
     'protection_ends_at',
@@ -42,6 +43,7 @@ class CommissionAgreement extends Model
             'rate_percent' => 'decimal:2',
             'fixed_amount' => 'integer',
             'earned_amount' => 'integer',
+            'paid_amount' => 'integer',
             'funding_party' => CommissionFunding::class,
             'protection_starts_at' => 'datetime',
             'protection_ends_at' => 'datetime',
@@ -71,9 +73,22 @@ class CommissionAgreement extends Model
         return $this->belongsTo(Property::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(CommissionPayment::class);
+    }
+
     public function payment(): HasOne
     {
-        return $this->hasOne(CommissionPayment::class);
+        return $this->hasOne(CommissionPayment::class)->latestOfMany();
+    }
+
+    public function outstandingPayable(): int
+    {
+        $earned = (int) ($this->earned_amount ?? 0);
+        $paid = (int) $this->paid_amount;
+
+        return max(0, $earned - $paid);
     }
 
     public function versions(): HasMany

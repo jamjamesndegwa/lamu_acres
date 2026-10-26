@@ -87,8 +87,8 @@ class SalesInventoryTraceabilityTest extends FoundationTestCase
     {
         Notification::fake();
 
-        $owner = User::factory()->withRoles('seller')->create();
-        $other = User::factory()->withRoles('seller')->create();
+        $owner = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $other = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $sales = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
 
         $mine = Property::factory()->published()->create([
@@ -193,7 +193,7 @@ class SalesInventoryTraceabilityTest extends FoundationTestCase
     {
         Notification::fake();
 
-        $seller = User::factory()->withRoles('seller')->create();
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
         $property = Property::factory()->published()->create([
             'acreage' => 40,
