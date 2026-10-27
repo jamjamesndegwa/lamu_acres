@@ -7,6 +7,7 @@ use App\Http\Requests\ProfileUpdateRequest;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Account\AccountAvatar;
 use App\Services\Auth\OtpLogin;
+use App\Services\Communications\AccountSecurityNotifier;
 use App\Services\Communications\MessageDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -104,6 +105,7 @@ class ProfileController extends Controller
         }
 
         if ($request->filled('password')) {
+            app(AccountSecurityNotifier::class)->passwordChanged($user->fresh());
             $request->session()->regenerate();
         }
 

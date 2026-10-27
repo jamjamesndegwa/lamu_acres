@@ -65,10 +65,10 @@ class MessageDesk
 
             if ($delivery->status === 'queued') {
                 if (in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)) {
-                    DB::afterCommit(function () use ($delivery): void {
+                    DB::afterCommit(function () use ($delivery, $event): void {
                         try {
                             DeliverMessage::dispatch($delivery->idempotency_key)
-                                ->onQueue((string) config('communications.queues.communications'));
+                                ->onQueue($this->queueFor($event));
                         } catch (\Throwable $exception) {
                             $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
                         }
@@ -124,7 +124,7 @@ class MessageDesk
             return match ($channel) {
                 MessageChannel::InApp => true,
                 MessageChannel::Email => filled($user->email),
-                MessageChannel::Sms => filled($user->phone),
+                MessageChannel::Sms => $this->optionalChannelEnabled($user, $channel) && filled($user->phone),
                 MessageChannel::Whatsapp => $this->optionalChannelEnabled($user, $channel),
             };
         }
@@ -214,6 +214,17 @@ class MessageDesk
         }
 
         return $digits;
+    }
+
+    public function queueFor(MessageEvent $event): string
+    {
+        $critical = config('communications.critical_events', []);
+
+        if (in_array($event->value, $critical, true)) {
+            return (string) config('communications.queues.critical');
+        }
+
+        return (string) config('communications.queues.communications');
     }
 
     private function scrub(string $value): string

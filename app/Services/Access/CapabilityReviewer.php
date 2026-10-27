@@ -3,15 +3,17 @@
 namespace App\Services\Access;
 
 use App\Enums\CapabilityApplicationStatus;
+use App\Enums\MessageEvent;
 use App\Enums\PartnerCapability;
 use App\Events\ApplicationDecided;
 use App\Models\CapabilityApplication;
 use App\Models\User;
 use App\Notifications\ApplicationSubmittedNotification;
+use App\Services\Communications\MessageDesk;
+use App\Services\Communications\StaffDeskNotifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -100,9 +102,36 @@ class CapabilityReviewer
                     $user->assignRole('broker');
                 }
 
-                Notification::send(
-                    User::permission('staff.brokerage')->whereKeyNot($user->id)->get(),
+                $capabilityLabel = $capability->label();
+                $submitEvent = $resubmitted ? MessageEvent::ApplicationResubmitted : MessageEvent::ApplicationSubmitted;
+                $historyCount = count($history);
+
+                app(MessageDesk::class)->send($user, $submitEvent, [
+                    'name' => $user->name,
+                    'title' => $capabilityLabel.' application received',
+                    'reference' => (string) $application->id,
+                    'summary' => $resubmitted
+                        ? 'Your '.$capabilityLabel.' application was resubmitted and is awaiting staff review.'
+                        : 'Your '.$capabilityLabel.' application was received and is awaiting staff review.',
+                    'url' => route('account.applications.index'),
+                ], 'application:'.$application->id.':submit:'.$historyCount);
+
+                $staffMessage = $resubmitted
+                    ? 'A partner resubmitted a '.$capabilityLabel.' application for review.'
+                    : 'A new '.$capabilityLabel.' partner application was submitted for review.';
+
+                app(StaffDeskNotifier::class)->notifyPermission(
+                    'staff.brokerage',
+                    MessageEvent::ApplicationStaffAlert,
+                    [
+                        'title' => $capabilityLabel.' application',
+                        'reference' => (string) $application->id,
+                        'summary' => $staffMessage,
+                        'url' => route('staff.applications.edit', ['application' => $application]),
+                    ],
+                    'application:'.$application->id.':staff:'.$historyCount,
                     new ApplicationSubmittedNotification($application),
+                    $user->id,
                 );
 
                 return $application;

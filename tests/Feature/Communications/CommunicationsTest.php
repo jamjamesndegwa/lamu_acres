@@ -140,7 +140,7 @@ class CommunicationsTest extends FoundationTestCase
 
         $rows = MessageDelivery::query()
             ->where('user_id', $broker->id)
-            ->where('event', MessageEvent::PropertyApproved)
+            ->where('event', MessageEvent::PropertyPublished)
             ->get();
 
         $this->assertCount(2, $rows);

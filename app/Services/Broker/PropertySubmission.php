@@ -2,6 +2,7 @@
 
 namespace App\Services\Broker;
 
+use App\Enums\MessageEvent;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
 use App\Enums\SaleMode;
@@ -14,6 +15,8 @@ use App\Models\User;
 use App\Notifications\PropertyInformationRequestedNotification;
 use App\Notifications\PropertySubmittedNotification;
 use App\Services\Access\CapabilityReviewer;
+use App\Services\Communications\MessageDesk;
+use App\Services\Communications\StaffDeskNotifier;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
 use Illuminate\Http\UploadedFile;
@@ -93,8 +96,24 @@ class PropertySubmission
             )],
         ]);
 
-        Notification::send(
-            User::permission('staff.properties')->get(),
+        app(MessageDesk::class)->send($broker, MessageEvent::ListingSubmitted, [
+            'name' => $broker->name,
+            'title' => $property->title,
+            'reference' => $property->reference,
+            'summary' => 'Your property listing was submitted for staff review.',
+            'url' => $property->submitterUrl(),
+        ], 'property:'.$property->id.':submitted');
+
+        app(StaffDeskNotifier::class)->notifyPermission(
+            'staff.properties',
+            MessageEvent::ListingStaffAlert,
+            [
+                'title' => $property->title,
+                'reference' => $property->reference,
+                'summary' => 'A broker submitted a property listing for review.',
+                'url' => route('staff.listings.show', $property),
+            ],
+            'property:'.$property->id.':staff',
             new PropertySubmittedNotification($property),
         );
 
@@ -116,7 +135,17 @@ class PropertySubmission
             'to_status' => $property->status->value,
         ]);
 
-        $property->submitter?->notify(new PropertyInformationRequestedNotification($request));
+        $submitter = $property->submitter;
+
+        if ($submitter !== null) {
+            app(MessageDesk::class)->send($submitter, MessageEvent::ListingInformationRequested, [
+                'name' => $submitter->name,
+                'title' => $property->title,
+                'reference' => $property->reference,
+                'summary' => 'Staff requested additional information about your listing. Open your listing workspace to respond.',
+                'url' => $property->submitterUrl(),
+            ], 'property:'.$property->id.':info:'.$request->id, new PropertyInformationRequestedNotification($request));
+        }
 
         return $request;
     }

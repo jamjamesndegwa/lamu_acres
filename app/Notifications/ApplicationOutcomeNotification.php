@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Enums\CapabilityApplicationStatus;
 use App\Models\CapabilityApplication;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ApplicationOutcomeNotification extends Notification
@@ -19,21 +18,7 @@ class ApplicationOutcomeNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
-
-        if ($notifiable->notify_by_email ?? true) {
-            $channels[] = 'mail';
-        }
-
-        return $channels;
-    }
-
-    public function toMail(object $notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->subject('Partner application '.$this->application->status->label())
-            ->line($this->application->capability->label().' application: '.$this->application->status->label().'.')
-            ->line((string) $this->application->decision_reason);
+        return ['database'];
     }
 
     /**

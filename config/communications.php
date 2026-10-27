@@ -39,4 +39,15 @@ return [
         ),
     ),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Critical queue routing
+    |--------------------------------------------------------------------------
+    */
+
+    'critical_events' => [
+        MessageEvent::PasswordChanged->value,
+        MessageEvent::AccountSuspended->value,
+    ],
+
 ];

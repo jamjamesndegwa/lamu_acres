@@ -224,7 +224,7 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $this->actingAs($reviewer)->get(route('staff.notifications.open', $reviewer->notifications()->first()->id))->assertRedirect(route('staff.applications.edit', $application));
         $application->update(['status' => CapabilityApplicationStatus::InformationRequired]);
         $buyer->notify(new ApplicationOutcomeNotification($application));
-        $notice = $buyer->notifications()->first();
+        $notice = $buyer->notifications()->where('type', ApplicationOutcomeNotification::class)->firstOrFail();
         $this->actingAs($buyer)->get(route('buyer.notifications.open', $notice->id))->assertRedirect(route('account.applications.create', ['capability' => 'seller']));
         $this->assertCount(1, $this->get(route('buyer.notifications.index', ['filter' => 'attention']))->viewData('notifications')->items());
         $application->update(['status' => CapabilityApplicationStatus::Approved]);

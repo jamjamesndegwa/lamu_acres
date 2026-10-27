@@ -10,6 +10,7 @@ use App\Models\MessageDelivery;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\QueuedResetPassword;
+use App\Services\Communications\AccountSecurityNotifier;
 use App\Services\Communications\CampaignDesk;
 use App\Services\Communications\MessageDesk;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -111,13 +112,36 @@ class QueueRoutingTest extends FoundationTestCase
         $this->assertSame('event:1:user:1:email', $job->uniqueId());
     }
 
-    public function test_mandatory_sms_does_not_require_sms_preference_opt_in(): void
+    public function test_mandatory_sms_requires_sms_preference_opt_in(): void
     {
         $user = User::factory()->create(['phone' => '0712000555']);
+
+        $this->assertFalse(
+            app(MessageDesk::class)->allows($user, MessageChannel::Sms, MessageEvent::AccountRegistered)
+        );
+
+        NotificationPreference::query()->create([
+            'user_id' => $user->id,
+            'channel' => MessageChannel::Sms,
+            'enabled' => true,
+        ]);
 
         $this->assertTrue(
             app(MessageDesk::class)->allows($user, MessageChannel::Sms, MessageEvent::AccountRegistered)
         );
+    }
+
+    public function test_password_changed_email_uses_critical_queue(): void
+    {
+        Bus::fake([DeliverMessage::class]);
+
+        $user = User::factory()->create();
+
+        app(AccountSecurityNotifier::class)->passwordChanged($user);
+
+        Bus::assertDispatched(DeliverMessage::class, function (DeliverMessage $job): bool {
+            return $job->queue === config('communications.queues.critical');
+        });
     }
 
     public function test_whatsapp_remains_opt_in_for_mandatory_events(): void

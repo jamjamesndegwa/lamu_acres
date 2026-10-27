@@ -10,6 +10,7 @@ use App\Enums\LandTenure;
 use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\MarketingRole;
+use App\Enums\MessageEvent;
 use App\Enums\OfferStatus;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
@@ -42,6 +43,8 @@ use App\Services\Access\CapabilityReviewer;
 use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Buyer\InterestWorkflow;
+use App\Services\Communications\MessageDesk;
+use App\Services\Communications\StaffDeskNotifier;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Sales\SaleModeTerms;
 use App\Services\Sales\SalesPipeline;
@@ -319,8 +322,24 @@ class SellerPortal
             ],
         ]);
 
-        Notification::send(
-            User::permission('staff.properties')->get(),
+        app(MessageDesk::class)->send($seller, MessageEvent::ListingSubmitted, [
+            'name' => $seller->name,
+            'title' => $property->title,
+            'reference' => $property->reference,
+            'summary' => 'Your land listing was submitted for staff review.',
+            'url' => $property->submitterUrl(),
+        ], 'property:'.$property->id.':seller-submit');
+
+        app(StaffDeskNotifier::class)->notifyPermission(
+            'staff.properties',
+            MessageEvent::ListingStaffAlert,
+            [
+                'title' => $property->title,
+                'reference' => $property->reference,
+                'summary' => 'A landowner submitted land for review.',
+                'url' => route('staff.listings.show', $property),
+            ],
+            'property:'.$property->id.':seller-staff',
             new PropertySubmittedNotification($property, 'A landowner submitted land for review.'),
         );
 

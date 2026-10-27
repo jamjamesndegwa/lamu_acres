@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\AssignRolesRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Access\RoleAssigner;
+use App\Services\Communications\AccountSecurityNotifier;
 use App\Support\CsvExport;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
@@ -73,12 +74,14 @@ class UserAccessController extends Controller
                 'suspended_at' => now(),
                 'suspension_reason' => $data['suspension_reason'],
             ])->save();
+            app(AccountSecurityNotifier::class)->accountSuspended($user->fresh(), (string) $data['suspension_reason']);
             $status = 'Account suspended.';
         } else {
             $user->forceFill([
                 'suspended_at' => null,
                 'suspension_reason' => null,
             ])->save();
+            app(AccountSecurityNotifier::class)->accountRestored($user->fresh());
             $status = 'Account restored.';
         }
 
