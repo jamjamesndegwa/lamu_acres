@@ -14,6 +14,7 @@ use App\Models\SourcingRequest;
 use App\Models\User;
 use App\Notifications\TemplatedDeskNotification;
 use App\Notifications\WorkAssignedNotification;
+use App\Services\Communications\SalesFinanceNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -152,11 +153,7 @@ class SalesPipeline
             $this->timeline($locked, $actor, $outcome->label().': '.$reason);
             $this->timeline($locked, $actor, 'Request status updated: '.$outcome->label().'.', true);
             $this->audit($locked, $actor, 'outcome_'.$outcome->value, ['reason' => $reason]);
-            $locked->buyer?->notify(new TemplatedDeskNotification(
-                'Purchase request update',
-                'Your purchase request is now '.$outcome->label().'. Open the related record for details.',
-                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
-            ));
+            app(SalesFinanceNotifier::class)->saleOutcome($locked, $outcome);
         });
     }
 
@@ -186,11 +183,11 @@ class SalesPipeline
             $locked->agreed_price = $price;
             $this->timeline($locked, $actor, 'Agreed price recorded as KSh '.number_format($price).'.', true);
             $this->audit($locked, $actor, 'price_agreed', ['agreed_price' => $price]);
-            $locked->buyer?->notify(new TemplatedDeskNotification(
-                'Agreed price updated',
+            app(SalesFinanceNotifier::class)->saleTermsAgreed(
+                $locked,
                 'The agreed price for your purchase request is KSh '.number_format($price).'.',
-                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
-            ));
+                'price:'.$price,
+            );
         });
     }
 
@@ -212,11 +209,11 @@ class SalesPipeline
             $locked->acreage = $requested;
             $this->timeline($locked, $actor, 'Agreed acreage recorded as '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.', true);
             $this->audit($locked, $actor, 'acreage_agreed', ['acreage' => (string) $requested]);
-            $locked->buyer?->notify(new TemplatedDeskNotification(
-                'Agreed acreage updated',
+            app(SalesFinanceNotifier::class)->saleTermsAgreed(
+                $locked,
                 'The agreed acreage for your purchase request is '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.',
-                $locked->enquiry_id ? route('buyer.enquiries.show', $locked->enquiry_id) : route('buyer.matches.index'),
-            ));
+                'acreage:'.$requested,
+            );
         });
     }
 

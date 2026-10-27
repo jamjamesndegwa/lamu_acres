@@ -44,6 +44,7 @@ use App\Services\Broker\DuplicateListingDetector;
 use App\Services\Broker\PropertySubmission;
 use App\Services\Buyer\InterestWorkflow;
 use App\Services\Communications\MessageDesk;
+use App\Services\Communications\SalesFinanceNotifier;
 use App\Services\Communications\StaffDeskNotifier;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Sales\SaleModeTerms;
@@ -767,6 +768,7 @@ class SellerPortal
 
         try {
             Notification::send($sellers->unique('id'), new OfferPresentedNotification($presentation));
+            app(SalesFinanceNotifier::class)->offerPresented($presentation);
         } catch (Throwable) {
             // Presentation remains valid if notification delivery fails.
         }

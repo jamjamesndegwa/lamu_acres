@@ -23,6 +23,7 @@ use App\Notifications\ApplicationOutcomeNotification;
 use App\Notifications\EnquiryAssignedNotification;
 use App\Notifications\EnquiryResponseNotification;
 use App\Notifications\EnquirySubmittedNotification;
+use App\Notifications\OfferStatusNotification;
 use App\Notifications\PropertyApprovedNotification;
 use App\Notifications\TemplatedDeskNotification;
 use App\Services\Buyer\InterestWorkflow;
@@ -187,10 +188,11 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $match = PropertyMatch::query()->create(['buyer_id' => $buyer->id, 'property_id' => Property::factory()->published()->create()->id, 'status' => 'shortlisted', 'approved_at' => now()]);
         $offer = app(InterestWorkflow::class)->submitOffer($match, $buyer, 1000000, null, null);
         app(InterestWorkflow::class)->transitionOffer($offer, OfferStatus::UnderReview, $staff);
-        $this->assertSame(1, $buyer->notifications()->count());
+        $this->assertSame(2, $buyer->notifications()->count());
         $this->assertSame(1, $staff->notifications()->count());
         $url = route('buyer.offers.index', ['record' => $offer->id]).'#offer-'.$offer->id;
-        $this->actingAs($buyer)->get(route('buyer.notifications.open', $buyer->notifications()->first()->id))->assertRedirect($url);
+        $statusNotice = $buyer->notifications()->where('type', OfferStatusNotification::class)->firstOrFail();
+        $this->actingAs($buyer)->get(route('buyer.notifications.open', $statusNotice->id))->assertRedirect($url);
     }
 
     public function test_sourcing_assignment_and_status_updates_do_not_repeat_unchanged_work(): void

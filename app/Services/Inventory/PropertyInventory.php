@@ -290,6 +290,7 @@ class PropertyInventory
         event(new PropertyInventoryChanged($portion, $actor->id, 'portion_sold', null, PropertyStatus::Sold->value, [
             'parent' => $locked->reference,
             'acreage' => $requested,
+            'sales_transaction_id' => $salesTransaction?->id,
         ]));
 
         $this->syncOfferedAcreageAfterSale($locked);

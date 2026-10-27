@@ -52,4 +52,6 @@ return [
 
     'visit_reminder_hours' => (int) env('VISIT_REMINDER_HOURS', 24),
 
+    'subscription_expiry_reminder_days' => (int) env('SUBSCRIPTION_EXPIRY_REMINDER_DAYS', 7),
+
 ];

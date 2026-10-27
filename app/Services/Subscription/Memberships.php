@@ -11,6 +11,7 @@ use App\Models\SubscriptionEvent;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
+use App\Services\Communications\SalesFinanceNotifier;
 use Illuminate\Validation\ValidationException;
 
 class Memberships
@@ -144,6 +145,10 @@ class Memberships
 
         $this->entitlement($subscription->user, Entitlement::STATUS_ACTIVE, $start, $end);
         $this->event($subscription, $actor, $action, $plan, $note, $amountCents, $currency);
+
+        if ($action === 'activated') {
+            app(SalesFinanceNotifier::class)->subscriptionActivated($subscription);
+        }
 
         return $subscription;
     }

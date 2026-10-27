@@ -11,6 +11,7 @@ use App\Models\AgencyFeeAgreement;
 use App\Models\AgencyFeeReceipt;
 use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Services\Communications\SalesFinanceNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -237,6 +238,8 @@ class AgencyFeeDesk
                 'amount' => $lockedReceipt->amount,
                 'reconciliation' => $reconciliation->value,
             ]);
+
+            app(SalesFinanceNotifier::class)->agencyFeeReceiptConfirmed($lockedReceipt);
 
             return $lockedReceipt;
         });

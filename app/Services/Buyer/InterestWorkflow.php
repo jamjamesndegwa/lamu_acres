@@ -18,14 +18,13 @@ use App\Models\PropertyVisitRequest;
 use App\Models\SiteVisit;
 use App\Models\SourcingMatch;
 use App\Models\User;
-use App\Notifications\DocumentAccessDecidedNotification;
 use App\Notifications\MatchApprovedNotification;
 use App\Notifications\OfferStatusNotification;
-use App\Notifications\OfferSubmittedNotification;
 use App\Notifications\SiteVisitUpdatedNotification;
 use App\Notifications\ViewingAcknowledgedNotification;
 use App\Services\Communications\BuyerInterestNotifier;
 use App\Services\Communications\MessageDesk;
+use App\Services\Communications\SalesFinanceNotifier;
 use App\Services\Sales\SaleModeTerms;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -473,13 +472,7 @@ class InterestWorkflow
 
     private function notifyOfferSubmitted(Offer $offer): void
     {
-        $recipients = collect();
-
-        foreach (['staff.sales', 'staff.buyers', 'staff.properties'] as $permission) {
-            $recipients = $recipients->merge(User::permission($permission)->get());
-        }
-
-        Notification::send($recipients->unique('id'), new OfferSubmittedNotification($offer));
+        app(SalesFinanceNotifier::class)->offerSubmitted($offer);
     }
 
     public function reflectSellerPresentation(Offer $offer, OfferStatus $status, User $seller): Offer
@@ -498,14 +491,7 @@ class InterestWorkflow
         $summary = 'The seller '.$status->label().' your offer for '.$offer->property->title.'.';
         $this->timeline($offer->buyer, $summary, $offer->match, $seller);
 
-        app(MessageDesk::class)->send($offer->buyer, MessageEvent::OfferStatus, [
-            'name' => $offer->buyer->name,
-            'title' => $offer->property->title,
-            'status' => $status->label(),
-            'summary' => $summary,
-            'url' => route('buyer.offers.index'),
-        ], 'offer:'.$offer->id.':seller:'.$status->value, new OfferStatusNotification($offer));
-
+        app(SalesFinanceNotifier::class)->offerSellerResponse($offer, $status);
         $this->notifyDesk(new OfferStatusNotification($offer));
 
         return $offer;
@@ -524,16 +510,10 @@ class InterestWorkflow
 
         $this->timeline($offer->buyer, 'Offer '.$status->label().' for '.$offer->property->title.'.', $offer->match, $actor);
 
+        app(SalesFinanceNotifier::class)->offerTransition($offer, $status, $actor);
+
         if ($actor->is($offer->buyer)) {
             $this->notifyDesk(new OfferStatusNotification($offer));
-        } else {
-            app(MessageDesk::class)->send($offer->buyer, MessageEvent::OfferStatus, [
-                'name' => $offer->buyer->name,
-                'title' => $offer->property->title,
-                'status' => $status->label(),
-                'summary' => 'Your offer for '.$offer->property->title.' is now '.$status->label().'.',
-                'url' => route('buyer.offers.index'),
-            ], 'offer:'.$offer->id.':'.$status->value, new OfferStatusNotification($offer));
         }
 
         return $offer;
@@ -574,7 +554,7 @@ class InterestWorkflow
         $request->approved_by = $staff->id;
         $request->save();
         $this->timeline($request->buyer, 'Document access '.$status->label().' for '.$request->property->title.'.', $request->match, $staff);
-        $request->buyer->notify(new DocumentAccessDecidedNotification($request, 'Document access is '.$status->label().'.'));
+        app(SalesFinanceNotifier::class)->documentAccessDecided($request);
 
         return $request;
     }

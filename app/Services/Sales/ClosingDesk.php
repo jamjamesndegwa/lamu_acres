@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\CommissionSettlementNotification;
 use App\Notifications\SaleCompletedNotification;
 use App\Services\Communications\MessageDesk;
+use App\Services\Communications\SalesFinanceNotifier;
 use App\Services\Inventory\PropertyInventory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -67,6 +68,7 @@ class ClosingDesk
             'reviewed_at' => now(),
         ]);
         $this->pipeline->audit($transaction, $actor, 'closing_'.$decision, ['reason' => $reason]);
+        app(SalesFinanceNotifier::class)->closingReview($transaction, $decision);
     }
 
     public function evidence(SalesTransaction $transaction, User $actor, string $code, ClosingEvidenceState $state, ?string $note): void
@@ -81,6 +83,12 @@ class ClosingDesk
         $item->note = $note ?: $item->note;
         $item->reviewed_by = $actor->id;
         $item->save();
+
+        app(SalesFinanceNotifier::class)->closingEvidenceUpdated(
+            $transaction,
+            self::EVIDENCE[$code] ?? $code,
+            $state,
+        );
     }
 
     public function complete(SalesTransaction $transaction, User $actor, int $version): SalesTransaction
@@ -295,6 +303,7 @@ class ClosingDesk
                 'amount' => $amount,
                 'agreed_price' => $transaction->agreed_price,
             ], $agreement->id);
+            app(SalesFinanceNotifier::class)->commissionEarned($agreement);
         }
     }
 
@@ -326,6 +335,7 @@ class ClosingDesk
                 'amount' => $amount,
                 'agreed_price' => $transaction->agreed_price,
             ]);
+            app(SalesFinanceNotifier::class)->agencyFeePayable($agreement);
         }
     }
 

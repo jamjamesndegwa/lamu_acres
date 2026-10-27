@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('mpesa:reconcile')->everyMinute()->description('M-Pesa reconciliation');
 Schedule::command('research:commitments')->daily()->description('Research commitments');
 Schedule::command('visits:send-reminders')->hourly()->description('Site visit reminders');
+Schedule::command('subscriptions:send-expiry-reminders')->daily()->description('Investor Pass expiry reminders');

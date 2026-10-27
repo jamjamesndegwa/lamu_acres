@@ -17,7 +17,7 @@ class NotifyListingSubmitter
         $property = $event->property;
 
         if ($event->action === 'portion_sold') {
-            $this->notifyInventoryImpact($property);
+            $this->notifyInventoryImpact($property, $event->changes);
 
             return;
         }
@@ -67,8 +67,12 @@ class NotifyListingSubmitter
         }
     }
 
-    private function notifyInventoryImpact(Property $portion): void
+    private function notifyInventoryImpact(Property $portion, array $changes = []): void
     {
+        if (isset($changes['sales_transaction_id'])) {
+            return;
+        }
+
         $parent = $portion->parent_id !== null
             ? Property::query()->with('submitter')->find($portion->parent_id)
             : null;
