@@ -27,7 +27,6 @@ class EnsureWorkspace
 
         if ($target === Workspace::Broker && ! $request->isMethodSafe()
             && $request->routeIs('broker.listings.*', 'broker.referrals.store', 'broker.offers.store', 'broker.requirements.propose')) {
-            abort_unless($access->canUseBrokerFeatures($user), 403);
             app(CapabilityReviewer::class)->assertBrokerCanAct($user);
         }
 

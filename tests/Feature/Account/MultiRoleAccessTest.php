@@ -67,7 +67,7 @@ class MultiRoleAccessTest extends FoundationTestCase
         $this->actingAs($broker)->get('/broker')->assertOk();
         $this->actingAs($broker)->post(route('broker.listings.store'), [
             'title' => 'Should not save',
-        ])->assertForbidden();
+        ])->assertSessionHasErrors('capability');
     }
 
     public function test_broker_cannot_manage_another_users_listing(): void

@@ -207,6 +207,6 @@ class PurchaseRequestJourneyTest extends FoundationTestCase
         $this->actingAs($buyer)
             ->get($property->publicUrl())
             ->assertOk()
-            ->assertSee('interested in buying', false);
+            ->assertSee('Request to buy', false);
     }
 }

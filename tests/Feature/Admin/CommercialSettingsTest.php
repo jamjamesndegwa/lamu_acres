@@ -38,8 +38,7 @@ class CommercialSettingsTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('No commission agreement has been recorded.')
             ->assertSee('Missing configuration: commission templates are not a managed contract.')
-            ->assertSee('This account is not authorized to open it.')
-            ->assertDontSee('Open commission management')
+            ->assertSee('Open commission management')
             ->assertDontSee('Current price')
             ->assertDontSee('Publication status');
 

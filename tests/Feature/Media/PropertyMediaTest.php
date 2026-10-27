@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Media;
 
-use App\Enums\Amenity;
 use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
@@ -12,6 +11,7 @@ use App\Models\PropertyMedia;
 use App\Models\PropertyPriceChange;
 use App\Models\User;
 use App\Services\Inventory\PropertyInventory;
+use App\Services\Seller\SellerPortal;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Foundation\FoundationTestCase;
@@ -29,8 +29,8 @@ class PropertyMediaTest extends FoundationTestCase
 
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
         $buyer = User::factory()->withRoles('buyer')->create();
-        $owner = User::factory()->withRoles('broker')->create();
-        $other = User::factory()->withRoles('broker')->create();
+        $owner = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
+        $other = User::factory()->withRoles('broker')->withVerifiedCapability('broker')->create();
         $locality = $this->locality();
         $property = Property::factory()->published()->listedIn($locality)->create([
             'submitted_by' => $owner->id,
@@ -162,6 +162,12 @@ class PropertyMediaTest extends FoundationTestCase
         $inventory->transition($staff, $property, PropertyStatus::Review);
         $this->attachPublicPhoto($property, $staff);
         $this->clearCriticalVerification($property, $staff);
+        $seller = User::factory()->withRoles('seller')->withVerifiedCapability('seller')->create();
+        $owner = $property->owners()->create(['user_id' => $seller->id, 'relationship' => 'owner', 'status' => 'pending']);
+        app(SellerPortal::class)->verifyLink($owner, $staff, null, 'Test-only identity and authority review.', true);
+        $property->authorities()->create([
+            'seller_id' => $seller->id, 'scope' => 'both', 'status' => 'active', 'terms' => 'Test-only reviewed marketing authority.',
+        ]);
         $inventory->transition($staff, $property->refresh(), PropertyStatus::Published);
 
         $this->assertSame([1_000_000, 1_200_000], PropertyPriceChange::query()->where('property_id', $property->id)->orderBy('id')->pluck('price_amount')->all());

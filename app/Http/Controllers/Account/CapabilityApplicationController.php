@@ -75,13 +75,19 @@ class CapabilityApplicationController extends Controller
 
     public function store(Request $request, CapabilityReviewer $reviewer): RedirectResponse
     {
-        $this->authorize('create', CapabilityApplication::class);
-
         $data = $request->validate([
             'capability' => ['required', Rule::enum(PartnerCapability::class)],
             'organization' => ['nullable', 'string', 'max:160'],
             'statement' => ['required', 'string', 'max:1000'],
         ]);
+
+        $capability = PartnerCapability::from($data['capability']);
+        $existing = $request->user()->capabilityApplications()->where('capability', $capability)->first();
+        if ($existing !== null && $request->user()->can('update', $existing)) {
+            $this->authorize('update', $existing);
+        } elseif ($existing === null) {
+            $this->authorize('create', CapabilityApplication::class);
+        }
 
         $reviewer->submit(
             $request->user(),

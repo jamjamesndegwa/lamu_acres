@@ -51,8 +51,8 @@ class WorkspaceFoundationTest extends FoundationTestCase
 
     public function test_new_buyer_can_register_log_out_and_sign_in_again(): void
     {
-        $this->get(route('login'))->assertOk()->assertSee('Create a buyer account')->assertSee('Welcome back');
-        $this->get(route('register'))->assertOk()->assertSee('Create buyer account');
+        $this->get(route('login'))->assertOk()->assertSee('Create an account')->assertSee('Welcome back');
+        $this->get(route('register'))->assertOk()->assertSee('Create your account');
 
         $this->post(route('register'), [
             'name' => 'Coastal Buyer', 'email' => 'coastal-buyer@example.com',
@@ -194,6 +194,11 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('data-module="verification"', false)
             ->assertSee('Calendar')
+            ->assertSee('Verification');
+
+        $this->actingAs($verification)
+            ->get(route('staff.verification.index'))
+            ->assertOk()
             ->assertSee('Review Queue')
             ->assertSee('Evidence')
             ->assertSee('Exceptions')
@@ -206,6 +211,11 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get('/staff')
             ->assertOk()
             ->assertSee('data-module="finance"', false)
+            ->assertSee('Finance');
+
+        $this->actingAs($finance)
+            ->get(route('staff.memberships.index'))
+            ->assertOk()
             ->assertSee('Subscriptions')
             ->assertSee('Commissions')
             ->assertSee('Settlements')
@@ -230,33 +240,17 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('Dashboard')
             ->assertSee('Tasks')
             ->assertSee('Calendar')
-            ->assertSee('Property Register')
-            ->assertSee('Listing Reviews')
-            ->assertSee('Property Media')
-            ->assertSee('Buyers & CRM')
-            ->assertSee('Enquiries')
-            ->assertSee('Viewings')
-            ->assertSee('Document Requests')
-            ->assertSee('Requirements')
-            ->assertSee('Matching')
-            ->assertSee('Approvals')
-            ->assertSee('Applications')
-            ->assertSee('Referrals')
-            ->assertSee('Seller Authority')
-            ->assertSee('Pipeline')
-            ->assertSee('Offers')
-            ->assertSee('Completion')
-            ->assertSee('Review Queue')
-            ->assertSee('Evidence')
-            ->assertSee('Exceptions')
-            ->assertSee('Projects')
-            ->assertSee('Imagery')
-            ->assertSee('Planning')
-            ->assertSee('Research')
-            ->assertSee('Subscriptions')
-            ->assertSee('Commissions')
-            ->assertSee('Settlements')
-            ->assertSee('Messages and work updates');
+            ->assertSee('Property register')
+            ->assertSee('Buyer enquiries')
+            ->assertSee('Sourcing queue')
+            ->assertSee('Broker introductions')
+            ->assertSee('Sales pipeline')
+            ->assertSee('Verification queue')
+            ->assertSee('Finance queue')
+            ->assertSee('Communications');
+
+        $this->actingAs($operations)->get(route('staff.properties.index'))->assertOk()->assertSee('Property register');
+        $this->actingAs($operations)->get(route('staff.verification.index'))->assertOk()->assertSee('Review Queue');
 
         $this->actingAs($operations)->get(route('staff.tasks'))->assertOk()->assertSee('Tasks');
         $this->actingAs($operations)->get(route('staff.calendar'))->assertOk()->assertSee('Calendar');
@@ -313,8 +307,8 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($superAdmin)
             ->get(route('admin.users.index'))
             ->assertOk()
-            ->assertSee('Partner accounts')
-            ->assertSee('Staff & administration')
+            ->assertSee('User directory')
+            ->assertSee('User Directory')
             ->assertSee('Access History')
             ->assertDontSee('Sales Performance');
 
@@ -360,10 +354,18 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('Explore Land')
             ->assertSee('Saved Properties')
             ->assertSee('Find Land for Me')
-            ->assertSee('My Property Matches')
-            ->assertSee('Buying Profile')
             ->assertSee('Investor Pass')
             ->assertSee('data-module="enquiries"', false);
+
+        $this->actingAs($buyer)
+            ->get(route('buyer.sourcing.index'))
+            ->assertOk()
+            ->assertSee('Buying Profile');
+
+        $this->actingAs($buyer)
+            ->get(route('buyer.matches.index'))
+            ->assertOk()
+            ->assertSee('My property matches');
 
         $broker = User::factory()->withRoles('broker')->create();
 
@@ -422,7 +424,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($investor)->get(route('investor.watchlists.index'))->assertOk()->assertSee('My Watchlists')->assertSee('Watched locations')->assertSee('Watched projects');
         $this->actingAs($investor)->get(route('investor.archive.index'))->assertOk()->assertSee('Alerts & Archive')->assertSee('Published alerts');
         $this->actingAs($investor)->get(route('investor.subscription.show'))->assertOk()->assertSee('Active entitlement')->assertSee('Renewal')->assertSee('Payment history');
-        $this->actingAs($investor)->get(route('investor.profile'))->assertOk()->assertSee('Profile & Security')->assertSee('Name')->assertSee('Email');
+        $this->actingAs($investor)->get(route('investor.profile'))->assertOk()->assertSee('Profile')->assertSee('Name')->assertSee('Email');
 
         auth()->logout();
 
@@ -436,7 +438,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
     public function test_only_an_administrator_can_change_roles_and_cannot_remove_their_own(): void
     {
         $admin = User::factory()->withRoles('super_admin')->create();
-        $buyer = User::factory()->withRoles('buyer')->create();
+        $buyer = User::factory()->withRoles('buyer')->withVerifiedCapability('broker')->create();
 
         $this->actingAs($admin)
             ->put(route('admin.users.roles.update', $buyer), [
@@ -494,6 +496,6 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($user)
             ->get(route('workspaces.index'))
             ->assertOk()
-            ->assertSee('No workspace has been assigned to this account.');
+            ->assertSee('No workspace assigned yet');
     }
 }

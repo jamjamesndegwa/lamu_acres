@@ -31,12 +31,16 @@ class CapabilityApplicationPolicy
 
     public function update(User $user, CapabilityApplication $application): bool
     {
-        if (! $user->is($application->user) || ! $this->canApply($user)) {
+        if (! $user->is($application->user)) {
             return false;
         }
 
         if (in_array($application->status, [CapabilityApplicationStatus::InformationRequired, CapabilityApplicationStatus::Rejected], true)) {
             return true;
+        }
+
+        if (! $this->canApply($user)) {
+            return false;
         }
 
         return $application->capability === PartnerCapability::Broker

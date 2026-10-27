@@ -306,7 +306,8 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $buyer = User::factory()->withRoles('buyer')->create();
         $enquiry = Enquiry::factory()->create(['buyer_id' => $buyer->id]);
         $pipeline = app(SalesPipeline::class);
-        $sale = $pipeline->open($staff, ['origin' => 'enquiry', 'property_id' => $enquiry->property_id, 'enquiry_id' => $enquiry->id, 'acreage' => 1]);
+        $property = $enquiry->property;
+        $sale = $pipeline->open($staff, ['origin' => 'enquiry', 'property_id' => $enquiry->property_id, 'enquiry_id' => $enquiry->id, 'acreage' => (float) $property->acreage]);
         $sale = $pipeline->assign($sale, $agent, $staff, $sale->lock_version);
         $sale = $pipeline->assign($sale, $agent, $staff, $sale->lock_version);
         $this->assertSame(1, $agent->notifications()->count());

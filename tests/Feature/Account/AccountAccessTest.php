@@ -370,8 +370,7 @@ class AccountAccessTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('aria-label="Account menu"', false)
             ->assertSee('Broker')
-            ->assertSee('Add photo')
-            ->assertSee('Settings')
+            ->assertSee('Profile')
             ->assertSee('Logout');
 
         Storage::fake('local');

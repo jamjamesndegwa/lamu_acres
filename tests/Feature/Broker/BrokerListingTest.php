@@ -4,6 +4,7 @@ namespace Tests\Feature\Broker;
 
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
+use App\Enums\SaleMode;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationItemState;
 use App\Models\County;
@@ -138,6 +139,7 @@ class BrokerListingTest extends FoundationTestCase
             'description' => 'Further description for staff.',
             'locality_id' => $locality->id,
             'acreage' => 4,
+            'sale_mode' => SaleMode::Whole->value,
             'price_amount' => 800_000,
             'purpose' => 'sale',
             'property_type' => 'agricultural',

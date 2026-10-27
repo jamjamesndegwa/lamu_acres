@@ -31,7 +31,14 @@ class CapabilityReviewer
      */
     public function submit(User $user, PartnerCapability $capability, ?string $organization, string $statement, array $details = [], array $files = []): CapabilityApplication
     {
-        abort_unless($user->can('create', CapabilityApplication::class), 403);
+        $existing = $user->capabilityApplications()->where('capability', $capability)->first();
+        if ($existing !== null) {
+            if (! $user->can('update', $existing)) {
+                throw ValidationException::withMessages(['capability' => 'This application cannot be resubmitted in its current status. Follow the application status page for the next step.']);
+            }
+        } else {
+            abort_unless($user->can('create', CapabilityApplication::class), 403);
+        }
         $broker = $capability === PartnerCapability::Broker;
         $type = $details['applicant_type'] ?? null;
         $requiredBusiness = $type === 'firm' || $type === 'company_representative';
@@ -85,6 +92,13 @@ class CapabilityReviewer
                     ],
                     'verification_history' => $history,
                 ])->save();
+
+                $resubmitted = collect($history)->contains(
+                    fn (array $entry): bool => ($entry['event'] ?? null) === 'resubmitted',
+                );
+                if ($resubmitted && $capability === PartnerCapability::Broker) {
+                    $user->assignRole('broker');
+                }
 
                 Notification::send(
                     User::permission('staff.brokerage')->whereKeyNot($user->id)->get(),
