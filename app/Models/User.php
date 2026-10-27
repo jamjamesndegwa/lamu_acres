@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Workspace;
 use App\Models\Concerns\StoresFileUrls;
+use App\Notifications\QueuedResetPassword;
 use App\Services\Access\WorkspaceAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -167,5 +168,10 @@ class User extends Authenticatable
         }
 
         return route('workspaces.index');
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new QueuedResetPassword((string) $token));
     }
 }

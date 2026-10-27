@@ -3,15 +3,19 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
-class AccountEmailChanged extends Notification
+class AccountEmailChanged extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public bool $emailChanged = true) {}
+    public function __construct(public bool $emailChanged = true)
+    {
+        $this->onQueue((string) config('communications.queues.critical'));
+    }
 
     public static function canDeliverEmail(): bool
     {

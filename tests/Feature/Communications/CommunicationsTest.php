@@ -102,15 +102,17 @@ class CommunicationsTest extends FoundationTestCase
 
         $rows = MessageDelivery::query()->where('event', MessageEvent::BuyerEnquiry)->get();
 
-        $this->assertCount(1, $rows);
+        $this->assertCount(2, $rows);
         $this->assertSame($desk->id, $rows->first()->user_id);
         $this->assertFalse($rows->contains('user_id', $other->id));
         $this->assertFalse($rows->contains('user_id', $buyer->id));
-        $this->assertStringContainsString('Shela ridge', $rows->first()->body);
-        $this->assertStringNotContainsString('2.27123456', $rows->first()->body);
-        $this->assertStringNotContainsString('evidence/', $rows->first()->body);
-        $this->assertStringNotContainsString('title-deed', $rows->first()->body);
-        $this->assertSame(0, MessageDelivery::query()->where('user_id', $desk->id)->where('channel', MessageChannel::Email)->count());
+        $inApp = $rows->firstWhere('channel', MessageChannel::InApp);
+        $this->assertNotNull($inApp);
+        $this->assertStringContainsString('Shela ridge', $inApp->body);
+        $this->assertStringNotContainsString('2.27123456', $inApp->body);
+        $this->assertStringNotContainsString('evidence/', $inApp->body);
+        $this->assertStringNotContainsString('title-deed', $inApp->body);
+        $this->assertSame(1, MessageDelivery::query()->where('user_id', $desk->id)->where('channel', MessageChannel::Email)->count());
     }
 
     public function test_property_approval_notifies_the_submitter_and_a_repeat_does_not_send_again(): void
@@ -141,11 +143,13 @@ class CommunicationsTest extends FoundationTestCase
             ->where('event', MessageEvent::PropertyApproved)
             ->get();
 
-        $this->assertCount(1, $rows);
-        $this->assertSame(MessageChannel::InApp, $rows->first()->channel);
-        $this->assertStringContainsString('Mokowe acres', $rows->first()->body);
-        $this->assertStringNotContainsString('2.27123456', $rows->first()->body);
-        $this->assertStringNotContainsString('40.90123456', $rows->first()->body);
+        $this->assertCount(2, $rows);
+        $inApp = $rows->firstWhere('channel', MessageChannel::InApp);
+        $this->assertNotNull($inApp);
+        $this->assertStringContainsString('Mokowe acres', $inApp->body);
+        $this->assertStringNotContainsString('2.27123456', $inApp->body);
+        $this->assertStringNotContainsString('40.90123456', $inApp->body);
+        $this->assertTrue($rows->contains('channel', MessageChannel::Email));
     }
 
     public function test_unsecured_channels_drop_coordinates_and_private_files(): void

@@ -21,6 +21,16 @@ enum MessageEvent: string
     case SubscriptionExpired = 'subscription_expired';
     case MarketingBroadcast = 'marketing_broadcast';
 
+    public function isMarketing(): bool
+    {
+        return $this === self::MarketingBroadcast;
+    }
+
+    public function isMandatory(): bool
+    {
+        return ! $this->isMarketing();
+    }
+
     public function label(): string
     {
         return match ($this) {

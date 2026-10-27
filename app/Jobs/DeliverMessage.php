@@ -11,17 +11,20 @@ use App\Mail\DeskMessageMail;
 use App\Models\MessageDelivery;
 use App\Models\User;
 use App\Notifications\TemplatedDeskNotification;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-class DeliverMessage implements ShouldQueue
+class DeliverMessage implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
     public int $tries = 3;
+
+    public int $uniqueFor = 3600;
 
     /**
      * @return array<int, int>
@@ -31,7 +34,15 @@ class DeliverMessage implements ShouldQueue
         return [15, 60];
     }
 
-    public function __construct(public string $idempotencyKey, public ?Notification $notification = null) {}
+    public function __construct(public string $idempotencyKey, public ?Notification $notification = null)
+    {
+        $this->onQueue((string) config('communications.queues.communications'));
+    }
+
+    public function uniqueId(): string
+    {
+        return $this->idempotencyKey;
+    }
 
     public function handle(SmsSender $sms): void
     {

@@ -29,7 +29,7 @@ class MessageDesk
         $body = $this->render($template->body ?? '{summary}', $context);
 
         foreach (MessageChannel::cases() as $channel) {
-            if (! $this->allows($recipient, $channel)) {
+            if (! $this->allows($recipient, $channel, $event)) {
                 continue;
             }
 
@@ -67,7 +67,8 @@ class MessageDesk
                 if (in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)) {
                     DB::afterCommit(function () use ($delivery): void {
                         try {
-                            DeliverMessage::dispatch($delivery->idempotency_key);
+                            DeliverMessage::dispatch($delivery->idempotency_key)
+                                ->onQueue((string) config('communications.queues.communications'));
                         } catch (\Throwable $exception) {
                             $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
                         }
@@ -109,8 +110,25 @@ class MessageDesk
         }
     }
 
-    public function allows(User $user, MessageChannel $channel): bool
+    public function allows(User $user, MessageChannel $channel, MessageEvent $event): bool
     {
+        if ($event->isMarketing()) {
+            return match ($channel) {
+                MessageChannel::Email => $user->marketing_email_consent && filled($user->email),
+                MessageChannel::Sms => $user->marketing_sms_consent && filled($user->phone),
+                default => false,
+            };
+        }
+
+        if ($event->isMandatory()) {
+            return match ($channel) {
+                MessageChannel::InApp => true,
+                MessageChannel::Email => filled($user->email),
+                MessageChannel::Sms => filled($user->phone),
+                MessageChannel::Whatsapp => $this->optionalChannelEnabled($user, $channel),
+            };
+        }
+
         $preference = $user->notificationPreferences()->where('channel', $channel)->first();
 
         if ($preference !== null) {
@@ -122,6 +140,17 @@ class MessageDesk
             MessageChannel::Email => (bool) $user->notify_by_email && filled($user->email),
             MessageChannel::Sms, MessageChannel::Whatsapp => false,
         };
+    }
+
+    private function optionalChannelEnabled(User $user, MessageChannel $channel): bool
+    {
+        $preference = $user->notificationPreferences()->where('channel', $channel)->first();
+
+        if ($preference !== null) {
+            return $preference->enabled;
+        }
+
+        return false;
     }
 
     /**

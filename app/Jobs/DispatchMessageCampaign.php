@@ -30,7 +30,10 @@ class DispatchMessageCampaign implements ShouldQueue
         return [30, 120];
     }
 
-    public function __construct(public int $campaignId) {}
+    public function __construct(public int $campaignId)
+    {
+        $this->onQueue((string) config('communications.queues.campaigns'));
+    }
 
     public function handle(CampaignDesk $campaigns, SmsSender $sms): void
     {

@@ -8,8 +8,8 @@ use App\Models\CapabilityApplication;
 use App\Models\User;
 use App\Notifications\AccountEmailChanged;
 use App\Notifications\ApplicationOutcomeNotification;
+use App\Notifications\QueuedResetPassword;
 use App\Services\Auth\OtpDeliveryResult;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -354,7 +354,7 @@ class AccountAccessTest extends FoundationTestCase
             'email' => $buyer->email,
         ])->assertRedirect();
 
-        Notification::assertSentTo($buyer, ResetPassword::class);
+        Notification::assertSentTo($buyer, QueuedResetPassword::class);
     }
 
     public function test_the_account_menu_shows_the_role_and_stores_a_profile_photo(): void

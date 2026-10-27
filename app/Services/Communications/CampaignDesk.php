@@ -47,7 +47,8 @@ class CampaignDesk
             'queued_at' => now(),
         ])->save();
 
-        DB::afterCommit(fn () => DispatchMessageCampaign::dispatch($campaign->id));
+        DB::afterCommit(fn () => DispatchMessageCampaign::dispatch($campaign->id)
+            ->onQueue((string) config('communications.queues.campaigns')));
 
         return $campaign->refresh();
     }
