@@ -22,17 +22,18 @@ class BulkCommunicationsTest extends FoundationTestCase
     public function test_marketing_sms_campaign_respects_consent_and_records_provider_reference(): void
     {
         Mail::fake();
-        config()->set('services.sms.endpoint', 'https://sms.test/send');
-        config()->set('services.sms.bulk_endpoint', 'https://sms.test/bulk');
-        config()->set('services.sms.token', 'secret');
-        config()->set('services.sms.tenant_id', 'tenant-1');
-        config()->set('services.sms.from', 'LamuAcres');
+        config()->set('services.bulk_sms', [
+            'base_url' => 'https://provider.test/api',
+            'client_id' => '123',
+            'api_key' => 'secret-key',
+            'sender_id' => 'LAMUACRES',
+            'enabled' => true,
+            'dry_run' => false,
+        ]);
 
         Http::fake([
-            'https://sms.test/bulk' => Http::response([
-                'messages' => [
-                    ['to' => '254712000333', 'reference' => 'sms-ref-1'],
-                ],
+            'https://provider.test/api/123/messages/send' => Http::response([
+                'data' => ['id' => 'sms-ref-1', 'status' => 'sent'],
             ], 200),
         ]);
 

@@ -451,14 +451,16 @@ class SystemOperations
      */
     private function sms(): array
     {
-        $endpoint = filled(config('services.sms.endpoint'));
-        $token = filled(config('services.sms.token'));
+        $enabled = (bool) config('services.bulk_sms.enabled');
+        $baseUrl = filled(config('services.bulk_sms.base_url'));
+        $clientId = filled(config('services.bulk_sms.client_id'));
+        $apiKey = filled(config('services.bulk_sms.api_key'));
 
-        if (! $endpoint && ! $token) {
+        if (! $enabled && ! $baseUrl && ! $clientId && ! $apiKey) {
             return $this->check('SMS', OperationsStatus::NotConfigured, 'SMS provider settings are not present. No message was sent.');
         }
 
-        if (! $endpoint || ! $token) {
+        if (! $enabled || ! $baseUrl || ! $clientId || ! $apiKey) {
             return $this->check('SMS', OperationsStatus::Unhealthy, 'SMS provider settings are incomplete. No message was sent.');
         }
 
@@ -828,8 +830,7 @@ class SystemOperations
             config('mpesa.shortcode'),
             config('mpesa.callback_url'),
             config('mpesa.callback_secret'),
-            config('services.sms.endpoint'),
-            config('services.sms.token'),
+            config('services.bulk_sms.api_key'),
             config('services.ses.key'),
             config('services.ses.secret'),
             config('mail.mailers.smtp.password'),

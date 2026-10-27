@@ -3,6 +3,7 @@
 namespace Tests\Feature\Communications;
 
 use App\Contracts\Communications\SmsSender;
+use App\Data\Communications\SmsSendResult;
 use App\Enums\CapabilityApplicationStatus;
 use App\Enums\MessageChannel;
 use App\Enums\MessageEvent;
@@ -196,7 +197,7 @@ class CommunicationsTest extends FoundationTestCase
                 return true;
             }
 
-            public function send(string $phone, string $body): string
+            public function send(string $phone, string $body): SmsSendResult
             {
                 throw new RuntimeException('gateway down');
             }

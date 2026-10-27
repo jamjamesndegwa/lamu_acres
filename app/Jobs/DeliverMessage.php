@@ -3,7 +3,10 @@
 namespace App\Jobs;
 
 use App\Contracts\Communications\SmsSender;
+use App\Data\Communications\SmsSendResult;
 use App\Enums\MessageChannel;
+use App\Exceptions\Communications\SmsProviderException;
+use App\Exceptions\Communications\SmsUncertainDeliveryException;
 use App\Mail\DeskMessageMail;
 use App\Models\MessageDelivery;
 use App\Models\User;
@@ -39,14 +42,23 @@ class DeliverMessage implements ShouldQueue
         }
 
         try {
-            $reference = $this->deliver($delivery, $sms);
+            $result = $this->deliver($delivery, $sms);
             $delivery->forceFill([
                 'status' => 'sent',
                 'attempts' => $this->attempts(),
                 'sent_at' => now(),
                 'error' => null,
-                'provider_reference' => $reference,
+                'provider_reference' => $result?->messageId,
+                'provider_meta' => $result?->meta(),
             ])->save();
+        } catch (SmsUncertainDeliveryException|SmsProviderException $exception) {
+            $delivery->forceFill([
+                'status' => 'failed',
+                'attempts' => $this->attempts(),
+                'error' => class_basename($exception).': delivery failed.',
+            ])->save();
+
+            throw $exception;
         } catch (Throwable $exception) {
             $delivery->forceFill([
                 'status' => 'failed',
@@ -58,7 +70,7 @@ class DeliverMessage implements ShouldQueue
         }
     }
 
-    private function deliver(MessageDelivery $delivery, SmsSender $sms): ?string
+    private function deliver(MessageDelivery $delivery, SmsSender $sms): ?SmsSendResult
     {
         $user = $delivery->recipient;
 

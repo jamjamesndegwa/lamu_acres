@@ -98,7 +98,7 @@ class HttpSmsSender implements SmsSender
 
             foreach (array_chunk($phones, self::BULK_RECIPIENT_LIMIT) as $chunk) {
                 $chunkResults = $this->sendBulkChunk($chunk, $body);
-                $results = array_merge($results, $chunkResults);
+                $results += $chunkResults;
             }
         }
 
@@ -216,9 +216,11 @@ class HttpSmsSender implements SmsSender
 
                 $phone = $this->normalizePhone((string) ($row['recipient'] ?? $row['to'] ?? ''));
                 $status = isset($row['status']) ? strtolower((string) $row['status']) : null;
-                $success = in_array($status, ['sent', 'queued', 'delivered', 'success', 'accepted'], true)
-                    || ($row['success'] ?? null) === true;
                 $messageId = (string) ($row['message_id'] ?? $row['id'] ?? $row['reference'] ?? '');
+                $failedStatuses = ['failed', 'rejected', 'error', 'undelivered'];
+                $success = ($row['success'] ?? null) === true
+                    || in_array($status, ['sent', 'queued', 'delivered', 'success', 'accepted'], true)
+                    || ($messageId !== '' && ! in_array($status, $failedStatuses, true));
                 $error = (string) ($row['error'] ?? $row['message'] ?? '');
 
                 if ($phone === '') {
@@ -265,7 +267,6 @@ class HttpSmsSender implements SmsSender
     }
 
     /**
-     * @param  mixed  $payload
      * @return array<string, mixed>
      */
     private function data(mixed $payload): array

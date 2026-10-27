@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Contracts\Communications\SmsSender;
 use App\Enums\MessageCampaignStatus;
 use App\Enums\MessageChannel;
+use App\Exceptions\Communications\SmsProviderException;
+use App\Exceptions\Communications\SmsUncertainDeliveryException;
 use App\Mail\DeskMessageMail;
 use App\Models\MessageCampaign;
 use App\Models\User;
@@ -109,22 +111,43 @@ class DispatchMessageCampaign implements ShouldQueue
             }
 
             try {
-                $references = $sms->sendBulk($batch);
+                $outcomes = $sms->sendBulk($batch);
 
                 foreach ($deliveries as $index => $delivery) {
                     $phone = $batch[$index]['phone'];
-                    $reference = $references[$phone] ?? null;
+                    $outcome = $outcomes[$phone] ?? null;
+
+                    if ($outcome?->success) {
+                        $delivery->forceFill([
+                            'status' => 'sent',
+                            'provider_reference' => $outcome->messageId,
+                            'provider_meta' => $outcome->meta(),
+                            'attempts' => 1,
+                            'sent_at' => now(),
+                            'error' => null,
+                        ])->save();
+                        $sent++;
+
+                        continue;
+                    }
 
                     $delivery->forceFill([
-                        'status' => 'sent',
-                        'provider_reference' => $reference,
+                        'status' => 'failed',
                         'attempts' => 1,
-                        'sent_at' => now(),
-                        'error' => null,
+                        'error' => $outcome?->error ?? 'SMS delivery failed.',
                     ])->save();
-                    $sent++;
+                    $failed++;
                 }
-            } catch (Throwable $exception) {
+            } catch (SmsUncertainDeliveryException) {
+                foreach ($deliveries as $delivery) {
+                    $delivery->forceFill([
+                        'status' => 'failed',
+                        'attempts' => 1,
+                        'error' => 'SmsUncertainDeliveryException: outcome unknown.',
+                    ])->save();
+                    $failed++;
+                }
+            } catch (SmsProviderException $exception) {
                 foreach ($deliveries as $delivery) {
                     $delivery->forceFill([
                         'status' => 'failed',
@@ -134,7 +157,9 @@ class DispatchMessageCampaign implements ShouldQueue
                     $failed++;
                 }
 
-                throw $exception;
+                if ($exception->retriable) {
+                    throw $exception;
+                }
             }
         });
 

@@ -97,9 +97,11 @@ class SystemOperationsTest extends FoundationTestCase
             'mpesa.shortcode' => '99887766',
             'mpesa.callback_url' => 'https://payments.example.test/callback-do-not-show',
             'mpesa.callback_secret' => 'callback-secret-do-not-show',
-            'services.sms.endpoint' => 'https://sms.example.test/send-do-not-show',
-            'services.sms.token' => 'sms-token-do-not-show',
-            'services.sms.from' => 'LamuAcres',
+            'services.bulk_sms.enabled' => true,
+            'services.bulk_sms.base_url' => 'https://sms.example.test/api-do-not-show',
+            'services.bulk_sms.client_id' => '123',
+            'services.bulk_sms.api_key' => 'sms-token-do-not-show',
+            'services.bulk_sms.sender_id' => 'LAMUACRES',
         ]);
 
         DB::table('jobs')->insert([
