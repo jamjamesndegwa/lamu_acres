@@ -82,7 +82,13 @@ class HttpSmsSender implements SmsSender
                         cost: $single->cost,
                         segments: $single->segments,
                     );
-                } catch (SmsProviderException|SmsUncertainDeliveryException $exception) {
+                } catch (SmsUncertainDeliveryException $exception) {
+                    $results[$phones[0]] = new SmsBulkRecipientResult(
+                        success: false,
+                        uncertain: true,
+                        error: class_basename($exception).': outcome unknown.',
+                    );
+                } catch (SmsProviderException $exception) {
                     $results[$phones[0]] = new SmsBulkRecipientResult(
                         success: false,
                         error: class_basename($exception).': delivery failed.',
@@ -129,10 +135,11 @@ class HttpSmsSender implements SmsSender
 
         try {
             $response = $this->post($this->bulkSendUrl($clientId), $payload);
-        } catch (SmsUncertainDeliveryException $exception) {
+        } catch (SmsUncertainDeliveryException) {
             return array_fill_keys($recipients, new SmsBulkRecipientResult(
                 success: false,
-                error: 'UncertainDelivery: outcome unknown.',
+                uncertain: true,
+                error: 'SmsUncertainDeliveryException: outcome unknown.',
             ));
         }
 
@@ -234,6 +241,7 @@ class HttpSmsSender implements SmsSender
                     error: $success ? null : ($error !== '' ? $error : 'SMS delivery failed.'),
                     cost: isset($row['cost']) ? (float) $row['cost'] : null,
                     segments: isset($row['segments']) ? (int) $row['segments'] : null,
+                    referenceKind: 'message',
                 );
             }
         }
@@ -252,6 +260,7 @@ class HttpSmsSender implements SmsSender
                     success: true,
                     messageId: $batchId,
                     status: $batchStatus,
+                    referenceKind: 'batch',
                 );
 
                 continue;

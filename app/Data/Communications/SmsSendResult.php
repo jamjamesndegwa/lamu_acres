@@ -24,6 +24,7 @@ class SmsSendResult
             'segments' => $this->segments,
             'balance' => $this->balance,
             'dry_run' => $this->dryRun ? true : null,
+            'reference_kind' => 'message',
         ], fn ($value): bool => $value !== null);
     }
 }

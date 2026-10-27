@@ -15,6 +15,8 @@ use App\Models\ResearchAssignment;
 use App\Models\SalesAudit;
 use App\Models\SubscriptionPayment;
 use App\Models\VerificationReviewLog;
+use App\Services\Communications\BulkSmsPreflight;
+use App\Services\Communications\MailPreflight;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
@@ -58,6 +60,7 @@ class SystemOperations
                     $queue['configuration'],
                     $queue['pending'],
                     $queue['failed'],
+                    $this->uncertainSmsDeliveries(),
                 ],
                 'results' => $this->jobResults(),
             ],
@@ -65,6 +68,7 @@ class SystemOperations
             'integrations' => [
                 $this->mpesa(),
                 $this->sms(),
+                $this->smtp(),
                 $this->mapping(),
             ],
             'activity' => $activity['rows'],
@@ -464,7 +468,64 @@ class SystemOperations
             return $this->check('SMS', OperationsStatus::Unhealthy, 'SMS provider settings are incomplete. No message was sent.');
         }
 
-        return $this->check('SMS', OperationsStatus::Configured, 'SMS provider settings are present. No message was sent.');
+        try {
+            $report = Cache::remember('communications.sms.preflight', 300, fn (): array => app(BulkSmsPreflight::class)->inspect());
+
+            if (($report['connectivity'] ?? null) === 'failed') {
+                return $this->check('SMS', OperationsStatus::Unhealthy, (string) ($report['detail'] ?? 'SMS provider connectivity failed.'));
+            }
+
+            $balance = is_array($report['balance'] ?? null) ? ($report['balance']['balance'] ?? null) : null;
+            $currency = is_array($report['balance'] ?? null) ? ($report['balance']['currency'] ?? '') : '';
+            $detail = 'SMS provider settings are present and profile or balance responded.';
+            if ($balance !== null) {
+                $detail = 'SMS provider responded. Balance '.$balance.' '.trim((string) $currency).'.';
+            }
+
+            return $this->check('SMS', OperationsStatus::Healthy, $detail);
+        } catch (Throwable) {
+            return $this->check('SMS', OperationsStatus::Configured, 'SMS provider settings are present. Connectivity was not verified.');
+        }
+    }
+
+    /**
+     * @return array{name: string, status: string, label: string, detail: string}
+     */
+    private function smtp(): array
+    {
+        $report = app(MailPreflight::class)->inspect();
+
+        if ($report['smtp_ready']) {
+            return $this->check('SMTP mail', OperationsStatus::Configured, (string) $report['detail']);
+        }
+
+        if (($report['mailer'] ?? '') === 'log') {
+            return $this->check('SMTP mail', OperationsStatus::NotConfigured, (string) $report['detail']);
+        }
+
+        return $this->check('SMTP mail', OperationsStatus::Unhealthy, (string) $report['detail']);
+    }
+
+    /**
+     * @return array{name: string, status: string, label: string, detail: string}
+     */
+    private function uncertainSmsDeliveries(): array
+    {
+        try {
+            $count = MessageDelivery::query()->where('status', 'uncertain')->count();
+
+            if ($count === 0) {
+                return $this->check('Uncertain SMS deliveries', OperationsStatus::Healthy, 'No uncertain SMS deliveries are waiting for review.');
+            }
+
+            return $this->check(
+                'Uncertain SMS deliveries',
+                OperationsStatus::Unhealthy,
+                $this->countPhrase($count, 'uncertain SMS delivery', 'uncertain SMS deliveries').' need provider confirmation.',
+            );
+        } catch (Throwable) {
+            return $this->check('Uncertain SMS deliveries', OperationsStatus::Unhealthy, 'Uncertain SMS deliveries could not be counted.');
+        }
     }
 
     /**

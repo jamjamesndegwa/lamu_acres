@@ -37,7 +37,7 @@ class DeliverMessage implements ShouldQueue
     {
         $delivery = MessageDelivery::query()->where('idempotency_key', $this->idempotencyKey)->first();
 
-        if ($delivery === null || $delivery->status === 'sent' || $delivery->status === 'skipped') {
+        if ($delivery === null || in_array($delivery->status, ['sent', 'skipped', 'uncertain'], true)) {
             return;
         }
 
@@ -51,14 +51,26 @@ class DeliverMessage implements ShouldQueue
                 'provider_reference' => $result?->messageId,
                 'provider_meta' => $result?->meta(),
             ])->save();
-        } catch (SmsUncertainDeliveryException|SmsProviderException $exception) {
+        } catch (SmsUncertainDeliveryException $exception) {
+            $delivery->forceFill([
+                'status' => 'uncertain',
+                'attempts' => $this->attempts(),
+                'error' => class_basename($exception).': outcome unknown.',
+            ])->save();
+
+            return;
+        } catch (SmsProviderException $exception) {
             $delivery->forceFill([
                 'status' => 'failed',
                 'attempts' => $this->attempts(),
                 'error' => class_basename($exception).': delivery failed.',
             ])->save();
 
-            throw $exception;
+            if ($exception->retriable) {
+                throw $exception;
+            }
+
+            return;
         } catch (Throwable $exception) {
             $delivery->forceFill([
                 'status' => 'failed',

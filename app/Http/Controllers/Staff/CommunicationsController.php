@@ -7,9 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Models\MessageCampaign;
 use App\Models\MessageDelivery;
 use App\Models\MessageTemplate;
+use App\Services\Communications\BulkSmsPreflight;
 use App\Services\Communications\CampaignDesk;
+use App\Services\Communications\MailPreflight;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -34,11 +37,33 @@ class CommunicationsController extends Controller
         return back()->with('status', 'Template saved.');
     }
 
-    public function deliveries(): View
+    public function deliveries(BulkSmsPreflight $smsPreflight, MailPreflight $mailPreflight): View
     {
+        $queue = config('queue.default');
+        $pendingJobs = $queue === 'database' && $this->tableExists('jobs')
+            ? (int) DB::table('jobs')->count()
+            : null;
+        $failedJobs = $queue === 'database' && $this->tableExists('failed_jobs')
+            ? (int) DB::table('failed_jobs')->count()
+            : null;
+
         return view('staff.messages.deliveries', [
             'deliveries' => MessageDelivery::query()->with(['recipient', 'campaign'])->latest()->paginate(30),
+            'uncertainCount' => MessageDelivery::query()->where('status', 'uncertain')->count(),
+            'smsConfigured' => $smsPreflight->configured(),
+            'mailStatus' => $mailPreflight->inspect(),
+            'pendingJobs' => $pendingJobs,
+            'failedJobs' => $failedJobs,
         ]);
+    }
+
+    private function tableExists(string $table): bool
+    {
+        try {
+            return DB::getSchemaBuilder()->hasTable($table);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function campaigns(): View

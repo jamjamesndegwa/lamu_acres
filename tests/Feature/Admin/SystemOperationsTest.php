@@ -17,7 +17,9 @@ use App\Models\User;
 use App\Models\VerificationReviewLog;
 use App\Services\Access\NavigationBuilder;
 use App\Services\Admin\SystemOperations;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\Feature\Foundation\FoundationTestCase;
@@ -104,6 +106,16 @@ class SystemOperationsTest extends FoundationTestCase
             'services.bulk_sms.sender_id' => 'LAMUACRES',
         ]);
 
+        Cache::forget('communications.sms.preflight');
+        Http::fake([
+            'https://sms.example.test/api-do-not-show/123/client/profile' => Http::response([
+                'data' => ['name' => 'Lamu Acres SMS'],
+            ], 200),
+            'https://sms.example.test/api-do-not-show/123/client/balance' => Http::response([
+                'data' => ['balance' => 10, 'currency' => 'KES'],
+            ], 200),
+        ]);
+
         DB::table('jobs')->insert([
             'queue' => 'default',
             'payload' => json_encode(['displayName' => 'App\\Jobs\\DeliverMessage', 'secret' => 'waiting-payload-secret-do-not-show']),
@@ -148,7 +160,9 @@ class SystemOperationsTest extends FoundationTestCase
             ->assertSee('Quarterly imagery comparison')
             ->assertSee('No execution has been recorded.')
             ->assertSee('Daraja settings are present. No payment request was sent.')
-            ->assertSee('SMS provider settings are present. No message was sent.')
+            ->assertSee('SMS provider responded. Balance 10 KES.')
+            ->assertSee('SMTP mail')
+            ->assertSee('Uncertain SMS deliveries')
             ->assertSee('4 map layers are on file.')
             ->assertSee('No imagery scene is on file.')
             ->assertSee('No remote map or imagery service is configured.')

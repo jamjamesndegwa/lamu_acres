@@ -11,6 +11,8 @@ class SmsBulkRecipientResult
         public ?string $error = null,
         public ?float $cost = null,
         public ?int $segments = null,
+        public bool $uncertain = false,
+        public string $referenceKind = 'message',
     ) {}
 
     /**
@@ -22,6 +24,7 @@ class SmsBulkRecipientResult
             'status' => $this->status,
             'cost' => $this->cost,
             'segments' => $this->segments,
+            'reference_kind' => $this->referenceKind,
         ], fn ($value): bool => $value !== null);
     }
 }

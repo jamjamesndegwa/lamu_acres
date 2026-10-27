@@ -117,6 +117,17 @@ class DispatchMessageCampaign implements ShouldQueue
                     $phone = $batch[$index]['phone'];
                     $outcome = $outcomes[$phone] ?? null;
 
+                    if ($outcome?->uncertain) {
+                        $delivery->forceFill([
+                            'status' => 'uncertain',
+                            'attempts' => 1,
+                            'error' => $outcome->error ?? 'SmsUncertainDeliveryException: outcome unknown.',
+                        ])->save();
+                        $failed++;
+
+                        continue;
+                    }
+
                     if ($outcome?->success) {
                         $delivery->forceFill([
                             'status' => 'sent',
@@ -141,7 +152,7 @@ class DispatchMessageCampaign implements ShouldQueue
             } catch (SmsUncertainDeliveryException) {
                 foreach ($deliveries as $delivery) {
                     $delivery->forceFill([
-                        'status' => 'failed',
+                        'status' => 'uncertain',
                         'attempts' => 1,
                         'error' => 'SmsUncertainDeliveryException: outcome unknown.',
                     ])->save();
