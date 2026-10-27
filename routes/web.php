@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Communications\UnsubscribeController;
 use App\Http\Controllers\EvidenceDownloadController;
 use App\Http\Controllers\Intelligence\FileController;
 use App\Http\Controllers\Intelligence\LibraryController;
@@ -24,6 +25,8 @@ use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/communications/unsubscribe/{token}', [UnsubscribeController::class, 'show'])->name('communications.unsubscribe');
+Route::post('/communications/unsubscribe/{token}', [UnsubscribeController::class, 'update'])->name('communications.unsubscribe.update');
 Route::get('/find-land', FindLandController::class)->name('find-land.index');
 Route::get('/broker-partners', BrokerPartnersController::class)->name('broker-partners');
 Route::get('/list-property', ListPropertyController::class)->name('list-property');

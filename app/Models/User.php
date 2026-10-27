@@ -13,9 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'notify_by_email'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'notify_by_email', 'marketing_email_consent', 'marketing_sms_consent', 'communications_unsubscribe_token'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -23,6 +24,15 @@ class User extends Authenticatable
     use HasFactory, HasRoles, Notifiable;
 
     use StoresFileUrls;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (blank($user->communications_unsubscribe_token)) {
+                $user->communications_unsubscribe_token = Str::random(40);
+            }
+        });
+    }
 
     /**
      * @return array<string, string>
@@ -34,6 +44,8 @@ class User extends Authenticatable
             'phone_verified_at' => 'datetime',
             'suspended_at' => 'datetime',
             'notify_by_email' => 'boolean',
+            'marketing_email_consent' => 'boolean',
+            'marketing_sms_consent' => 'boolean',
             'password' => 'hashed',
         ];
     }

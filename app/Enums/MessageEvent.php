@@ -19,6 +19,7 @@ enum MessageEvent: string
     case ReportPublished = 'report_published';
     case SubscriptionRenewed = 'subscription_renewed';
     case SubscriptionExpired = 'subscription_expired';
+    case MarketingBroadcast = 'marketing_broadcast';
 
     public function label(): string
     {
@@ -38,6 +39,7 @@ enum MessageEvent: string
             self::ReportPublished => 'Premium report published',
             self::SubscriptionRenewed => 'Subscription renewal',
             self::SubscriptionExpired => 'Subscription expiration',
+            self::MarketingBroadcast => 'Marketing broadcast',
         };
     }
 }

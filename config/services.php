@@ -30,7 +30,9 @@ return [
 
     'sms' => [
         'endpoint' => env('SMS_ENDPOINT'),
+        'bulk_endpoint' => env('SMS_BULK_ENDPOINT'),
         'token' => env('SMS_TOKEN'),
+        'tenant_id' => env('SMS_TENANT_ID'),
         'from' => env('SMS_FROM', 'LamuAcres'),
     ],
 

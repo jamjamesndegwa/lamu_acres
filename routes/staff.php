@@ -245,6 +245,11 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::get('/messages/templates', [CommunicationsController::class, 'templates'])->name('messages.templates');
             Route::put('/messages/templates/{messageTemplate}', [CommunicationsController::class, 'updateTemplate'])->name('messages.templates.update');
             Route::get('/messages/deliveries', [CommunicationsController::class, 'deliveries'])->name('messages.deliveries');
+            Route::get('/messages/campaigns', [CommunicationsController::class, 'campaigns'])->name('messages.campaigns');
+            Route::get('/messages/campaigns/create', [CommunicationsController::class, 'createCampaign'])->name('messages.campaigns.create');
+            Route::post('/messages/campaigns', [CommunicationsController::class, 'storeCampaign'])->name('messages.campaigns.store');
+            Route::get('/messages/campaigns/{messageCampaign}', [CommunicationsController::class, 'showCampaign'])->name('messages.campaigns.show');
+            Route::post('/messages/campaigns/{messageCampaign}/queue', [CommunicationsController::class, 'queueCampaign'])->name('messages.campaigns.queue');
         });
 
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');

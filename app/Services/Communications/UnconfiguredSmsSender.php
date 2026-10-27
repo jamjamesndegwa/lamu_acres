@@ -12,7 +12,12 @@ class UnconfiguredSmsSender implements SmsSender
         return false;
     }
 
-    public function send(string $phone, string $body): void
+    public function send(string $phone, string $body): string
+    {
+        throw new RuntimeException('SMS provider is not configured.');
+    }
+
+    public function sendBulk(array $messages): array
     {
         throw new RuntimeException('SMS provider is not configured.');
     }

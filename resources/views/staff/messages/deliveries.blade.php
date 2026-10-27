@@ -8,7 +8,7 @@
                 @if (str_starts_with((string) $delivery->destination, 'https://wa.me/'))
                     <p class="mt-1"><a href="{{ $delivery->destination }}" class="text-lamu-900 underline">Open WhatsApp chat</a></p>
                 @endif
-                <p class="mt-1 text-xs text-stone-500">Attempts {{ $delivery->attempts }}@if ($delivery->error) · {{ $delivery->error }}@endif</p>
+                <p class="mt-1 text-xs text-stone-500">Attempts {{ $delivery->attempts }}@if ($delivery->provider_reference) · Provider {{ $delivery->provider_reference }}@endif@if ($delivery->error) · {{ $delivery->error }}@endif</p>
             </article>
         @empty
             <x-workspace.empty title="No deliveries" message="Messages appear here after an account, enquiry, or sale event." />

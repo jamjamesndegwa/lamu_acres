@@ -196,7 +196,12 @@ class CommunicationsTest extends FoundationTestCase
                 return true;
             }
 
-            public function send(string $phone, string $body): void
+            public function send(string $phone, string $body): string
+            {
+                throw new RuntimeException('gateway down');
+            }
+
+            public function sendBulk(array $messages): array
             {
                 throw new RuntimeException('gateway down');
             }

@@ -68,5 +68,15 @@
         <input type="checkbox" name="notify_by_whatsapp" value="1" @checked(old('notify_by_whatsapp', $user->notificationPreferences->firstWhere('channel', \App\Enums\MessageChannel::Whatsapp)?->enabled))>
         WhatsApp click-to-chat updates
     </label>
+    <input type="hidden" name="marketing_email_consent" value="0">
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="marketing_email_consent" value="1" @checked(old('marketing_email_consent', $user->marketing_email_consent))>
+        Email me Lamu Acres news and land opportunities
+    </label>
+    <input type="hidden" name="marketing_sms_consent" value="0">
+    <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="marketing_sms_consent" value="1" @checked(old('marketing_sms_consent', $user->marketing_sms_consent))>
+        SMS me Lamu Acres news and land opportunities
+    </label>
     <button type="submit" class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Save profile</button>
 </form>

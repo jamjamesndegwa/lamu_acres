@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'subject',
     'body',
     'destination',
+    'provider_reference',
+    'message_campaign_id',
     'error',
     'sent_at',
 ])]
@@ -36,5 +38,10 @@ class MessageDelivery extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(MessageCampaign::class, 'message_campaign_id');
     }
 }

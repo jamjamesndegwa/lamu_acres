@@ -479,6 +479,7 @@ return [
                 'items' => [
                     ['label' => 'Messages and work updates', 'route' => 'staff.notifications.index', 'active' => 'staff.notifications.*'],
                     ['label' => 'Templates', 'route' => 'staff.messages.templates', 'active' => 'staff.messages.templates', 'permission' => 'staff.communications'],
+                    ['label' => 'Bulk campaigns', 'route' => 'staff.messages.campaigns', 'active' => 'staff.messages.campaigns*', 'permission' => 'staff.communications'],
                     ['label' => 'Delivery History', 'route' => 'staff.messages.deliveries', 'active' => 'staff.messages.deliveries', 'permission' => 'staff.communications'],
                 ],
             ],
@@ -496,7 +497,7 @@ return [
             ['title' => 'Verification queue', 'description' => 'Documents and rechecks.', 'permission' => 'staff.verification', 'route' => 'staff.verification.index'],
             ['title' => 'Research desk', 'description' => 'Drafts and the publication calendar.', 'permission' => 'staff.intelligence'],
             ['title' => 'Finance queue', 'description' => 'Subscriptions and commission settlements.', 'permission' => 'staff.finance', 'route' => 'staff.memberships.index'],
-            ['title' => 'Communications', 'description' => 'Messages waiting to be sent.', 'permission' => 'staff.communications', 'route' => 'staff.messages.deliveries'],
+            ['title' => 'Communications', 'description' => 'Templates, bulk campaigns, and delivery history.', 'permission' => 'staff.communications', 'route' => 'staff.messages.deliveries'],
         ],
     ],
 

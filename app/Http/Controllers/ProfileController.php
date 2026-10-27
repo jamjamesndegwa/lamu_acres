@@ -79,6 +79,14 @@ class ProfileController extends Controller
             $channels['whatsapp'] = $request->boolean('notify_by_whatsapp');
         }
 
+        if ($request->exists('marketing_email_consent')) {
+            $channels['marketing_email'] = $request->boolean('marketing_email_consent');
+        }
+
+        if ($request->exists('marketing_sms_consent')) {
+            $channels['marketing_sms'] = $request->boolean('marketing_sms_consent');
+        }
+
         if ($request->filled('password')) {
             Auth::logoutOtherDevices($request->string('current_password')->value());
             $user->password = $request->string('password')->value();
@@ -88,6 +96,7 @@ class ProfileController extends Controller
 
         if ($channels !== []) {
             app(MessageDesk::class)->savePreferences($user, $channels);
+            $user->save();
         }
 
         if ($emailChanged) {

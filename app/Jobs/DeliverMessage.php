@@ -4,7 +4,9 @@ namespace App\Jobs;
 
 use App\Contracts\Communications\SmsSender;
 use App\Enums\MessageChannel;
+use App\Mail\DeskMessageMail;
 use App\Models\MessageDelivery;
+use App\Models\User;
 use App\Notifications\TemplatedDeskNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -37,12 +39,13 @@ class DeliverMessage implements ShouldQueue
         }
 
         try {
-            $this->deliver($delivery, $sms);
+            $reference = $this->deliver($delivery, $sms);
             $delivery->forceFill([
                 'status' => 'sent',
                 'attempts' => $this->attempts(),
                 'sent_at' => now(),
                 'error' => null,
+                'provider_reference' => $reference,
             ])->save();
         } catch (Throwable $exception) {
             $delivery->forceFill([
@@ -55,36 +58,43 @@ class DeliverMessage implements ShouldQueue
         }
     }
 
-    private function deliver(MessageDelivery $delivery, SmsSender $sms): void
+    private function deliver(MessageDelivery $delivery, SmsSender $sms): ?string
     {
         $user = $delivery->recipient;
 
         if ($user === null) {
-            return;
+            return null;
         }
 
-        match ($delivery->channel) {
+        return match ($delivery->channel) {
             MessageChannel::InApp => $this->inApp($delivery),
-            MessageChannel::Email => Mail::raw($delivery->body, function ($message) use ($user, $delivery): void {
-                $message->to($user->email)->subject((string) $delivery->subject);
-            }),
+            MessageChannel::Email => $this->email($user, $delivery),
             MessageChannel::Sms => $sms->send((string) $delivery->destination, $delivery->body),
             MessageChannel::Whatsapp => $this->whatsappLink($delivery),
         };
     }
 
-    private function inApp(MessageDelivery $delivery): void
+    private function email(User $user, MessageDelivery $delivery): ?string
+    {
+        Mail::to($user->email)->send(new DeskMessageMail((string) $delivery->subject, $delivery->body));
+
+        return null;
+    }
+
+    private function inApp(MessageDelivery $delivery): ?string
     {
         $id = $this->notificationId($delivery->idempotency_key);
         if ($delivery->recipient->notifications()->whereKey($id)->exists()) {
-            return;
+            return null;
         }
         $notification = $this->notification ?? new TemplatedDeskNotification((string) $delivery->subject, $delivery->body, $delivery->destination);
         $notification->id = $id;
         $delivery->recipient->notifyNow($notification, ['database']);
+
+        return null;
     }
 
-    private function whatsappLink(MessageDelivery $delivery): void
+    private function whatsappLink(MessageDelivery $delivery): ?string
     {
         $key = substr($delivery->idempotency_key, 0, -strlen(MessageChannel::Whatsapp->value)).MessageChannel::InApp->value;
         $notice = $delivery->recipient->notifications()->whereKey($this->notificationId($key))->first();
@@ -95,10 +105,12 @@ class DeliverMessage implements ShouldQueue
                 $notice->update(['data' => $data]);
             }
 
-            return;
+            return null;
         }
         $this->notification = new TemplatedDeskNotification((string) $delivery->subject, trim($delivery->body.' '.$delivery->destination));
         $this->inApp($delivery);
+
+        return null;
     }
 
     private function notificationId(string $key): string

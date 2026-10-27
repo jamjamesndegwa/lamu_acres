@@ -99,6 +99,14 @@ class MessageDesk
                 ['enabled' => (bool) $channels[$channel->value]],
             );
         }
+
+        if (array_key_exists('marketing_email', $channels)) {
+            $user->marketing_email_consent = (bool) $channels['marketing_email'];
+        }
+
+        if (array_key_exists('marketing_sms', $channels)) {
+            $user->marketing_sms_consent = (bool) $channels['marketing_sms'];
+        }
     }
 
     public function allows(User $user, MessageChannel $channel): bool
