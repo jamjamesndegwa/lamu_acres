@@ -28,12 +28,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'sms' => [
-        'endpoint' => env('SMS_ENDPOINT'),
-        'bulk_endpoint' => env('SMS_BULK_ENDPOINT'),
-        'token' => env('SMS_TOKEN'),
-        'tenant_id' => env('SMS_TENANT_ID'),
-        'from' => env('SMS_FROM', 'LamuAcres'),
+    'bulk_sms' => [
+        'base_url' => env('BULK_SMS_BASE_URL'),
+        'client_id' => env('BULK_SMS_CLIENT_ID'),
+        'api_key' => env('BULK_SMS_API_KEY'),
+        'sender_id' => env('BULK_SMS_SENDER_ID', 'LAMUACRES'),
+        'enabled' => filter_var(env('BULK_SMS_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'dry_run' => filter_var(env('BULK_SMS_DRY_RUN', true), FILTER_VALIDATE_BOOL),
     ],
 
     'slack' => [

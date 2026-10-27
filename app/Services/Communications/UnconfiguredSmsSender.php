@@ -3,6 +3,7 @@
 namespace App\Services\Communications;
 
 use App\Contracts\Communications\SmsSender;
+use App\Data\Communications\SmsSendResult;
 use RuntimeException;
 
 class UnconfiguredSmsSender implements SmsSender
@@ -12,7 +13,7 @@ class UnconfiguredSmsSender implements SmsSender
         return false;
     }
 
-    public function send(string $phone, string $body): string
+    public function send(string $phone, string $body): SmsSendResult
     {
         throw new RuntimeException('SMS provider is not configured.');
     }

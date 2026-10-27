@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'body',
     'destination',
     'provider_reference',
+    'provider_meta',
     'message_campaign_id',
     'error',
     'sent_at',
@@ -32,6 +33,7 @@ class MessageDelivery extends Model
             'channel' => MessageChannel::class,
             'attempts' => 'integer',
             'sent_at' => 'datetime',
+            'provider_meta' => 'array',
         ];
     }
 
