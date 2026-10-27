@@ -24,6 +24,7 @@ use App\Notifications\OfferStatusNotification;
 use App\Notifications\OfferSubmittedNotification;
 use App\Notifications\SiteVisitUpdatedNotification;
 use App\Notifications\ViewingAcknowledgedNotification;
+use App\Services\Communications\BuyerInterestNotifier;
 use App\Services\Communications\MessageDesk;
 use App\Services\Sales\SaleModeTerms;
 use Illuminate\Support\Carbon;
@@ -114,7 +115,7 @@ class InterestWorkflow
         ]);
 
         $this->timeline($buyer, 'Site visit requested for '.$match->property->title.'.', $match, $buyer);
-        $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer requested a site visit.'));
+        app(BuyerInterestNotifier::class)->siteVisitRequested($visit);
 
         return $visit;
     }
@@ -147,7 +148,7 @@ class InterestWorkflow
         ], $request->buyer);
 
         try {
-            $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer requested a site visit.'));
+            app(BuyerInterestNotifier::class)->siteVisitRequested($visit);
         } catch (Throwable) {
             // The visit remains in the authorized staff queue if notification delivery fails.
         }
@@ -195,14 +196,20 @@ class InterestWorkflow
         $visit->save();
         $this->visitTimeline($visit, 'Site visit '.$status->label().' for '.$visit->property->title.'.', $actor);
 
-        if ($actor->is($visit->buyer)) {
-            $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
-        } elseif ($status !== SiteVisitStatus::Confirmed) {
-            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
-        }
-
         if ($status === SiteVisitStatus::Confirmed) {
-            $this->notifyVisitConfirmed($visit);
+            app(BuyerInterestNotifier::class)->siteVisitConfirmed($visit);
+        } elseif ($status === SiteVisitStatus::Cancelled) {
+            app(BuyerInterestNotifier::class)->siteVisitCancelled(
+                $visit,
+                'Your site visit for '.$visit->property->title.' was cancelled.',
+            );
+        } elseif ($status === SiteVisitStatus::Completed) {
+            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
+            app(BuyerInterestNotifier::class)->siteVisitFollowUpRequired($visit);
+        } elseif ($actor->is($visit->buyer)) {
+            $this->notifyDesk(new SiteVisitUpdatedNotification($visit, 'A buyer updated a site visit.'));
+        } else {
+            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, 'Your site visit is now '.$status->label().'.'));
         }
 
         return $visit;
@@ -269,9 +276,9 @@ class InterestWorkflow
         $this->visitTimeline($visit, 'Reschedule request '.$decision.'. '.trim($response), $actor);
 
         if ($accept) {
-            $this->notifyVisitConfirmed($visit);
+            app(BuyerInterestNotifier::class)->siteVisitConfirmed($visit);
         } else {
-            $visit->buyer->notify(new SiteVisitUpdatedNotification($visit, $summary));
+            app(BuyerInterestNotifier::class)->siteVisitRescheduled($visit, $summary);
         }
 
         return $visit;
@@ -550,7 +557,7 @@ class InterestWorkflow
         ]);
 
         $this->timeline($buyer, 'Document access requested for '.$match->property->title.'.', $match, $buyer);
-        $this->notifyDesk(new DocumentAccessDecidedNotification($request, 'A buyer requested document access.'));
+        app(BuyerInterestNotifier::class)->documentAccessRequested($request);
 
         return $request;
     }
@@ -603,19 +610,5 @@ class InterestWorkflow
         }
 
         Notification::send($recipients->unique('id'), $notification);
-    }
-
-    private function notifyVisitConfirmed(SiteVisit $visit): void
-    {
-        $confirmedFor = $visit->confirmed_for?->timezone(config('app.timezone'))->toDayDateTimeString() ?? 'a time to be confirmed';
-        $summary = 'Your site visit for '.$visit->property->title.' is confirmed for '.$confirmedFor.'.';
-
-        app(MessageDesk::class)->send($visit->buyer, MessageEvent::SiteVisitConfirmed, [
-            'name' => $visit->buyer->name,
-            'title' => $visit->property->title,
-            'status' => SiteVisitStatus::Confirmed->label(),
-            'summary' => $summary,
-            'url' => route('buyer.visits.index'),
-        ], 'visit:'.$visit->id.':'.$visit->confirmed_for?->timestamp, new SiteVisitUpdatedNotification($visit, $summary));
     }
 }

@@ -7,9 +7,8 @@ use App\Enums\SourcingRequestStatus;
 use App\Models\BuyerTimelineEntry;
 use App\Models\SourcingRequest;
 use App\Models\User;
-use App\Notifications\TemplatedDeskNotification;
+use App\Services\Communications\BuyerInterestNotifier;
 use App\Support\Geo\Wkt;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -34,14 +33,7 @@ class SourcingRequestWriter
         $this->record($request, $buyer, 'Search '.$request->reference.' submitted.');
 
         try {
-            Notification::send(
-                User::permission('staff.sourcing')->get(),
-                new TemplatedDeskNotification(
-                    'New sourcing request',
-                    'A buyer submitted '.$request->reference.'. Review and assign it in the sourcing desk.',
-                    route('staff.sourcing.show', $request),
-                ),
-            );
+            app(BuyerInterestNotifier::class)->sourcingRequestSubmitted($request);
         } catch (Throwable) {
             // The accepted request remains saved and visible in the sourcing queue.
         }

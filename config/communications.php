@@ -50,4 +50,6 @@ return [
         MessageEvent::AccountSuspended->value,
     ],
 
+    'visit_reminder_hours' => (int) env('VISIT_REMINDER_HOURS', 24),
+
 ];

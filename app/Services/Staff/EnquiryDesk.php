@@ -5,6 +5,7 @@ namespace App\Services\Staff;
 use App\Enums\EnquiryStatus;
 use App\Enums\LeadStatus;
 use App\Events\EnquiryAssigned;
+use App\Events\EnquiryClosed;
 use App\Events\EnquiryResponded;
 use App\Models\Enquiry;
 use App\Models\EnquiryResponse;
@@ -32,10 +33,18 @@ class EnquiryDesk
 
     public function updateStatus(Enquiry $enquiry, EnquiryStatus $status, LeadStatus $leadStatus): Enquiry
     {
+        $wasClosed = $enquiry->status === EnquiryStatus::Closed || $enquiry->lead_status === LeadStatus::ClosedLost;
+
         $enquiry->status = $status;
         $enquiry->lead_status = $leadStatus;
         $enquiry->closed_at = $status === EnquiryStatus::Closed ? ($enquiry->closed_at ?? now()) : null;
         $enquiry->save();
+
+        $isClosed = $status === EnquiryStatus::Closed || $leadStatus === LeadStatus::ClosedLost;
+
+        if ($isClosed && ! $wasClosed) {
+            event(new EnquiryClosed($enquiry));
+        }
 
         return $enquiry;
     }

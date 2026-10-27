@@ -174,7 +174,7 @@ class UnifiedNotificationsTest extends FoundationTestCase
         $notice = $staff->notifications()->firstOrFail();
         $this->actingAs($staff)->get(route('staff.notifications.open', $notice->id))->assertRedirect(route('staff.documents.index', ['record' => $request->id]).'#document-'.$request->id);
         $workflow->decideDocuments($request, DocumentAccessStatus::Approved, $staff);
-        $this->assertSame(1, $buyer->notifications()->count());
+        $this->assertSame(2, $buyer->notifications()->count());
         $this->assertSame(0, $other->notifications()->count());
         $this->actingAs($buyer)->get(route('buyer.notifications.open', $buyer->notifications()->first()->id))->assertRedirect(route('buyer.matches.show', $match));
         $this->assertCount(0, $this->actingAs($staff)->get(route('staff.notifications.index', ['filter' => 'attention']))->viewData('notifications')->items());
