@@ -238,7 +238,7 @@
                         <h3 class="home-serif text-sm leading-tight font-semibold">Lamu’s<br>Next Chapter</h3>
                         <p class="mt-1 text-[10px] leading-snug text-stone-600">Data. Insights.<br>Opportunities.</p>
                     </div>
-                    <a href="{{ route('intelligence.projects.index') }}" class="inline-flex min-h-8 w-full items-center justify-center gap-2 rounded border border-white/60 bg-gold-500 px-2 py-1.5 text-center text-[10px] leading-tight font-medium text-white shadow-sm hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Explore Investor Pass <svg viewBox="0 0 24 24" class="size-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
+                    <a href="{{ route('investor-intelligence.index') }}" class="inline-flex min-h-8 w-full items-center justify-center gap-2 rounded border border-white/60 bg-gold-500 px-2 py-1.5 text-center text-[10px] leading-tight font-medium text-white shadow-sm hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">Explore Investor Pass <svg viewBox="0 0 24 24" class="size-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
                 </div>
             </div>
         </article>

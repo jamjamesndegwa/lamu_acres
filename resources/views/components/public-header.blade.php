@@ -9,7 +9,8 @@
     $deskEmail = is_string($deskEmail) && filter_var($deskEmail, FILTER_VALIDATE_EMAIL) ? $deskEmail : null;
     $findLandHref = route('find-land.index');
     $onHome = request()->routeIs('home');
-    $intelligenceHref = $onHome ? '#intelligence' : route('home').'#intelligence';
+    $intelligenceActive = request()->routeIs('investor-intelligence.*');
+    $intelligenceHref = route('investor-intelligence.index');
     $searchHref = $onHome ? '#home-search' : route('land.index');
     $exploreActive = request()->routeIs('land.*');
     $brokerPartnersActive = request()->routeIs('broker-partners')
@@ -38,7 +39,7 @@
                 </div>
             </details>
             <a @class([$linkClass, 'border-transparent']) href="{{ $findLandHref }}" @if (request()->routeIs('find-land.index')) aria-current="page" @endif>Find Land for Me</a>
-            <a @class([$linkClass, 'border-transparent']) href="{{ $intelligenceHref }}">Investor Intelligence</a>
+            <a @class([$linkClass, 'border-gold-500 font-medium text-gold-500' => $intelligenceActive, 'border-transparent' => ! $intelligenceActive]) href="{{ $intelligenceHref }}" @if ($intelligenceActive) aria-current="page" @endif>Investor Intelligence</a>
             <a @class([$linkClass, 'border-gold-500 font-medium text-gold-500' => $brokerPartnersActive, 'border-transparent' => ! $brokerPartnersActive]) href="{{ route('broker-partners') }}" @if ($brokerPartnersActive) aria-current="page" @endif>Broker Partners</a>
             <a @class([$linkClass, 'border-gold-500 font-medium text-gold-500' => $listPropertyActive, 'border-transparent' => ! $listPropertyActive]) href="{{ route('list-property') }}" @if ($listPropertyActive) aria-current="page" @endif>List Property</a>
             @if ($deskEmail)
@@ -77,7 +78,7 @@
                     <a href="{{ route('land.index') }}" @if ($exploreActive) aria-current="page" @endif>Explore Land</a>
                     <a href="{{ route('land.index', ['purpose' => 'lease']) }}">Lease Land</a>
                     <a href="{{ $findLandHref }}" @if (request()->routeIs('find-land.index')) aria-current="page" @endif>Find Land for Me</a>
-                    <a href="{{ $intelligenceHref }}">Investor Intelligence</a>
+                    <a href="{{ $intelligenceHref }}" @if ($intelligenceActive) aria-current="page" @endif>Investor Intelligence</a>
                     <a href="{{ route('broker-partners') }}" @if ($brokerPartnersActive) aria-current="page" @endif>Broker Partners</a>
                     <a href="{{ route('list-property') }}" @if ($listPropertyActive) aria-current="page" @endif>List Property</a>
                     @if ($deskEmail)

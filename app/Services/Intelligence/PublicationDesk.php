@@ -10,6 +10,7 @@ use App\Models\ResearchReport;
 use App\Models\User;
 use App\Services\Communications\MessageDesk;
 use App\Services\Research\CommitmentDesk;
+use App\Services\Research\WatchAlertContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -80,14 +81,21 @@ class PublicationDesk
 
     private function announceReport(ResearchReport $report): void
     {
+        $report->loadMissing(['localities', 'projects']);
+        $watcherIds = app(WatchAlertContext::class)->watcherUserIdsForReport($report);
+
         User::query()->whereHas('entitlements', function ($query): void {
             $query->where('code', Entitlement::INVESTOR_PASS)
                 ->where('status', Entitlement::STATUS_ACTIVE)
                 ->where(function ($query): void {
                     $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
                 });
-        })->each(function (User $user) use ($report): void {
+        })->each(function (User $user) use ($report, $watcherIds): void {
             if (! $user->hasActiveInvestorPass()) {
+                return;
+            }
+
+            if (in_array($user->id, $watcherIds, true)) {
                 return;
             }
 
@@ -95,7 +103,7 @@ class PublicationDesk
                 'name' => $user->name,
                 'title' => $report->title,
                 'reference' => $report->reference,
-                'summary' => $report->title.' is now available.',
+                'summary' => $report->summary ?: ($report->title.' is now available.'),
                 'url' => route('investor.reports.show', $report),
             ], 'report:'.$report->id);
         });

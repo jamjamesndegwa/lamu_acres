@@ -202,7 +202,7 @@ class MessageDesk
      */
     public function safeContext(array $context): array
     {
-        $allowed = ['name', 'title', 'reference', 'status', 'summary', 'url'];
+        $allowed = ['name', 'title', 'reference', 'status', 'summary', 'url', 'watch'];
         $safe = [];
 
         foreach ($allowed as $key) {
@@ -216,7 +216,7 @@ class MessageDesk
     {
         $text = $template;
 
-        foreach (['name', 'title', 'reference', 'status', 'summary', 'url'] as $key) {
+        foreach (['name', 'title', 'reference', 'status', 'summary', 'url', 'watch'] as $key) {
             $text = str_replace('{'.$key.'}', (string) ($context[$key] ?? ''), $text);
         }
 

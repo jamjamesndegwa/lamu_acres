@@ -206,29 +206,9 @@ class CommitmentDesk
 
     private function sendWatchEmail(User $user, Model $subject, string $deliveryKey): void
     {
-        $title = match (true) {
-            $subject instanceof ResearchReport => $subject->title,
-            $subject instanceof DevelopmentProject => $subject->name,
-            $subject instanceof PlanningRecord => $subject->title,
-            $subject instanceof ImageryComparison => $subject->area_label,
-            default => 'Research update',
-        };
+        $context = app(WatchAlertContext::class)->forEmail($user, $subject);
 
-        $url = match (true) {
-            $subject instanceof ResearchReport => route('investor.reports.show', $subject),
-            $subject instanceof DevelopmentProject => route('investor.projects.show', $subject),
-            $subject instanceof PlanningRecord => route('investor.planning.show', $subject),
-            $subject instanceof ImageryComparison => route('investor.imagery.show', $subject),
-            default => route('investor.archive.index'),
-        };
-
-        app(MessageDesk::class)->send($user, MessageEvent::ResearchWatchAlert, [
-            'name' => $user->name,
-            'title' => $title,
-            'reference' => method_exists($subject, 'getAttribute') ? (string) ($subject->reference ?? '') : '',
-            'summary' => $title.' is now available in your Investor workspace.',
-            'url' => $url,
-        ], 'watch:'.$deliveryKey, null, [MessageChannel::Email]);
+        app(MessageDesk::class)->send($user, MessageEvent::ResearchWatchAlert, $context, 'watch:'.$deliveryKey, null, [MessageChannel::Email]);
     }
 
     private function ensure(ResearchCommitment $commitment, CarbonInterface $anchor): void

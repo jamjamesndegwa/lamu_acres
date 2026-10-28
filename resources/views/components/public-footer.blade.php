@@ -18,7 +18,8 @@
         </nav>
         <nav aria-label="Investor intelligence">
             <p class="font-medium text-gold-500">Investor Intelligence</p>
-            <a class="mt-1.5 block hover:text-white" href="{{ route('intelligence.projects.index') }}">Developments</a>
+            <a class="mt-1.5 block hover:text-white" href="{{ route('investor-intelligence.index') }}">Overview</a>
+            <a class="mt-1 block hover:text-white" href="{{ route('intelligence.projects.index') }}">Developments</a>
             <a class="mt-1 block hover:text-white" href="{{ route('intelligence.imagery.index') }}">Imagery</a>
             <a class="mt-1 block hover:text-white" href="{{ route('intelligence.planning.index') }}">Planning</a>
             <a class="mt-1 block hover:text-white" href="{{ route('intelligence.prices') }}">Prices</a>
