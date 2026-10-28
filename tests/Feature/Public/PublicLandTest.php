@@ -79,9 +79,9 @@ class PublicLandTest extends TestCase
         $this->get('/land')
             ->assertOk()
             ->assertSee('Land in Lamu')
-            ->assertSee('Interactive area overview')
-            ->assertSee('data-shared-map', false)
-            ->assertSee('data-zoom="9"', false)
+            ->assertSee('Listing map')
+            ->assertSee('id="land-directory-map"', false)
+            ->assertSee('Green dots match the listings shown for your current filters.')
             ->assertDontSee('Overview map of the Lamu area')
             ->assertSee('Visible Shela plot')
             ->assertSeeInOrder(['<span class="flex-1">Shela</span>', '1 <span class="sr-only">published listing</span>'], false)
@@ -114,7 +114,9 @@ class PublicLandTest extends TestCase
         $this->get('/land?q=Shela')
             ->assertOk()
             ->assertSee('Shela lease holding')
-            ->assertDontSee('Manda sale block');
+            ->assertDontSee('Manda sale block')
+            ->assertSee('land-directory-map-markers', false)
+            ->assertSee('Shela lease holding', false);
 
         $this->get('/land/lamu')
             ->assertOk()

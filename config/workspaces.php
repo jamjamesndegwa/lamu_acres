@@ -71,7 +71,7 @@ return [
         ],
         'panels' => [
             ['title' => 'Explore land', 'description' => 'Published properties you can open.', 'route' => 'land.index'],
-            ['title' => 'Find land for me', 'description' => 'Tell us the area, size, and budget you want.', 'route' => 'buyer.sourcing.create'],
+            ['title' => 'Find land for me', 'description' => 'Tell us the area, size, and budget you want.', 'route' => 'buyer.sourcing.create', 'modal' => false],
             ['title' => 'Saved properties', 'description' => 'Land you have kept to review.', 'route' => 'buyer.saved.index'],
             ['title' => 'My enquiries', 'description' => 'Questions you have sent.', 'route' => 'buyer.enquiries.index'],
             ['title' => 'Site visits', 'description' => 'Visits that have been arranged.', 'route' => 'buyer.visits.index'],

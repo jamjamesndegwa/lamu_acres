@@ -18,7 +18,8 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('Explore Land in Lamu')
             ->assertSee('images/explore_land_hero_section.jpg', false)
             ->assertSee('id="workspace-sidebar"', false)
-            ->assertSee('Interactive area overview')
+            ->assertSee('Listing map')
+            ->assertSee('id="land-directory-map"', false)
             ->assertSee('No land has been published yet.');
     }
 
@@ -104,6 +105,19 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->assertStringContainsString('must-revalidate', $cacheControl);
 
         $this->actingAs($buyer)->get('/staff')->assertForbidden();
+    }
+
+    public function test_buyer_dashboard_find_land_link_opens_full_sourcing_create_page(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->get(route('buyer.dashboard'))
+            ->assertOk()
+            ->assertSee('Find land for me')
+            ->assertSee(route('buyer.sourcing.create'), false)
+            ->assertSee('data-turbo-frame="_top"', false);
+
+        $this->actingAs($buyer)->get(route('buyer.sourcing.create'))->assertOk()->assertSee('Submit search request');
     }
 
     public function test_a_person_with_two_workspaces_can_switch_and_cannot_open_a_third(): void

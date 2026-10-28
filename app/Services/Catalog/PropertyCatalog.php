@@ -45,6 +45,38 @@ class PropertyCatalog
     }
 
     /**
+     * Approximate public map points for every listing that matches the filters (not paginated).
+     *
+     * @return array<int, array{latitude: float, longitude: float, title: string, url: string}>
+     */
+    public function mapMarkers(array $filters, ?County $county = null, ?Locality $locality = null, int $limit = 300): array
+    {
+        return $this->query($filters, $county, $locality)
+            ->whereNotNull('public_latitude')
+            ->whereNotNull('public_longitude')
+            ->limit($limit)
+            ->get(['id', 'title', 'slug', 'public_latitude', 'public_longitude', 'county_id', 'locality_id'])
+            ->filter(function (Property $property): bool {
+                if ($property->public_latitude === null || $property->public_longitude === null) {
+                    return false;
+                }
+
+                $latitude = (float) $property->public_latitude;
+                $longitude = (float) $property->public_longitude;
+
+                return abs($latitude) <= 90 && abs($longitude) <= 180;
+            })
+            ->map(fn (Property $property): array => [
+                'latitude' => round((float) $property->public_latitude, 6),
+                'longitude' => round((float) $property->public_longitude, 6),
+                'title' => $property->title,
+                'url' => $property->publicUrl(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return Collection<int, Property>
      */
     public function featured(int $limit = 6): Collection

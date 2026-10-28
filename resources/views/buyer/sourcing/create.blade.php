@@ -1,14 +1,16 @@
-<x-workspace-layout heading="Request staff assistance">
-    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p class="max-w-3xl text-sm text-stone-600">Tell the Lamu Acres team where you want land, your budget and acreage, and any requirements. Your request stays in your buyer account for staff review and property matching.</p>
-        <a href="{{ route('buyer.sourcing.index') }}" class="text-sm font-medium text-lamu-800 underline">View your requests</a>
+<x-workspace-layout heading="Find land for me">
+    <div class="mt-4 max-w-4xl rounded-2xl border border-lamu-800 bg-lamu-900 px-5 py-4 text-white shadow-md">
+        <p class="text-sm leading-relaxed text-white/90">Place a pin where you want land, set a search radius, then tell us your budget and requirements. Staff use your map centre and radius to match published listings by location.</p>
     </div>
-    <x-step-list :steps="['Choose your preferred area', 'Describe your budget and requirements', 'Send your request to the team']" />
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 max-w-4xl">
+        <x-step-list :steps="['Drop a pin on the map', 'Set size, budget, and amenities', 'Send to the Lamu Acres team']" />
+        <a href="{{ route('buyer.sourcing.index') }}" class="text-sm font-medium text-lamu-800 underline">View your searches</a>
+    </div>
     @include('buyer.sourcing.partials.form', [
         'action' => route('buyer.sourcing.store'),
         'method' => 'POST',
-        'confirm' => 'Send this staff assistance request?',
-        'submit' => 'Request staff assistance',
+        'confirm' => 'Send this land search request?',
+        'submit' => 'Submit search request',
         'sourcingRequest' => null,
     ])
 </x-workspace-layout>

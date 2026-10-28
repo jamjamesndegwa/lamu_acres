@@ -22,8 +22,13 @@ class SourcingRequestTest extends FoundationTestCase
         $buyer = User::factory()->withRoles('buyer')->create();
 
         $this->actingAs($buyer)->get(route('buyer.sourcing.create'))->assertOk()
-            ->assertSee('Request staff assistance')
-            ->assertSee('View your requests')
+            ->assertSee('Place a pin where you want land')
+            ->assertSee('Submit search request')
+            ->assertSee('View your searches')
+            ->assertSee('id="sourcing-map"', false)
+            ->assertSee('type="hidden" name="centre_latitude"', false)
+            ->assertSee('id="radius_km_slider"', false)
+            ->assertDontSee('Drawn area')
             ->assertSee('name="location_label"', false)
             ->assertSee('name="notes"', false)
             ->assertSee('action="'.route('buyer.sourcing.store').'"', false)
@@ -53,7 +58,7 @@ class SourcingRequestTest extends FoundationTestCase
         $this->assertSame(Amenity::Water, $request->amenities()->where('required', true)->first()->amenity);
         $this->assertSame(Amenity::Electricity, $request->amenities()->where('required', false)->first()->amenity);
 
-        $this->actingAs($buyer)->get(route('buyer.sourcing.show', $request))->assertOk()->assertSee($request->reference)->assertSee('Exact matches');
+        $this->actingAs($buyer)->get(route('buyer.sourcing.show', $request))->assertOk()->assertSee($request->reference)->assertSee('Exact matches')->assertSee('Your requirements');
         $this->actingAs($other)->get(route('buyer.sourcing.show', $request))->assertForbidden();
         $this->actingAs($other)->get(route('buyer.sourcing.index'))->assertOk()->assertDontSee($request->reference);
         $this->actingAs(User::factory()->withRoles('broker')->create())->get(route('buyer.sourcing.index'))->assertForbidden();

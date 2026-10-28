@@ -23,6 +23,9 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'capability' => ['nullable', 'in:seller,broker'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'marketing_email_consent' => ['sometimes', 'boolean'],
+            'marketing_sms_consent' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -56,4 +56,9 @@ return [
 
     'subscription_expiry_reminder_days' => (int) env('SUBSCRIPTION_EXPIRY_REMINDER_DAYS', 7),
 
+    'campaigns' => [
+        'excluded_roles' => ['staff', 'admin', 'super_admin'],
+        'marketable_roles' => ['buyer', 'seller', 'broker'],
+    ],
+
 ];

@@ -27,7 +27,15 @@ class RegisterController extends Controller
 
     public function store(RegisterRequest $request, RoleAssigner $roles): RedirectResponse
     {
-        $user = User::query()->create($request->safe()->only(['name', 'email', 'password']));
+        $user = User::query()->create([
+            'name' => $request->validated('name'),
+            'email' => $request->validated('email'),
+            'password' => $request->validated('password'),
+            'phone' => $request->validated('phone'),
+            'notify_by_email' => true,
+            'marketing_email_consent' => $request->boolean('marketing_email_consent'),
+            'marketing_sms_consent' => $request->boolean('marketing_sms_consent'),
+        ]);
 
         $roles->assign($user, 'buyer');
 

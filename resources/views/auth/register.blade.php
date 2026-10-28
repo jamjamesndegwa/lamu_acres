@@ -34,6 +34,27 @@
             @enderror
         </div>
         <div>
+            <label for="phone" class="block text-sm font-medium">Phone <span class="font-normal text-stone-500">(optional, for SMS updates)</span></label>
+            <input id="phone" name="phone" type="text" value="{{ old('phone') }}" autocomplete="tel" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
+            @error('phone')
+                <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
+            @enderror
+        </div>
+        <fieldset class="space-y-3 rounded-xl border border-sand-200 bg-sand-50/80 p-4">
+            <legend class="px-1 text-sm font-semibold text-lamu-900">Stay in touch</legend>
+            <p class="text-xs text-stone-600">Optional. You can change these anytime in your profile. Account emails (applications, offers, visits) still send when needed.</p>
+            <input type="hidden" name="marketing_email_consent" value="0">
+            <label class="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="marketing_email_consent" value="1" @checked(old('marketing_email_consent')) class="mt-1">
+                <span>Email me Lamu Acres news and land opportunities</span>
+            </label>
+            <input type="hidden" name="marketing_sms_consent" value="0">
+            <label class="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="marketing_sms_consent" value="1" @checked(old('marketing_sms_consent')) class="mt-1">
+                <span>SMS me Lamu Acres news and land opportunities (requires a phone number)</span>
+            </label>
+        </fieldset>
+        <div>
             <label for="password" class="block text-sm font-medium">Password</label>
             <input id="password" name="password" type="password" required autocomplete="new-password" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
             @error('password')

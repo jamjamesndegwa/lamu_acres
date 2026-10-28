@@ -352,3 +352,17 @@ body:has(.public-mobile-menu[open]) {
         font-size: 9px;
     }
 }
+
+/* Leaflet tile images must ignore global responsive img rules. */
+.leaflet-container img.leaflet-tile,
+.leaflet-container img.leaflet-marker-icon,
+.leaflet-container img.leaflet-marker-shadow {
+    max-width: none !important;
+    max-height: none !important;
+}
+
+#land-directory-map.leaflet-container {
+    width: 100%;
+    min-height: 16rem;
+    z-index: 0;
+}

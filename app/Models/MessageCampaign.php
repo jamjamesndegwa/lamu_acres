@@ -7,6 +7,7 @@ use App\Enums\MessageChannel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
@@ -44,5 +45,10 @@ class MessageCampaign extends Model
     public function deliveries(): HasMany
     {
         return $this->hasMany(MessageDelivery::class);
+    }
+
+    public function recipients(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'message_campaign_recipients')->withTimestamps();
     }
 }

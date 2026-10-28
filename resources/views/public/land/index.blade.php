@@ -29,9 +29,10 @@
     $mapPlace = $locality ?? $county ?? $counties->firstWhere('slug', 'lamu');
     $hasAreaPoint = $mapPlace?->latitude !== null && $mapPlace?->longitude !== null
         && abs((float) $mapPlace->latitude) <= 90 && abs((float) $mapPlace->longitude) <= 180;
-    $mapLatitude = $hasAreaPoint ? (float) $mapPlace->latitude : -2.27;
-    $mapLongitude = $hasAreaPoint ? (float) $mapPlace->longitude : 40.90;
-    $mapLabel = $hasAreaPoint ? $mapPlace->name.' area overview' : 'Lamu area overview';
+    $mapFallbackLatitude = $hasAreaPoint ? (float) $mapPlace->latitude : -2.27;
+    $mapFallbackLongitude = $hasAreaPoint ? (float) $mapPlace->longitude : 40.90;
+    $mapFallbackZoom = $locality && $hasAreaPoint ? 12 : 9;
+    $mapMarkerCount = count($mapMarkers ?? []);
     $resultCount = $listings->total();
     $breadcrumbs = [['label' => 'Home', 'href' => route('home')]];
     $breadcrumbs[] = $areaName
@@ -60,8 +61,8 @@
         </div>
     </section>
 
-    <div class="mx-auto grid w-full max-w-[1440px] gap-4 px-4 py-4 sm:px-6 lg:w-[90%] lg:grid-cols-[230px_minmax(0,1fr)] lg:px-0 xl:grid-cols-[230px_minmax(0,1fr)_280px]">
-        <div class="contents lg:sticky lg:top-[60px] lg:row-span-2 lg:block lg:max-h-[calc(100dvh-72px)] lg:space-y-3 lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin] xl:row-span-1">
+    <div class="mx-auto grid w-full max-w-[1440px] gap-4 px-4 py-4 sm:px-6 lg:w-[90%] lg:grid-cols-[230px_minmax(0,1fr)_minmax(260px,320px)] lg:px-0">
+        <div class="contents lg:sticky lg:top-[60px] lg:col-start-1 lg:row-span-2 lg:block lg:max-h-[calc(100dvh-72px)] lg:space-y-3 lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin]">
             <div class="sticky top-[65px] z-20 order-1 -mx-4 flex items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:hidden">
                 <button type="button" data-dialog-open="land-filters-dialog" aria-controls="land-filters-dialog" aria-expanded="false" class="inline-flex h-10 items-center gap-2 rounded-md border border-lamu-800 bg-white px-4 text-sm font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-800">
                     <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M3 5h14v2H3V5Zm3 4h8v2H6V9Zm2 4h4v2H8v-2Z" /></svg>
@@ -89,7 +90,7 @@
             @include('public.land.locations', ['headingId' => 'land-locations-heading', 'navClass' => 'hidden rounded-lg border border-sand-200 bg-white p-3 shadow-sm shadow-stone-900/5 lg:block'])
         </div>
 
-        <section aria-labelledby="land-results-heading" class="order-2 min-w-0 lg:order-none">
+        <section aria-labelledby="land-results-heading" class="order-2 min-w-0 lg:order-none lg:col-start-2">
             <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
                 <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                     <div>
@@ -180,14 +181,24 @@
             @endif
         </section>
 
-        <aside class="order-3 grid content-start gap-3 sm:grid-cols-2 lg:order-none lg:col-start-2 xl:sticky xl:top-[60px] xl:col-start-3 xl:max-h-[calc(100dvh-72px)] xl:grid-cols-1 xl:self-start xl:overflow-y-auto xl:[scrollbar-width:thin]" aria-label="Area overview and assistance">
-            <section class="relative z-0 overflow-hidden rounded-lg border border-sand-200 bg-white p-3 shadow-sm shadow-stone-900/5" aria-label="Interactive area overview">
-                <h2 class="text-xs font-semibold text-lamu-900">{{ $mapLabel }}</h2>
-                <x-map-viewer :latitude="$mapLatitude" :longitude="$mapLongitude" :zoom="$locality && $hasAreaPoint ? 12 : 9" />
-                <p class="mt-2 text-xs text-stone-600">Pan or zoom to explore. This is an area guide, not a parcel boundary.</p>
+        <aside class="order-3 grid content-start gap-3 lg:order-none lg:col-start-3 lg:row-start-1 lg:sticky lg:top-[60px] lg:max-h-[calc(100dvh-72px)] lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin] sm:grid-cols-2 lg:grid-cols-1" aria-label="Listing map and assistance">
+            <section class="relative z-0 overflow-hidden rounded-lg border border-sand-200 bg-white p-3 shadow-sm shadow-stone-900/5 sm:col-span-2 lg:col-span-1" aria-labelledby="land-directory-map-heading">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="land-directory-map-heading" class="text-xs font-semibold uppercase tracking-wide text-lamu-900">Listing map</h2>
+                    <span class="rounded-full bg-lamu-100 px-2 py-0.5 text-[0.65rem] font-semibold text-lamu-900">{{ $mapMarkerCount }} on map</span>
+                </div>
+                <p class="mt-1 text-xs text-stone-600">Green dots match the listings shown for your current filters.</p>
+                <x-land-directory-map
+                    class="mt-3"
+                    :markers="$mapMarkers"
+                    :count="$resultCount"
+                    :fallback-latitude="$mapFallbackLatitude"
+                    :fallback-longitude="$mapFallbackLongitude"
+                    :fallback-zoom="$mapFallbackZoom"
+                />
             </section>
 
-            <div class="flex gap-3 rounded-lg border border-gold-500/30 bg-[#f8f1e4] p-3">
+            <div class="flex gap-3 rounded-lg border border-gold-500/30 bg-[#f8f1e4] p-3 sm:col-span-2 lg:col-span-1">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gold-500/50 text-gold-500" aria-hidden="true">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" stroke-linejoin="round" /></svg>
                 </span>

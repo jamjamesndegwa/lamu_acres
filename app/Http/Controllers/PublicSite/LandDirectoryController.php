@@ -37,6 +37,7 @@ class LandDirectoryController extends Controller
 
         return view('public.land.index', [
             'listings' => $listings->through(fn (Property $property): array => $publicListing->card($property)),
+            'mapMarkers' => $catalog->mapMarkers($filters, $countyModel, $localityModel),
             'filterChips' => $appliedFilters->chips($request, $filters, $countyModel, $localityModel),
             'clearFiltersUrl' => $appliedFilters->clearUrl($request),
             'filters' => $filters,

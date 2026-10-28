@@ -59,7 +59,13 @@ class SourcingRequestController extends Controller
         $sourcingRequest->load([
             'amenities',
             'activities' => fn ($query) => $query->where('visible_to_buyer', true),
-            'matches.property',
+            'matches.property.areaCounty:id,name,slug',
+            'matches.property.areaLocality:id,name,slug,county_id',
+            'matches.property.media' => fn ($query) => $query
+                ->where('kind', 'photo')
+                ->whereNotNull('public_path')
+                ->orderByDesc('is_cover')
+                ->orderBy('position'),
         ]);
 
         return view('buyer.sourcing.show', [

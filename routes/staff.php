@@ -254,6 +254,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::get('/messages/campaigns/create', [CommunicationsController::class, 'createCampaign'])->name('messages.campaigns.create');
             Route::post('/messages/campaigns', [CommunicationsController::class, 'storeCampaign'])->name('messages.campaigns.store');
             Route::get('/messages/campaigns/{messageCampaign}', [CommunicationsController::class, 'showCampaign'])->name('messages.campaigns.show');
+            Route::put('/messages/campaigns/{messageCampaign}/recipients', [CommunicationsController::class, 'updateCampaignRecipients'])->name('messages.campaigns.recipients.update');
             Route::post('/messages/campaigns/{messageCampaign}/queue', [CommunicationsController::class, 'queueCampaign'])->name('messages.campaigns.queue');
         });
 

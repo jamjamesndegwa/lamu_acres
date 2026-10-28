@@ -13,71 +13,81 @@
     $infrastructureAmenities = collect($amenities)->filter(fn ($amenity) => in_array($amenity->value, $infrastructure, true));
 @endphp
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" data-leaflet="true">
 
-<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-confirm="{{ $confirm }}" class="mt-6 max-w-3xl space-y-8">
+<form method="POST" action="{{ $action }}" data-turbo-frame="_top" data-confirm="{{ $confirm }}" class="mt-6 max-w-4xl space-y-8">
     @csrf
     @if (($method ?? 'POST') !== 'POST')
         @method($method)
     @endif
 
-    <section class="space-y-4">
-        <h2 class="font-semibold text-lamu-900">Location</h2>
-        <p class="text-sm text-stone-600">Click the map to place the search, set a radius, or draw an area. The same fields are sent to the sourcing request.</p>
-        <div id="sourcing-map" class="h-80 overflow-hidden rounded-2xl border border-sand-200"></div>
-        <div class="flex flex-wrap gap-2">
-            <button type="button" id="map-mode-radius" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Radius</button>
-            <button type="button" id="map-mode-area" class="rounded-full border border-sand-200 px-4 py-2 text-sm font-medium">Draw area</button>
-            <button type="button" id="map-clear-area" class="rounded-full border border-sand-200 px-4 py-2 text-sm font-medium">Clear area</button>
-        </div>
-        @if ($places !== [])
+    <section class="overflow-hidden rounded-2xl border border-sand-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-                <label for="place-picker" class="block text-sm font-medium">Recorded place</label>
+                <h2 class="home-serif text-lg font-semibold text-lamu-900">Where do you want land?</h2>
+                <p class="mt-1 max-w-2xl text-sm text-stone-700">Drop a pin on the map and set how far out to search. Coordinates are saved automatically — you do not need to type latitude or longitude.</p>
+            </div>
+            <button type="button" id="map-clear-pin" class="rounded-full border border-sand-300 bg-white px-4 py-2 text-sm font-medium text-lamu-900 hover:border-lamu-700">Clear pin</button>
+        </div>
+
+        <p id="map-location-summary" role="status" class="mt-4 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm text-stone-800">
+            Tap the map to place your search pin.
+        </p>
+
+        <div id="sourcing-map" class="mt-4 h-[22rem] overflow-hidden rounded-2xl border border-sand-200 ring-1 ring-sand-100 sm:h-[26rem]"></div>
+
+        @if ($places !== [])
+            <div class="mt-5">
+                <label for="place-picker" class="block text-sm font-medium text-lamu-900">Jump to a known place</label>
                 @php
                     $chosenPlace = trim((string) old('location_label', $current?->location_label ?? $profileDefaults?->preferred_locality));
                 @endphp
-                <select id="place-picker" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
-                    <option value="">Choose a recorded place, or click the map</option>
+                <select id="place-picker" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2 shadow-sm">
+                    <option value="">Choose a place, or tap the map</option>
                     @foreach ($places as $place)
                         @php($placeLabel = $place->county ? $place->name.', '.$place->county->name : $place->name)
                         <option value="{{ $placeLabel }}" data-lat="{{ $place->latitude }}" data-lng="{{ $place->longitude }}" @selected(strcasecmp($chosenPlace, $placeLabel) === 0 || strcasecmp($chosenPlace, $place->name) === 0)>{{ $placeLabel }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-stone-500">Choosing a place sets the name and the map pin. It does not draw a boundary.</p>
             </div>
         @endif
-        <div>
-            <label for="location_label" class="block text-sm font-medium">Place name</label>
-            <input id="location_label" name="location_label" value="{{ old('location_label', $current?->location_label ?? $profileDefaults?->preferred_locality) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="Shela, Lamu">
+
+        <div class="mt-4">
+            <label for="location_label" class="block text-sm font-medium text-lamu-900">Area name</label>
+            <input id="location_label" name="location_label" value="{{ old('location_label', $current?->location_label ?? $profileDefaults?->preferred_locality) }}" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2 shadow-sm" placeholder="e.g. Shela, Mokowe, Lamu Island">
             @error('location_label') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
         </div>
-        <div class="grid gap-4 sm:grid-cols-3">
-            <div>
-                <label for="centre_latitude" class="block text-sm font-medium">Latitude</label>
-                <input id="centre_latitude" name="centre_latitude" value="{{ old('centre_latitude', $current?->centre_latitude) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-                @error('centre_latitude') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+
+        <div class="mt-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <label for="radius_km_slider" class="text-sm font-medium text-lamu-900">Search radius</label>
+                <span id="radius_km_display" class="rounded-full bg-lamu-900 px-3 py-1 text-xs font-semibold text-white">5 km</span>
             </div>
-            <div>
-                <label for="centre_longitude" class="block text-sm font-medium">Longitude</label>
-                <input id="centre_longitude" name="centre_longitude" value="{{ old('centre_longitude', $current?->centre_longitude) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-                @error('centre_longitude') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label for="radius_km" class="block text-sm font-medium">Radius (km)</label>
-                <input id="radius_km" name="radius_km" value="{{ old('radius_km', $current?->radius_km) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
-                @error('radius_km') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-            </div>
+            <input
+                id="radius_km_slider"
+                type="range"
+                min="0.5"
+                max="150"
+                step="0.5"
+                value="{{ old('radius_km', $current?->radius_km ?? 5) }}"
+                class="mt-3 w-full accent-lamu-900"
+                @disabled(! old('centre_latitude', $current?->centre_latitude))
+            >
+            <p class="mt-2 text-xs text-stone-600">Published listings within this distance of your pin are considered for matching.</p>
+            @error('radius_km') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
         </div>
-        <div>
-            <label for="polygon_text" class="block text-sm font-medium">Drawn area</label>
-            <textarea id="polygon_text" name="polygon_text" rows="4" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2" placeholder="-2.2800, 40.8900">{{ $polygonText }}</textarea>
-            <p class="mt-1 text-xs text-stone-500">One latitude, longitude pair per line. Three points close the area.</p>
-            @error('polygon') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
-        </div>
+
+        <input type="hidden" name="centre_latitude" id="centre_latitude" value="{{ old('centre_latitude', $current?->centre_latitude) }}">
+        <input type="hidden" name="centre_longitude" id="centre_longitude" value="{{ old('centre_longitude', $current?->centre_longitude) }}">
+        <input type="hidden" name="radius_km" id="radius_km" value="{{ old('radius_km', $current?->radius_km ?? '') }}">
+        <textarea id="polygon_text" name="polygon_text" class="hidden" aria-hidden="true" tabindex="-1">{{ $polygonText }}</textarea>
+        @error('centre_latitude') <p class="mt-2 text-sm text-red-700">{{ $message }}</p> @enderror
+        @error('centre_longitude') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
+        @error('polygon') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
     </section>
 
-    <section class="space-y-4">
-        <h2 class="font-semibold text-lamu-900">Size and budget</h2>
+    <section class="space-y-4 rounded-2xl border border-sand-200 bg-white p-5 shadow-sm">
+        <h2 class="home-serif text-lg font-semibold text-lamu-900">Size and budget</h2>
         <div class="grid gap-4 sm:grid-cols-3">
             <div>
                 <label for="min_acreage" class="block text-sm font-medium">Minimum acreage</label>
@@ -200,87 +210,132 @@
         const latitude = document.getElementById('centre_latitude');
         const longitude = document.getElementById('centre_longitude');
         const radius = document.getElementById('radius_km');
+        const radiusSlider = document.getElementById('radius_km_slider');
+        const radiusDisplay = document.getElementById('radius_km_display');
+        const summary = document.getElementById('map-location-summary');
         const polygon = document.getElementById('polygon_text');
+        const clearPin = document.getElementById('map-clear-pin');
+        const picker = document.getElementById('place-picker');
+        const label = document.getElementById('location_label');
         const startLat = Number(latitude.value) || -2.269;
         const startLng = Number(longitude.value) || 40.902;
-        const map = L.map(mapElement).setView([startLat, startLng], 12);
+        const map = L.map(mapElement, { scrollWheelZoom: true }).setView([startLat, startLng], latitude.value ? 12 : 11);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
+            attribution: '&copy; OpenStreetMap',
         }).addTo(map);
 
-        let mode = 'radius';
         let marker = null;
         let circle = null;
-        let shape = null;
-        let points = [];
 
-        function readPolygon() {
-            return polygon.value.split(/\n/).map(function (line) {
-                const parts = line.trim().split(/[,\s]+/);
-                if (parts.length < 2 || parts[0] === '' || parts[1] === '') {
-                    return null;
-                }
-                return L.latLng(Number(parts[0]), Number(parts[1]));
-            }).filter(Boolean);
+        function hasPin() {
+            return latitude.value !== '' && longitude.value !== '';
         }
 
-        function writePolygon() {
-            polygon.value = points.map(function (point) {
-                return point.lat.toFixed(6) + ', ' + point.lng.toFixed(6);
-            }).join('\n');
+        function currentRadiusKm() {
+            const value = Number(radiusSlider.value);
+            return Number.isNaN(value) || value <= 0 ? 5 : value;
+        }
+
+        function syncRadiusFields() {
+            const kilometres = currentRadiusKm();
+            radius.value = kilometres.toFixed(1).replace(/\.0$/, '');
+            radiusDisplay.textContent = kilometres + ' km';
+        }
+
+        function updateSummary() {
+            if (! hasPin()) {
+                summary.textContent = 'Tap the map to place your search pin.';
+                summary.classList.remove('border-lamu-300', 'bg-lamu-50');
+                summary.classList.add('border-sand-200', 'bg-sand-50');
+                radiusSlider.disabled = true;
+                return;
+            }
+
+            radiusSlider.disabled = false;
+            syncRadiusFields();
+            const place = label.value.trim() || 'Selected map point';
+            summary.textContent = 'Searching within ' + radiusDisplay.textContent + ' of ' + place + '.';
+            summary.classList.remove('border-sand-200', 'bg-sand-50');
+            summary.classList.add('border-lamu-300', 'bg-lamu-50');
+        }
+
+        function setPin(lat, lng, options) {
+            options = options || {};
+            latitude.value = lat.toFixed(6);
+            longitude.value = lng.toFixed(6);
+            if (options.clearPolygon !== false) {
+                polygon.value = '';
+            }
+            if (! radius.value) {
+                radiusSlider.value = '5';
+            }
+            syncRadiusFields();
+            draw();
+            updateSummary();
+            if (options.moveMap !== false) {
+                map.setView([lat, lng], Math.max(map.getZoom(), 12));
+            }
+        }
+
+        function clearPinSelection() {
+            latitude.value = '';
+            longitude.value = '';
+            polygon.value = '';
+            draw();
+            updateSummary();
         }
 
         function draw() {
             if (marker) {
                 map.removeLayer(marker);
+                marker = null;
             }
             if (circle) {
                 map.removeLayer(circle);
+                circle = null;
             }
-            if (shape) {
-                map.removeLayer(shape);
-            }
+
             const lat = Number(latitude.value);
             const lng = Number(longitude.value);
-            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                marker = L.marker([lat, lng]).addTo(map);
-                const kilometres = Number(radius.value);
-                if (!Number.isNaN(kilometres) && kilometres > 0) {
-                    circle = L.circle([lat, lng], { radius: kilometres * 1000, color: '#143028' }).addTo(map);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                return;
+            }
+
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            marker.on('dragend', function () {
+                const position = marker.getLatLng();
+                setPin(position.lat, position.lng, { moveMap: false, clearPolygon: true });
+                const near = nearestPlace(position.lat, position.lng);
+                if (near && picker) {
+                    picker.value = near.value;
+                    label.value = near.value;
+                    updateSummary();
                 }
-            }
-            if (points.length > 0) {
-                shape = L.polygon(points, { color: '#a68548' }).addTo(map);
-            }
+            });
+
+            const kilometres = currentRadiusKm();
+            circle = L.circle([lat, lng], {
+                radius: kilometres * 1000,
+                color: '#143028',
+                weight: 2,
+                fillColor: '#245744',
+                fillOpacity: 0.15,
+            }).addTo(map);
+            map.fitBounds(circle.getBounds(), { padding: [24, 24], maxZoom: 14 });
         }
 
         map.on('click', function (event) {
-            if (mode === 'area') {
-                points.push(event.latlng);
-                writePolygon();
-            } else {
-                latitude.value = event.latlng.lat.toFixed(6);
-                longitude.value = event.latlng.lng.toFixed(6);
-                if (!radius.value) {
-                    radius.value = '5';
-                }
-                const near = nearestPlace(event.latlng.lat, event.latlng.lng);
-                if (near && label) {
-                    picker.value = near.value;
-                    label.value = near.value;
-                }
+            setPin(event.latlng.lat, event.latlng.lng);
+            const near = nearestPlace(event.latlng.lat, event.latlng.lng);
+            if (near) {
+                picker.value = near.value;
+                label.value = near.value;
+            } else if (! label.value.trim()) {
+                label.value = 'Map selection';
             }
-            draw();
+            updateSummary();
         });
 
-        document.getElementById('map-mode-radius').addEventListener('click', function () {
-            mode = 'radius';
-        });
-        document.getElementById('map-mode-area').addEventListener('click', function () {
-            mode = 'area';
-        });
-        const picker = document.getElementById('place-picker');
-        const label = document.getElementById('location_label');
         function placeDistance(lat1, lng1, lat2, lng2) {
             const toRad = function (value) { return value * Math.PI / 180; };
             const dLat = toRad(lat2 - lat1);
@@ -288,6 +343,7 @@
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
             return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
         }
+
         function nearestPlace(lat, lng) {
             if (!picker) {
                 return null;
@@ -306,6 +362,7 @@
             });
             return best;
         }
+
         function selectNamedPlace() {
             if (!picker || !label) {
                 return;
@@ -322,6 +379,7 @@
                 picker.value = match.value;
             }
         }
+
         if (picker) {
             picker.addEventListener('change', function () {
                 const option = picker.selectedOptions[0];
@@ -329,33 +387,32 @@
                     return;
                 }
                 label.value = option.value;
-                latitude.value = Number(option.dataset.lat).toFixed(6);
-                longitude.value = Number(option.dataset.lng).toFixed(6);
-                if (!radius.value) {
-                    radius.value = '5';
-                }
-                mode = 'radius';
-                draw();
-                map.setView([Number(option.dataset.lat), Number(option.dataset.lng)], 12);
+                setPin(Number(option.dataset.lat), Number(option.dataset.lng));
+                updateSummary();
             });
         }
-        document.getElementById('map-clear-area').addEventListener('click', function () {
-            points = [];
-            polygon.value = '';
+
+        radiusSlider.addEventListener('input', function () {
+            syncRadiusFields();
             draw();
-        });
-        [latitude, longitude, radius, polygon].forEach(function (field) {
-            field.addEventListener('change', function () {
-                points = readPolygon();
-                draw();
-            });
+            updateSummary();
         });
 
-        points = readPolygon();
+        if (label) {
+            label.addEventListener('input', updateSummary);
+        }
+
+        if (clearPin) {
+            clearPin.addEventListener('click', clearPinSelection);
+        }
+
+        if (radius.value) {
+            radiusSlider.value = radius.value;
+        }
         selectNamedPlace();
-        if (picker && !picker.value && latitude.value && longitude.value) {
+        if (picker && !picker.value && hasPin()) {
             const near = nearestPlace(Number(latitude.value), Number(longitude.value));
-            if (near && label) {
+            if (near) {
                 picker.value = near.value;
                 if (!label.value) {
                     label.value = near.value;
@@ -363,6 +420,8 @@
             }
         }
         draw();
+        updateSummary();
+
         function refreshMap() {
             map.invalidateSize();
         }

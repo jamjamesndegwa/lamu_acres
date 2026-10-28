@@ -38,7 +38,7 @@ class BulkCommunicationsTest extends FoundationTestCase
         ]);
 
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
-        $optedIn = User::factory()->create([
+        $optedIn = User::factory()->withRoles('buyer')->create([
             'phone' => '0712000333',
             'marketing_sms_consent' => true,
         ]);
@@ -48,6 +48,7 @@ class BulkCommunicationsTest extends FoundationTestCase
         ]);
 
         $campaign = app(CampaignDesk::class)->create($staff, MessageChannel::Sms, 'New plots', 'Visit Lamu Acres this week.');
+        app(CampaignDesk::class)->syncRecipients($campaign, [$optedIn->id]);
         app(CampaignDesk::class)->queue($campaign);
 
         DispatchMessageCampaign::dispatchSync($campaign->id);
@@ -107,12 +108,13 @@ class BulkCommunicationsTest extends FoundationTestCase
         Mail::fake();
 
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
-        $buyer = User::factory()->create([
+        $buyer = User::factory()->withRoles('buyer')->create([
             'notify_by_email' => true,
             'marketing_email_consent' => true,
         ]);
 
         $campaign = app(CampaignDesk::class)->create($staff, MessageChannel::Email, 'Weekly digest', 'Fresh listings are live.');
+        app(CampaignDesk::class)->syncRecipients($campaign, [$buyer->id]);
         app(CampaignDesk::class)->queue($campaign);
         DispatchMessageCampaign::dispatchSync($campaign->id);
 
@@ -121,5 +123,99 @@ class BulkCommunicationsTest extends FoundationTestCase
 
         DispatchMessageCampaign::dispatchSync($campaign->id);
         $this->assertSame(1, MessageDelivery::query()->where('user_id', $buyer->id)->count());
+    }
+
+    public function test_staff_select_recipients_on_draft_campaign_before_queueing(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        $included = User::factory()->withRoles('buyer')->create([
+            'notify_by_email' => true,
+            'marketing_email_consent' => true,
+        ]);
+        User::factory()->create([
+            'notify_by_email' => true,
+            'marketing_email_consent' => true,
+        ]);
+
+        $campaign = app(CampaignDesk::class)->create($staff, MessageChannel::Email, 'Selected only', 'Hello selected buyers.');
+
+        $this->actingAs($staff)
+            ->get(route('staff.messages.campaigns.show', $campaign))
+            ->assertOk()
+            ->assertSee('Select recipients')
+            ->assertSee($included->email);
+
+        $this->actingAs($staff)
+            ->get(route('staff.messages.campaigns.create'))
+            ->assertOk()
+            ->assertSee('Select recipients');
+
+        $this->actingAs($staff)
+            ->put(route('staff.messages.campaigns.recipients.update', $campaign), [
+                'recipient_ids' => [$included->id],
+            ])
+            ->assertRedirect(route('staff.messages.campaigns.show', $campaign));
+
+        $this->assertSame(1, $campaign->fresh()->recipients()->count());
+
+        $this->actingAs($staff)
+            ->post(route('staff.messages.campaigns.queue', $campaign))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $campaign->fresh()->recipient_count);
+    }
+
+    public function test_queueing_without_recipients_is_rejected(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        $campaign = app(CampaignDesk::class)->create($staff, MessageChannel::Email, 'Nobody', 'Hello');
+
+        $this->actingAs($staff)
+            ->post(route('staff.messages.campaigns.queue', $campaign))
+            ->assertSessionHasErrors('recipient_ids');
+    }
+
+    public function test_campaign_audience_excludes_staff_and_requires_marketing_consent(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        User::factory()->withRoles('buyer')->create([
+            'marketing_email_consent' => false,
+            'notify_by_email' => true,
+        ]);
+        $optedIn = User::factory()->withRoles('buyer')->create([
+            'marketing_email_consent' => true,
+            'notify_by_email' => true,
+        ]);
+        User::factory()->withRoles('super_admin')->create([
+            'marketing_email_consent' => true,
+            'notify_by_email' => true,
+        ]);
+
+        $audience = app(CampaignDesk::class)->audienceForSelection(MessageChannel::Email);
+
+        $this->assertSame([$optedIn->id], $audience->pluck('id')->all());
+
+        $this->actingAs($staff)
+            ->get(route('staff.messages.campaigns.create'))
+            ->assertOk()
+            ->assertSee($optedIn->email)
+            ->assertDontSee('admin@lamuacres.test');
+    }
+
+    public function test_registration_can_store_marketing_consent(): void
+    {
+        $this->post(route('register'), [
+            'name' => 'Consent Buyer',
+            'email' => 'consent-buyer@example.test',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'marketing_email_consent' => '1',
+        ])->assertRedirect(route('buyer.dashboard'));
+
+        $user = User::query()->where('email', 'consent-buyer@example.test')->firstOrFail();
+        $this->assertTrue($user->marketing_email_consent);
+        $this->assertTrue($user->notify_by_email);
+        $this->assertTrue($user->hasRole('buyer'));
     }
 }
