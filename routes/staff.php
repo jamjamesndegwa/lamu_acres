@@ -153,6 +153,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::put('/projects/{project}', [DevelopmentProjectController::class, 'update'])->name('projects.update');
             Route::post('/projects/{project}/submission', [DevelopmentProjectController::class, 'submit'])->name('projects.submit');
             Route::post('/projects/{project}/publication', [DevelopmentProjectController::class, 'publish'])->name('projects.publish');
+            Route::post('/projects/{project}/withdrawal', [DevelopmentProjectController::class, 'withdraw'])->name('projects.withdraw');
             Route::post('/projects/{project}/milestones', [DevelopmentProjectController::class, 'milestone'])->name('projects.milestone');
             Route::post('/projects/{project}/evidence', [DevelopmentProjectController::class, 'evidence'])->name('projects.evidence');
 
@@ -163,11 +164,13 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::put('/imagery/scenes/{scene}', [ImageryController::class, 'updateScene'])->name('imagery.scenes.update');
             Route::post('/imagery/scenes/{scene}/submission', [ImageryController::class, 'submitScene'])->name('imagery.scenes.submit');
             Route::post('/imagery/scenes/{scene}/publication', [ImageryController::class, 'publishScene'])->name('imagery.scenes.publish');
+            Route::post('/imagery/scenes/{scene}/withdrawal', [ImageryController::class, 'withdrawScene'])->name('imagery.scenes.withdraw');
             Route::get('/imagery/comparisons/create', [ImageryController::class, 'createComparison'])->name('imagery.comparisons.create');
             Route::post('/imagery/comparisons', [ImageryController::class, 'storeComparison'])->name('imagery.comparisons.store');
             Route::get('/imagery/comparisons/{comparison}', [ImageryController::class, 'showComparison'])->name('imagery.comparisons.show');
             Route::post('/imagery/comparisons/{comparison}/submission', [ImageryController::class, 'submitComparison'])->name('imagery.comparisons.submit');
             Route::post('/imagery/comparisons/{comparison}/publication', [ImageryController::class, 'publishComparison'])->name('imagery.comparisons.publish');
+            Route::post('/imagery/comparisons/{comparison}/withdrawal', [ImageryController::class, 'withdrawComparison'])->name('imagery.comparisons.withdraw');
 
             Route::get('/planning', [PlanningRecordController::class, 'index'])->name('planning.index');
             Route::get('/planning/create', [PlanningRecordController::class, 'create'])->name('planning.create');
@@ -176,11 +179,13 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::put('/planning/{record}', [PlanningRecordController::class, 'update'])->name('planning.update');
             Route::post('/planning/{record}/submission', [PlanningRecordController::class, 'submit'])->name('planning.submit');
             Route::post('/planning/{record}/publication', [PlanningRecordController::class, 'publish'])->name('planning.publish');
+            Route::post('/planning/{record}/withdrawal', [PlanningRecordController::class, 'withdraw'])->name('planning.withdraw');
 
             Route::get('/prices', [VerifiedSaleController::class, 'index'])->name('prices.index');
             Route::post('/prices/sales', [VerifiedSaleController::class, 'store'])->name('prices.sales.store');
             Route::post('/prices/sales/{sale}/submission', [VerifiedSaleController::class, 'submit'])->name('prices.sales.submit');
             Route::post('/prices/sales/{sale}/publication', [VerifiedSaleController::class, 'publish'])->name('prices.sales.publish');
+            Route::post('/prices/sales/{sale}/withdrawal', [VerifiedSaleController::class, 'withdraw'])->name('prices.sales.withdraw');
 
             Route::get('/reports', [ResearchReportController::class, 'index'])->name('reports.index');
             Route::get('/reports/create', [ResearchReportController::class, 'create'])->name('reports.create');
@@ -190,6 +195,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::put('/reports/{report}', [ResearchReportController::class, 'update'])->name('reports.update');
             Route::post('/reports/{report}/submission', [ResearchReportController::class, 'submit'])->name('reports.submit');
             Route::post('/reports/{report}/publication', [ResearchReportController::class, 'publish'])->name('reports.publish');
+            Route::post('/reports/{report}/withdrawal', [ResearchReportController::class, 'withdraw'])->name('reports.withdraw');
 
             Route::get('/research/compliance', [ResearchCommitmentController::class, 'index'])->name('commitments.index');
             Route::post('/research/assignments/{assignment}/report', [ResearchCommitmentController::class, 'fulfillReport'])->name('commitments.report');

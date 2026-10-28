@@ -39,6 +39,7 @@
             @if ($scene->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
                 <form method="POST" action="{{ route('staff.imagery.scenes.publish', $scene) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish scene</button></form>
             @endif
+            @include('staff.intelligence.partials.withdraw-form', ['subject' => $scene, 'action' => route('staff.imagery.scenes.withdraw', $scene)])
         </div>
     @endif
 </x-crud-page>

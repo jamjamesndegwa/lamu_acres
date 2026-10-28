@@ -4,7 +4,12 @@
     @forelse ($rows as $row)
         <article class="mt-4 rounded-2xl border border-sand-200 bg-white p-4">
             <h2 class="font-semibold">{{ $row['locality']->name }}</h2>
-            <p class="text-sm">Sample {{ $row['sample'] }} · median asking KSh {{ number_format($row['median']) }} per acre</p>
+            <p class="text-sm">Sample {{ $row['sample'] }} published asking {{ $row['sample'] === 1 ? 'price' : 'prices' }} · minimum for median {{ $row['min_median_sample'] ?? config('intelligence.price_observatory.min_median_sample', 3) }}</p>
+            @if ($row['median'] !== null)
+                <p class="text-sm">Median asking KSh {{ number_format($row['median']) }} per acre</p>
+            @else
+                <p class="text-sm text-amber-900">Insufficient observations for a reliable locality median.</p>
+            @endif
         </article>
     @empty
         <p class="mt-4 text-sm text-stone-600">No published asking prices yet. No median has been calculated.</p>
@@ -32,6 +37,9 @@
                         @endif
                         @if ($sale->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
                             <form method="POST" action="{{ route('staff.prices.sales.publish', $sale) }}">@csrf <button class="text-sm text-lamu-800">Publish</button></form>
+                        @endif
+                        @if ($sale->publication_status === \App\Enums\PublicationStatus::Published && auth()->user()->hasPermission('intelligence.publish'))
+                            <form method="POST" action="{{ route('staff.prices.sales.withdraw', $sale) }}" data-confirm="Withdraw this verified sale from subscriber access?">@csrf <button class="text-sm text-amber-900">Withdraw</button></form>
                         @endif
                     </td>
                 </tr>

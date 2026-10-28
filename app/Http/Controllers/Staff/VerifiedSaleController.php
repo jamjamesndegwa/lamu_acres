@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
+use App\Http\Controllers\Staff\Concerns\WithdrawsIntelligencePublication;
 use App\Models\VerifiedSale;
 use App\Services\Intelligence\IntelligenceFiles;
 use App\Services\Intelligence\PriceObservatory;
@@ -16,6 +17,7 @@ use Illuminate\View\View;
 class VerifiedSaleController extends Controller
 {
     use AuthorizesIntelligence;
+    use WithdrawsIntelligencePublication;
 
     public function index(PriceObservatory $observatory): View
     {
@@ -60,6 +62,7 @@ class VerifiedSaleController extends Controller
     public function submit(Request $request, VerifiedSale $sale, PublicationDesk $desk): RedirectResponse
     {
         $this->researcher($request);
+        abort_unless($sale->files()->exists(), 422);
         $desk->submit($sale, $request->user());
 
         return back()->with('status', 'Verified sale submitted for review.');
@@ -71,5 +74,10 @@ class VerifiedSaleController extends Controller
         $desk->publish($sale, $request->user());
 
         return back()->with('status', 'Verified sale published. It remains separate from asking prices.');
+    }
+
+    public function withdraw(Request $request, VerifiedSale $sale, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $sale, $desk);
     }
 }

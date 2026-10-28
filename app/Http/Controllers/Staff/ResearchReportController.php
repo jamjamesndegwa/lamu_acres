@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
+use App\Http\Controllers\Staff\Concerns\WithdrawsIntelligencePublication;
 use App\Models\DevelopmentProject;
 use App\Models\ResearchReport;
 use App\Services\Intelligence\PublicationDesk;
@@ -16,6 +17,7 @@ use Illuminate\View\View;
 class ResearchReportController extends Controller
 {
     use AuthorizesIntelligence;
+    use WithdrawsIntelligencePublication;
 
     public function index(): View
     {
@@ -106,6 +108,11 @@ class ResearchReportController extends Controller
         $desk->publish($report, $request->user());
 
         return ApprovalsReturn::back($request, 'intelligence', 'Report published. The summary is the public preview.');
+    }
+
+    public function withdraw(Request $request, ResearchReport $report, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $report, $desk);
     }
 
     /**

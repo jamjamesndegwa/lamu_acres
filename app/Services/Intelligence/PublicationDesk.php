@@ -114,4 +114,23 @@ class PublicationDesk
         $status = $subject->publication_status;
         $this->audit($subject, $actor, 'revised', $status, $status, null, $changes);
     }
+
+    public function withdraw(Model $subject, User $actor): void
+    {
+        $from = $subject->publication_status;
+        abort_unless($from === PublicationStatus::Published, 422);
+
+        $subject->update([
+            'publication_status' => PublicationStatus::Withdrawn,
+            'published_at' => null,
+        ]);
+        $this->audit(
+            $subject,
+            $actor,
+            'withdrawn',
+            $from,
+            PublicationStatus::Withdrawn,
+            'Withdrawn from public preview and premium subscriber access.',
+        );
+    }
 }

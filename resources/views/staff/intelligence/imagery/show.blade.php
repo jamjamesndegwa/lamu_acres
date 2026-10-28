@@ -39,5 +39,6 @@
         @if ($comparison->publication_status === \App\Enums\PublicationStatus::Review && auth()->user()->hasPermission('intelligence.publish'))
             <form method="POST" action="{{ route('staff.imagery.comparisons.publish', $comparison) }}">@csrf @include('admin.approvals.return-field') <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm text-white">Publish</button></form>
         @endif
+        @include('staff.intelligence.partials.withdraw-form', ['subject' => $comparison, 'action' => route('staff.imagery.comparisons.withdraw', $comparison)])
     </div>
 </x-workspace-layout>

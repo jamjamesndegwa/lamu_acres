@@ -7,6 +7,7 @@ use App\Enums\DevelopmentProjectStatus;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
+use App\Http\Controllers\Staff\Concerns\WithdrawsIntelligencePublication;
 use App\Models\DevelopmentProject;
 use App\Models\Locality;
 use App\Services\Intelligence\IntelligenceFiles;
@@ -20,6 +21,7 @@ use Illuminate\View\View;
 class DevelopmentProjectController extends Controller
 {
     use AuthorizesIntelligence;
+    use WithdrawsIntelligencePublication;
 
     public function index(): View
     {
@@ -90,9 +92,16 @@ class DevelopmentProjectController extends Controller
     public function submit(Request $request, DevelopmentProject $project, PublicationDesk $desk): RedirectResponse
     {
         $this->researcher($request);
+        abort_unless(filled($project->verified_on), 422);
+        abort_unless($project->files()->exists(), 422);
         $desk->submit($project, $request->user());
 
         return back()->with('status', 'Submitted for editorial review.');
+    }
+
+    public function withdraw(Request $request, DevelopmentProject $project, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $project, $desk);
     }
 
     public function publish(Request $request, DevelopmentProject $project, PublicationDesk $desk): RedirectResponse

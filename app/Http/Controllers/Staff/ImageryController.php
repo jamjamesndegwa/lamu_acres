@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
+use App\Http\Controllers\Staff\Concerns\WithdrawsIntelligencePublication;
 use App\Models\DevelopmentProject;
 use App\Models\ImageryComparison;
 use App\Models\ImageryScene;
@@ -19,6 +20,7 @@ use Illuminate\View\View;
 class ImageryController extends Controller
 {
     use AuthorizesIntelligence;
+    use WithdrawsIntelligencePublication;
 
     public function index(): View
     {
@@ -88,9 +90,15 @@ class ImageryController extends Controller
     public function submitScene(Request $request, ImageryScene $scene, PublicationDesk $desk): RedirectResponse
     {
         $this->researcher($request);
+        abort_unless($scene->files()->exists(), 422);
         $desk->submit($scene, $request->user());
 
         return back()->with('status', 'Scene submitted for review.');
+    }
+
+    public function withdrawScene(Request $request, ImageryScene $scene, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $scene, $desk);
     }
 
     public function publishScene(Request $request, ImageryScene $scene, PublicationDesk $desk): RedirectResponse
@@ -150,6 +158,11 @@ class ImageryController extends Controller
         $desk->publish($comparison, $request->user());
 
         return ApprovalsReturn::back($request, 'intelligence', 'Comparison published.');
+    }
+
+    public function withdrawComparison(Request $request, ImageryComparison $comparison, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $comparison, $desk);
     }
 
     /**

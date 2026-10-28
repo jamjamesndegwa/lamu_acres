@@ -6,6 +6,7 @@ use App\Enums\PlanningInstrumentStatus;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Staff\Concerns\AuthorizesIntelligence;
+use App\Http\Controllers\Staff\Concerns\WithdrawsIntelligencePublication;
 use App\Models\Locality;
 use App\Models\PlanningRecord;
 use App\Services\Intelligence\IntelligenceFiles;
@@ -19,6 +20,7 @@ use Illuminate\View\View;
 class PlanningRecordController extends Controller
 {
     use AuthorizesIntelligence;
+    use WithdrawsIntelligencePublication;
 
     public function index(): View
     {
@@ -89,6 +91,11 @@ class PlanningRecordController extends Controller
         $desk->publish($record, $request->user());
 
         return ApprovalsReturn::back($request, 'intelligence', 'Planning record published.');
+    }
+
+    public function withdraw(Request $request, PlanningRecord $record, PublicationDesk $desk): RedirectResponse
+    {
+        return $this->withdrawPublication($request, $record, $desk);
     }
 
     /**

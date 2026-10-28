@@ -6,6 +6,7 @@ use App\Enums\PublicationStatus;
 use App\Models\DevelopmentMilestone;
 use App\Models\DevelopmentProject;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class DevelopmentPublicationTest extends FoundationTestCase
@@ -47,6 +48,11 @@ class DevelopmentPublicationTest extends FoundationTestCase
             'latitude' => -2.2694,
             'longitude' => 40.9012,
             'boundary_wkt' => 'POLYGON ((40.90 -2.27, 40.91 -2.27, 40.91 -2.26, 40.90 -2.27))',
+            'verified_on' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $this->actingAs($researcher)->post(route('staff.projects.evidence', $project), [
+            'evidence' => UploadedFile::fake()->create('notice.pdf', 20, 'application/pdf'),
         ])->assertRedirect();
 
         $this->actingAs($researcher)->post(route('staff.projects.submit', $project))->assertRedirect();
