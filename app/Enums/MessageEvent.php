@@ -65,6 +65,7 @@ enum MessageEvent: string
     case CommissionPayable = 'commission_payable';
     case CommissionPaid = 'commission_paid';
     case ReportPublished = 'report_published';
+    case ResearchWatchAlert = 'research_watch_alert';
     case SubscriptionRenewed = 'subscription_renewed';
     case SubscriptionExpired = 'subscription_expired';
     case MarketingBroadcast = 'marketing_broadcast';
@@ -76,7 +77,7 @@ enum MessageEvent: string
 
     public function isMandatory(): bool
     {
-        return ! $this->isMarketing();
+        return ! $this->isMarketing() && $this !== self::ResearchWatchAlert;
     }
 
     public function label(): string
@@ -143,6 +144,7 @@ enum MessageEvent: string
             self::CommissionPayable => 'Commission payable',
             self::CommissionPaid => 'Commission paid',
             self::ReportPublished => 'Premium report published',
+            self::ResearchWatchAlert => 'Research watch update',
             self::SubscriptionRenewed => 'Subscription renewal',
             self::SubscriptionExpired => 'Subscription expiration',
             self::MarketingBroadcast => 'Marketing broadcast',

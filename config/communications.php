@@ -35,7 +35,7 @@ return [
         fn (MessageEvent $event): string => $event->value,
         array_filter(
             MessageEvent::cases(),
-            fn (MessageEvent $event): bool => $event !== MessageEvent::MarketingBroadcast,
+            fn (MessageEvent $event): bool => $event->isMandatory(),
         ),
     ),
 

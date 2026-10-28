@@ -27,6 +27,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:investor'])
         Route::get('/reports/{report}', [LibraryController::class, 'report'])->name('reports.show');
         Route::get('/watchlists', [WatchlistController::class, 'index'])->name('watchlists.index');
         Route::post('/watchlists', [WatchlistController::class, 'store'])->name('watchlists.store');
+        Route::delete('/watchlists/{watch}', [WatchlistController::class, 'destroy'])->name('watchlists.destroy');
         Route::get('/archive', [WatchlistController::class, 'archive'])->name('archive.index');
         Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
         Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');

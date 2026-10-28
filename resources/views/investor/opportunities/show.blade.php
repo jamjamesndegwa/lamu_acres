@@ -39,6 +39,16 @@
                 </dl>
                 <p class="mt-4 text-sm text-stone-600">{{ $listing['summary'] ?: 'Open the public listing for photographs, verification checks and full property details.' }}</p>
                 <a href="{{ $property->publicUrl() }}" class="mt-4 inline-flex text-sm font-semibold text-lamu-800 hover:underline">View public property details →</a>
+                @if ($locality)
+                    <div class="mt-4">
+                        <x-investor-watch-control
+                            :watch="$localityWatch"
+                            :locality-id="$locality->id"
+                            label="Follow this location"
+                            watching-label="Following location"
+                        />
+                    </div>
+                @endif
             </section>
 
             <section class="rounded-2xl border border-sand-200 bg-white p-5 sm:p-6">

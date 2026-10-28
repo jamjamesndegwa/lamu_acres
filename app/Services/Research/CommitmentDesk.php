@@ -3,10 +3,12 @@
 namespace App\Services\Research;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\MessageChannel;
 use App\Enums\MessageEvent;
 use App\Enums\ResearchCommitment;
 use App\Models\DevelopmentProject;
 use App\Models\ImageryComparison;
+use App\Models\PlanningRecord;
 use App\Models\PublicationDelivery;
 use App\Models\ResearchAssignment;
 use App\Models\ResearchReport;
@@ -14,6 +16,7 @@ use App\Models\SubscriberWatch;
 use App\Models\User;
 use App\Notifications\DevelopmentAlertNotification;
 use App\Notifications\ResearchPublishedNotification;
+use App\Notifications\ResearchWatchNotification;
 use App\Services\Communications\MessageDesk;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -56,10 +59,21 @@ class CommitmentDesk
 
     public function afterPublication(Model $subject): void
     {
-        if (! $subject instanceof DevelopmentProject || ! $subject->isReleased()) {
+        if (! method_exists($subject, 'isReleased') || ! $subject->isReleased()) {
             return;
         }
 
+        match (true) {
+            $subject instanceof DevelopmentProject => $this->afterDevelopmentPublished($subject),
+            $subject instanceof ResearchReport => $this->afterResearchReportPublished($subject),
+            $subject instanceof PlanningRecord => $this->afterPlanningPublished($subject),
+            $subject instanceof ImageryComparison => $this->afterImageryPublished($subject),
+            default => null,
+        };
+    }
+
+    private function afterDevelopmentPublished(DevelopmentProject $subject): void
+    {
         $watches = SubscriberWatch::query()
             ->with('user')
             ->where(function ($query) use ($subject): void {
@@ -69,18 +83,152 @@ class CommitmentDesk
                     $query->orWhere('locality_id', $subject->locality_id);
                 }
             })
-            ->get();
+            ->get()
+            ->unique('user_id');
 
-        foreach ($watches->unique('user_id') as $watch) {
-            if (! $watch->user->hasActiveInvestorPass()) {
-                continue;
-            }
-
-            if (! $this->deliver($watch->user, $subject, null, 'project:'.$subject->id.':user:'.$watch->user_id)) {
-                continue;
-            }
-            $watch->user->notify(new DevelopmentAlertNotification($subject));
+        foreach ($watches as $watch) {
+            $this->notifyWatcher(
+                $watch->user,
+                $subject,
+                'project:'.$subject->id.':user:'.$watch->user_id,
+                new DevelopmentAlertNotification($subject),
+            );
         }
+    }
+
+    private function afterResearchReportPublished(ResearchReport $report): void
+    {
+        $report->loadMissing(['localities', 'projects']);
+        $localityIds = $report->localities->pluck('id');
+        $projectIds = $report->projects->pluck('id');
+
+        if ($localityIds->isEmpty() && $projectIds->isEmpty()) {
+            return;
+        }
+
+        $watches = SubscriberWatch::query()
+            ->with('user')
+            ->where(function ($query) use ($localityIds, $projectIds): void {
+                if ($localityIds->isNotEmpty()) {
+                    $query->whereIn('locality_id', $localityIds);
+                }
+
+                if ($projectIds->isNotEmpty()) {
+                    $method = $localityIds->isNotEmpty() ? 'orWhereIn' : 'whereIn';
+                    $query->{$method}('development_project_id', $projectIds);
+                }
+            })
+            ->get()
+            ->unique('user_id');
+
+        foreach ($watches as $watch) {
+            $this->notifyWatcher(
+                $watch->user,
+                $report,
+                'report-watch:'.$report->id.':user:'.$watch->user_id,
+                new ResearchWatchNotification($report),
+            );
+        }
+    }
+
+    private function afterPlanningPublished(PlanningRecord $record): void
+    {
+        if ($record->locality_id === null) {
+            return;
+        }
+
+        $watches = SubscriberWatch::query()
+            ->with('user')
+            ->where('locality_id', $record->locality_id)
+            ->get()
+            ->unique('user_id');
+
+        foreach ($watches as $watch) {
+            $this->notifyWatcher(
+                $watch->user,
+                $record,
+                'planning-watch:'.$record->id.':user:'.$watch->user_id,
+                new ResearchWatchNotification($record),
+            );
+        }
+    }
+
+    private function afterImageryPublished(ImageryComparison $comparison): void
+    {
+        $comparison->loadMissing(['beforeScene', 'afterScene']);
+        $localityIds = collect([
+            $comparison->beforeScene?->locality_id,
+            $comparison->afterScene?->locality_id,
+        ])->filter()->unique();
+
+        if ($localityIds->isEmpty() && $comparison->development_project_id === null) {
+            return;
+        }
+
+        $watches = SubscriberWatch::query()
+            ->with('user')
+            ->where(function ($query) use ($localityIds, $comparison): void {
+                if ($localityIds->isNotEmpty()) {
+                    $query->whereIn('locality_id', $localityIds);
+                }
+
+                if ($comparison->development_project_id !== null) {
+                    $method = $localityIds->isNotEmpty() ? 'orWhere' : 'where';
+                    $query->{$method}('development_project_id', $comparison->development_project_id);
+                }
+            })
+            ->get()
+            ->unique('user_id');
+
+        foreach ($watches as $watch) {
+            $this->notifyWatcher(
+                $watch->user,
+                $comparison,
+                'imagery-watch:'.$comparison->id.':user:'.$watch->user_id,
+                new ResearchWatchNotification($comparison),
+            );
+        }
+    }
+
+    private function notifyWatcher(User $user, Model $subject, string $deliveryKey, DevelopmentAlertNotification|ResearchWatchNotification $notification): void
+    {
+        if (! $user->hasActiveInvestorPass()) {
+            return;
+        }
+
+        if (! $this->deliver($user, $subject, null, $deliveryKey)) {
+            return;
+        }
+
+        $user->notify($notification);
+        $this->sendWatchEmail($user, $subject, $deliveryKey);
+    }
+
+    private function sendWatchEmail(User $user, Model $subject, string $deliveryKey): void
+    {
+        $title = match (true) {
+            $subject instanceof ResearchReport => $subject->title,
+            $subject instanceof DevelopmentProject => $subject->name,
+            $subject instanceof PlanningRecord => $subject->title,
+            $subject instanceof ImageryComparison => $subject->area_label,
+            default => 'Research update',
+        };
+
+        $url = match (true) {
+            $subject instanceof ResearchReport => route('investor.reports.show', $subject),
+            $subject instanceof DevelopmentProject => route('investor.projects.show', $subject),
+            $subject instanceof PlanningRecord => route('investor.planning.show', $subject),
+            $subject instanceof ImageryComparison => route('investor.imagery.show', $subject),
+            default => route('investor.archive.index'),
+        };
+
+        app(MessageDesk::class)->send($user, MessageEvent::ResearchWatchAlert, [
+            'name' => $user->name,
+            'title' => $title,
+            'reference' => method_exists($subject, 'getAttribute') ? (string) ($subject->reference ?? '') : '',
+            'summary' => $title.' is now available in your Investor workspace.',
+            'url' => $url,
+        ], 'watch:'.$deliveryKey, null, [MessageChannel::Email]);
     }
 
     private function ensure(ResearchCommitment $commitment, CarbonInterface $anchor): void

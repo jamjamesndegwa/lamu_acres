@@ -12,6 +12,7 @@ use App\Models\ImageryComparison;
 use App\Models\Locality;
 use App\Models\PlanningRecord;
 use App\Models\ResearchReport;
+use App\Models\SubscriberWatch;
 use App\Services\Intelligence\PriceObservatory;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -66,6 +67,12 @@ class LibraryController extends Controller
             'project' => $project,
             'relatedReports' => $relatedReports,
             'relatedComparisons' => $relatedComparisons,
+            'projectWatch' => $request->user()?->hasActiveInvestorPass()
+                ? SubscriberWatch::query()
+                    ->where('user_id', $request->user()->id)
+                    ->where('development_project_id', $project->id)
+                    ->first()
+                : null,
         ]);
     }
 

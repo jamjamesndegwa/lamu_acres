@@ -7,6 +7,7 @@ use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\SavedProperty;
+use App\Models\SubscriberWatch;
 use App\Services\Catalog\AppliedLandFilters;
 use App\Services\Catalog\PropertyCatalog;
 use App\Services\Catalog\PublicListing;
@@ -88,11 +89,19 @@ class OpportunityController extends Controller
 
         $property->unsetRelation('media');
 
+        $locality = $property->areaLocality;
+
         return view('investor.opportunities.show', [
             'property' => $property,
             'listing' => $listing,
             'saved' => $saved,
             'intelligence' => $intelligence->compose($property),
+            'localityWatch' => $locality !== null && auth()->user()?->hasActiveInvestorPass()
+                ? SubscriberWatch::query()
+                    ->where('user_id', auth()->id())
+                    ->where('locality_id', $locality->id)
+                    ->first()
+                : null,
         ]);
     }
 

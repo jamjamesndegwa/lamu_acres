@@ -8,6 +8,17 @@
 </dl>
 <p class="mt-4 max-w-3xl text-sm text-stone-700">{{ $project->project_status->statement() }}</p>
 <p class="mt-4 max-w-3xl text-stone-700">{{ $project->summary }}</p>
+@if ($frame === 'workspace' && auth()->user()?->hasActiveInvestorPass())
+    <div class="mt-4 max-w-3xl">
+        <x-investor-watch-control
+            :watch="$projectWatch ?? null"
+            :project-id="$project->id"
+            label="Watch this project"
+            watching-label="Watching project"
+        />
+        <p class="mt-2 text-xs text-stone-500">Alerts are sent after verified research is published. Draft material is never listed.</p>
+    </div>
+@endif
 @if ($premium)
     <div class="mt-6 max-w-3xl space-y-4">
         <p><span class="font-medium text-lamu-900">Source.</span> {{ $project->source_name }} @if ($project->source_url)<a class="text-lamu-800 hover:underline" href="{{ $project->source_url }}">{{ $project->source_url }}</a>@endif</p>

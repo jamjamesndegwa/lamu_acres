@@ -21,8 +21,9 @@ class MessageDesk
 
     /**
      * @param  array<string, mixed>  $context
+     * @param  list<MessageChannel>|null  $channels
      */
-    public function send(User $recipient, MessageEvent $event, array $context, string $subjectKey, ?Notification $inAppNotification = null): void
+    public function send(User $recipient, MessageEvent $event, array $context, string $subjectKey, ?Notification $inAppNotification = null, ?array $channels = null): void
     {
         $context = $this->safeContext($context);
         $template = MessageTemplate::query()->where('event', $event)->first();
@@ -30,6 +31,9 @@ class MessageDesk
         $body = $this->render($template->body ?? '{summary}', $context);
 
         foreach (MessageChannel::cases() as $channel) {
+            if ($channels !== null && ! in_array($channel, $channels, true)) {
+                continue;
+            }
             if (! $this->allows($recipient, $channel, $event)) {
                 continue;
             }
