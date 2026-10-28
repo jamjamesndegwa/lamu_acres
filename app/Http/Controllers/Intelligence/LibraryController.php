@@ -48,8 +48,24 @@ class LibraryController extends Controller
         abort_unless($project->isReleased(), 404);
         $project->load(['milestones', 'files', 'county', 'locality', 'audits.actor']);
 
+        $relatedReports = ResearchReport::query()
+            ->released()
+            ->whereHas('projects', fn ($query) => $query->whereKey($project->id))
+            ->latest('published_at')
+            ->limit(5)
+            ->get();
+
+        $relatedComparisons = ImageryComparison::query()
+            ->released()
+            ->where('development_project_id', $project->id)
+            ->latest('published_at')
+            ->limit(5)
+            ->get();
+
         return $this->page($request, 'intelligence.partials.project', $project->name, $project->summary, [
             'project' => $project,
+            'relatedReports' => $relatedReports,
+            'relatedComparisons' => $relatedComparisons,
         ]);
     }
 
@@ -144,7 +160,7 @@ class LibraryController extends Controller
     public function reports(Request $request): View
     {
         return $this->page($request, 'intelligence.partials.reports', 'Research Reports', 'Published research summaries. The full report is part of the Investor Pass.', [
-            'reports' => ResearchReport::query()->released()->with(['projects', 'citations'])->latest('published_at')->paginate(12),
+            'reports' => ResearchReport::query()->released()->with(['projects', 'citations', 'localities'])->latest('published_at')->paginate(12),
         ]);
     }
 

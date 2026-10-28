@@ -24,7 +24,12 @@
             <h3 class="home-serif text-base font-semibold text-lamu-900">{{ $row['locality']->name }}</h3>
             <p class="mt-2 text-xs leading-relaxed text-stone-600">Sample size: {{ $row['sample'] }} published asking {{ $row['sample'] === 1 ? 'price' : 'prices' }}. Freshness: {{ $row['fresh_at'] ? \Illuminate\Support\Carbon::parse($row['fresh_at'])->toFormattedDateString() : 'not recorded' }}.</p>
             @if ($premium)
-                <p class="mt-2">Median asking price per acre: KSh {{ number_format($row['median']) }}</p>
+                @if ($row['median'] !== null)
+                    <p class="mt-2 text-sm font-medium text-lamu-900">Median asking price per acre: KSh {{ number_format($row['median']) }}</p>
+                @else
+                    <p class="mt-2 text-sm text-amber-900">Insufficient observations for a reliable locality median.</p>
+                    <p class="text-xs text-stone-600">At least {{ $row['min_median_sample'] ?? config('intelligence.price_observatory.min_median_sample', 3) }} published asking prices are required.</p>
+                @endif
                 <h3 class="mt-4 text-sm font-medium text-lamu-900">Asking-price trend</h3>
                 <ul class="mt-2 list-disc pl-5 text-sm">
                     @forelse ($row['history'] as $point)

@@ -43,6 +43,22 @@
                 'text' => trim($audit->action.($audit->actor ? ' · '.$audit->actor->name : '')),
             ])->all()"
         />
+        <h2 class="font-semibold text-lamu-900">Related research</h2>
+        <ul class="list-disc pl-5 text-sm">
+            @forelse ($relatedReports ?? [] as $report)
+                <li><a class="text-lamu-800 hover:underline" href="{{ route($frame === 'workspace' ? 'investor.reports.show' : 'intelligence.reports.show', $report) }}">{{ $report->title }}</a></li>
+            @empty
+                <li>No linked report has been published.</li>
+            @endforelse
+        </ul>
+        <h2 class="font-semibold text-lamu-900">Related imagery</h2>
+        <ul class="list-disc pl-5 text-sm">
+            @forelse ($relatedComparisons ?? [] as $comparison)
+                <li><a class="text-lamu-800 hover:underline" href="{{ route($frame === 'workspace' ? 'investor.imagery.show' : 'intelligence.imagery.show', $comparison) }}">{{ $comparison->area_label }}</a></li>
+            @empty
+                <li>No imagery comparison has been linked.</li>
+            @endforelse
+        </ul>
         <h2 class="font-semibold text-lamu-900">Evidence</h2>
         <ul class="text-sm">
             @forelse ($project->files as $file)

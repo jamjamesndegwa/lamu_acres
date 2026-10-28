@@ -1,6 +1,9 @@
 <p class="mt-4 text-stone-700">{{ $record->area }} · {{ $record->instrument_status->label() }}</p>
 <p class="mt-2 text-sm text-stone-600">Review status: {{ $record->publication_status->label() }}. Effective {{ $record->effective_on?->toFormattedDateString() ?: 'date not recorded' }}.</p>
 <p class="mt-2 text-sm text-stone-600">Applicable area: {{ $record->area }}@if ($record->county) · {{ $record->county->name }}@endif @if ($record->locality) · {{ $record->locality->name }}@endif.</p>
+<div class="mt-4 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-stone-800">
+    Planning information is provided for research purposes. Confirm current zoning, permitted uses and approvals with the responsible authority before purchasing or developing land.
+</div>
 @if ($premium)
     <div class="mt-6 max-w-3xl space-y-3">
         <p><span class="font-medium">Permitted uses.</span> {{ $record->permitted_uses ?: 'Not recorded' }}</p>

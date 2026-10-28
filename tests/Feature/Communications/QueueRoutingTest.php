@@ -87,12 +87,13 @@ class QueueRoutingTest extends FoundationTestCase
     {
         Queue::fake();
 
-        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create([
-            'marketing_email_consent' => true,
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        $buyer = User::factory()->withRoles('buyer')->create([
             'notify_by_email' => true,
+            'marketing_email_consent' => true,
         ]);
         $campaign = app(CampaignDesk::class)->create($staff, MessageChannel::Email, 'News', 'Hello');
-        app(CampaignDesk::class)->syncRecipients($campaign, [$staff->id]);
+        app(CampaignDesk::class)->syncRecipients($campaign, [$buyer->id]);
 
         app(CampaignDesk::class)->queue($campaign);
 

@@ -273,8 +273,8 @@ return [
 
     'investor' => [
         'eyebrow' => 'Investor',
-        'heading' => 'Intelligence Dashboard',
-        'intro' => 'Premium research opens only after a verified subscription payment. An Investor Pass does not release private property records.',
+        'heading' => 'Dashboard',
+        'intro' => 'Premium research, infrastructure tracking, and market intelligence for active Investor Pass members. Seller identity and private parcel records stay closed.',
         'activity' => [
             'columns' => ['Activity', 'Detail'],
             'empty' => 'Research, alerts, and subscription activity will be listed here when a verified subscription is on file. Nothing has been published to this account.',
@@ -282,23 +282,23 @@ return [
         'groups' => [
             [
                 'key' => 'dashboard',
-                'label' => 'Intelligence Dashboard',
+                'label' => 'Dashboard',
                 'items' => [
-                    ['label' => 'Intelligence Dashboard', 'route' => 'investor.dashboard', 'active' => 'investor.dashboard'],
+                    ['label' => 'Dashboard', 'route' => 'investor.dashboard', 'active' => 'investor.dashboard'],
                 ],
             ],
             [
                 'key' => 'tracker',
-                'label' => 'Development Tracker',
+                'label' => 'Infrastructure',
                 'items' => [
-                    ['label' => 'Development Tracker', 'route' => 'investor.projects.index', 'active' => 'investor.projects.*'],
+                    ['label' => 'Infrastructure', 'route' => 'investor.projects.index', 'active' => 'investor.projects.*'],
                 ],
             ],
             [
                 'key' => 'imagery',
-                'label' => 'Satellite & Aerial Imagery',
+                'label' => 'Satellite Intelligence',
                 'items' => [
-                    ['label' => 'Satellite & Aerial Imagery', 'route' => 'investor.imagery.index', 'active' => 'investor.imagery.*'],
+                    ['label' => 'Satellite Intelligence', 'route' => 'investor.imagery.index', 'active' => 'investor.imagery.*'],
                 ],
             ],
             [
@@ -310,37 +310,37 @@ return [
             ],
             [
                 'key' => 'prices',
-                'label' => 'Land Price Observatory',
+                'label' => 'Land Prices',
                 'items' => [
-                    ['label' => 'Land Price Observatory', 'route' => 'investor.prices', 'active' => 'investor.prices'],
+                    ['label' => 'Land Prices', 'route' => 'investor.prices', 'active' => 'investor.prices'],
                 ],
             ],
             [
                 'key' => 'library',
-                'label' => 'Research Reports',
+                'label' => 'Exclusive Research',
                 'items' => [
-                    ['label' => 'Research Reports', 'route' => 'investor.reports.index', 'active' => 'investor.reports.*'],
+                    ['label' => 'Exclusive Research', 'route' => 'investor.reports.index', 'active' => 'investor.reports.*'],
                 ],
             ],
             [
                 'key' => 'watchlists',
-                'label' => 'My Watchlists',
+                'label' => 'My Watchlist',
                 'items' => [
-                    ['label' => 'My Watchlists', 'route' => 'investor.watchlists.index', 'active' => 'investor.watchlists.*'],
+                    ['label' => 'My Watchlist', 'route' => 'investor.watchlists.index', 'active' => 'investor.watchlists.*'],
                 ],
             ],
             [
                 'key' => 'alerts',
-                'label' => 'Alerts & Archive',
+                'label' => 'Research Archive',
                 'items' => [
-                    ['label' => 'Alerts & Archive', 'route' => 'investor.archive.index', 'active' => 'investor.archive.*'],
+                    ['label' => 'Research Archive', 'route' => 'investor.archive.index', 'active' => 'investor.archive.*'],
                 ],
             ],
             [
                 'key' => 'subscription',
-                'label' => 'Subscription',
+                'label' => 'My Subscription',
                 'items' => [
-                    ['label' => 'Subscription', 'route' => 'investor.subscription.show', 'active' => 'investor.subscription.*'],
+                    ['label' => 'My Subscription', 'route' => 'investor.subscription.show', 'active' => 'investor.subscription.*'],
                 ],
             ],
             [

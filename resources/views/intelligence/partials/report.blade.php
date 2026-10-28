@@ -4,7 +4,9 @@
     @include('intelligence.partials.report-facts', ['report' => $report, 'premium' => $premium])
 </div>
 @if ($premium)
-    <div class="mt-6 max-w-3xl space-y-4">
+    <div class="mt-6 max-w-3xl rounded-2xl border border-lamu-200 bg-lamu-50 p-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-lamu-800">Subscriber analysis</p>
+    <div class="mt-4 space-y-4">
         <div class="whitespace-pre-wrap">{{ $report->body }}</div>
         <h2 class="font-semibold text-lamu-900">Sources</h2>
         <ul class="list-disc pl-5 text-sm">
@@ -12,6 +14,9 @@
                 <li>{{ $citation->label }} @if ($citation->url) · {{ $citation->url }} @endif</li>
             @endforeach
         </ul>
+        @if ($report->localities->isNotEmpty())
+            <p>Locations: {{ $report->localities->pluck('name')->join(', ') }}</p>
+        @endif
         @if ($report->projects->isNotEmpty())
             <p>Projects: {{ $report->projects->pluck('name')->join(', ') }}</p>
         @endif
@@ -29,6 +34,7 @@
                 <li>{{ $audit->created_at?->toDayDateTimeString() }} · {{ $audit->action }}</li>
             @endforeach
         </ul>
+    </div>
     </div>
 @else
     <p class="mt-6 text-stone-700">The report, its citations, and its revision history are part of an active Investor Pass.</p>

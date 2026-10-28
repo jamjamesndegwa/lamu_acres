@@ -15,10 +15,12 @@ use App\Models\BuyerTimelineEntry;
 use App\Models\CommissionAgreement;
 use App\Models\DevelopmentProject;
 use App\Models\Enquiry;
+use App\Models\ImageryComparison;
 use App\Models\Offer;
 use App\Models\Property;
 use App\Models\PropertyAudit;
 use App\Models\PropertyMatch;
+use App\Models\PublicationDelivery;
 use App\Models\ResearchReport;
 use App\Models\Role;
 use App\Models\SalesTransaction;
@@ -26,8 +28,10 @@ use App\Models\SavedProperty;
 use App\Models\SiteVisit;
 use App\Models\SourcingRequest;
 use App\Models\SubscriberWatch;
+use App\Models\SubscriptionPlan;
 use App\Services\Access\NavigationBuilder;
 use App\Services\Admin\ExecutiveReport;
+use App\Services\Intelligence\PriceObservatory;
 use App\Services\Subscription\Memberships;
 use App\Support\Reporting\ReportingWindow;
 use Illuminate\Http\Request;
@@ -93,20 +97,71 @@ class WorkspaceDashboardController extends Controller
     }
 
     /**
-     * @return array{premium: bool, ends: mixed, reports: Collection, projects: Collection, watches: Collection}
+     * @return array<string, mixed>
      */
     private function investorBrief(Request $request, Memberships $memberships): array
     {
         $user = $request->user();
+        $plan = SubscriptionPlan::investorPass();
         $subscription = $memberships->find($user);
+        $memberships->expireIfDue($subscription);
+        $subscription?->refresh();
+
+        $observatory = app(PriceObservatory::class);
+        $checkoutReady = $plan->checkout_amount !== null
+            && $plan->checkout_amount >= 1
+            && $plan->checkout_currency === 'KES'
+            && filled($plan->checkout_policy)
+            && $plan->is_active;
 
         return [
             'premium' => $user->hasActiveInvestorPass(),
+            'plan' => $plan,
+            'subscription' => $subscription,
             'ends' => $subscription?->ends_at,
-            'status' => $subscription?->status,
-            'reports' => ResearchReport::query()->released()->with(['projects', 'citations'])->latest('published_at')->limit(4)->get(),
-            'projects' => DevelopmentProject::query()->released()->latest('published_at')->limit(4)->get(),
-            'watches' => SubscriberWatch::query()->where('user_id', $user->id)->with(['project', 'locality'])->latest()->limit(6)->get(),
+            'days_remaining' => $subscription?->ends_at?->isFuture() ? (int) now()->diffInDays($subscription->ends_at, false) : null,
+            'checkout_ready' => $checkoutReady,
+            'counts' => [
+                'reports' => ResearchReport::query()->released()->count(),
+                'projects' => DevelopmentProject::query()->released()->count(),
+                'watches' => SubscriberWatch::query()->where('user_id', $user->id)->count(),
+                'notifications' => $user->unreadNotifications()->count(),
+            ],
+            'reports' => ResearchReport::query()
+                ->released()
+                ->with(['projects', 'localities', 'citations'])
+                ->latest('published_at')
+                ->limit(4)
+                ->get(),
+            'projects' => DevelopmentProject::query()
+                ->released()
+                ->with(['county', 'locality'])
+                ->latest('published_at')
+                ->limit(4)
+                ->get(),
+            'comparisons' => ImageryComparison::query()
+                ->released()
+                ->with(['beforeScene', 'afterScene'])
+                ->latest('published_at')
+                ->limit(4)
+                ->get(),
+            'price_rows' => $observatory->askingByLocality()->sortByDesc('sample')->take(4)->values(),
+            'watches' => SubscriberWatch::query()
+                ->where('user_id', $user->id)
+                ->with(['project', 'locality'])
+                ->latest()
+                ->limit(6)
+                ->get(),
+            'deliveries' => PublicationDelivery::query()
+                ->where('user_id', $user->id)
+                ->with(['subject', 'assignment'])
+                ->latest('delivered_at')
+                ->limit(5)
+                ->get()
+                ->filter(fn (PublicationDelivery $delivery): bool => is_object($delivery->subject)
+                    && method_exists($delivery->subject, 'isReleased')
+                    && $delivery->subject->isReleased())
+                ->values(),
         ];
     }
 

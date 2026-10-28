@@ -54,7 +54,8 @@
             </h3>
             <p class="mt-2 text-xs leading-relaxed text-stone-600">{{ $project->coverage }}</p>
             <p class="mt-2 text-xs leading-relaxed text-stone-700">{{ $project->project_status->statement() }}</p>
-            <p class="mt-3 text-xs text-stone-500">{{ $project->locality?->name }}{{ $project->locality && $project->county ? ', ' : '' }}{{ $project->county?->name }}</p>
+            <p class="mt-2 text-xs text-stone-500">{{ $project->locality?->name }}{{ $project->county ? ', '.$project->county->name : '' }}</p>
+            <p class="mt-1 text-xs text-stone-500">Source {{ $project->source_name }} · published {{ $project->source_published_on?->toFormattedDateString() ?: 'not recorded' }} · verified {{ $project->verified_on?->toFormattedDateString() ?: 'not recorded' }}</p>
             <a href="{{ route($frame === 'workspace' ? 'investor.projects.show' : 'intelligence.projects.show', $project) }}" class="mt-3 inline-flex min-h-9 items-center self-start text-xs font-semibold text-lamu-800 hover:underline">View development →</a>
         </article>
     @empty

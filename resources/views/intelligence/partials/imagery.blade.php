@@ -34,7 +34,8 @@
                 <a class="hover:underline" href="{{ route($frame === 'workspace' ? 'investor.imagery.show' : 'intelligence.imagery.show', $comparison) }}">{{ $comparison->area_label }}</a>
             </h3>
             <p class="mt-2 text-xs leading-relaxed text-stone-600">Before {{ $comparison->beforeScene?->acquired_on?->toFormattedDateString() ?: 'date not recorded' }} · After {{ $comparison->afterScene?->acquired_on?->toFormattedDateString() ?: 'date not recorded' }}</p>
-            <p class="mt-2 text-xs text-stone-500">{{ $comparison->beforeScene?->county?->name ?: $comparison->afterScene?->county?->name }} {{ $comparison->beforeScene?->locality?->name ?: $comparison->afterScene?->locality?->name }}</p>
+            <p class="mt-2 text-xs text-stone-500">{{ $comparison->beforeScene?->license_name ?: 'Licence not recorded' }}</p>
+            <p class="mt-2 line-clamp-2 text-xs text-stone-600">{{ \Illuminate\Support\Str::limit($comparison->observed_change ?: 'Documented changes are on the comparison page.', 120) }}</p>
             <a href="{{ route($frame === 'workspace' ? 'investor.imagery.show' : 'intelligence.imagery.show', $comparison) }}" class="mt-3 inline-flex min-h-9 items-center self-start text-xs font-semibold text-lamu-800 hover:underline">View comparison →</a>
         </article>
     @empty

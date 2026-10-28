@@ -24,9 +24,11 @@ class PriceObservatory
             ->with('areaLocality')
             ->get();
 
+        $minimumSample = $this->minMedianSample();
+
         return $listings
             ->groupBy('locality_id')
-            ->map(function (Collection $group): array {
+            ->map(function (Collection $group) use ($minimumSample): array {
                 $prices = $group
                     ->map(fn (Property $property): ?int => $property->pricePerAcre())
                     ->filter(fn (?int $price): bool => $price !== null)
@@ -53,10 +55,13 @@ class PriceObservatory
                     ]);
                 }
 
+                $sample = $prices->count();
+
                 return [
                     'locality' => $group->first()->areaLocality,
-                    'median' => $this->median($prices),
-                    'sample' => $prices->count(),
+                    'median' => $sample >= $minimumSample ? $this->median($prices) : null,
+                    'sample' => $sample,
+                    'min_median_sample' => $minimumSample,
                     'fresh_at' => $group->max('published_at'),
                     'listings' => $group->values(),
                     'history' => $history->sortBy('at')->values(),
@@ -64,6 +69,11 @@ class PriceObservatory
             })
             ->filter(fn (array $row): bool => $row['locality'] !== null && $row['sample'] > 0)
             ->values();
+    }
+
+    public function minMedianSample(): int
+    {
+        return max(1, (int) config('intelligence.price_observatory.min_median_sample', 3));
     }
 
     public function verifiedSales(): Collection

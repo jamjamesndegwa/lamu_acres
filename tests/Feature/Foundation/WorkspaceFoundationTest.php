@@ -158,8 +158,8 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($subscriber)
             ->get('/investor')
             ->assertOk()
-            ->assertSee('verified subscription payment')
-            ->assertSee('does not release private property records');
+            ->assertSee('Premium research, infrastructure tracking')
+            ->assertSee('private parcel records stay closed');
 
         $this->actingAs($subscriber)->get('/buyer')->assertOk()->assertSee('Switch Workspace');
 
@@ -405,7 +405,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('data-module="imagery"', false)
             ->assertSee('data-module="watchlists"', false)
             ->assertSee('data-module="subscription"', false)
-            ->assertSee('Satellite & Aerial Imagery')
+            ->assertSee('Satellite Intelligence')
             ->assertDontSee('Satellite Explorer');
     }
 
@@ -416,27 +416,26 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($investor)
             ->get('/investor')
             ->assertOk()
-            ->assertSee('Intelligence Dashboard')
-            ->assertSee('Development Tracker')
+            ->assertSee('Dashboard')
+            ->assertSee('Infrastructure')
             ->assertSee('Planning & Zoning')
-            ->assertSee('Land Price Observatory')
-            ->assertSee('Research Reports')
-            ->assertSee('My Watchlists')
-            ->assertSee('Alerts & Archive')
-            ->assertSee('Subscription')
+            ->assertSee('Land Prices')
+            ->assertSee('Exclusive Research')
+            ->assertSee('My Watchlist')
+            ->assertSee('Research Archive')
+            ->assertSee('My Subscription')
             ->assertSee('Profile')
             ->assertSee('Logout')
-            ->assertSee('Membership')
-            ->assertSee('Latest research')
-            ->assertSee('Watched projects');
+            ->assertSee('Latest investment research')
+            ->assertSee('My watchlist');
 
-        $this->actingAs($investor)->get(route('investor.projects.index'))->assertOk()->assertSee('Development Tracker')->assertSee('Status')->assertSee('Type')->assertSee('Location');
-        $this->actingAs($investor)->get(route('investor.imagery.index'))->assertOk()->assertSee('Satellite & Aerial Imagery');
+        $this->actingAs($investor)->get(route('investor.projects.index'))->assertOk()->assertSee('Published developments')->assertSee('Status')->assertSee('Type')->assertSee('Location');
+        $this->actingAs($investor)->get(route('investor.imagery.index'))->assertOk()->assertSee('Published imagery comparisons');
         $this->actingAs($investor)->get(route('investor.planning.index'))->assertOk()->assertSee('Planning & Zoning');
         $this->actingAs($investor)->get(route('investor.prices'))->assertOk()->assertSee('Land Price Observatory')->assertSee('Asking prices');
-        $this->actingAs($investor)->get(route('investor.reports.index'))->assertOk()->assertSee('Research Reports')->assertSee('No research report has been published');
+        $this->actingAs($investor)->get(route('investor.reports.index'))->assertOk()->assertSee('Published research reports')->assertSee('No research report has been published');
         $this->actingAs($investor)->get(route('investor.watchlists.index'))->assertOk()->assertSee('My Watchlists')->assertSee('Watched locations')->assertSee('Watched projects');
-        $this->actingAs($investor)->get(route('investor.archive.index'))->assertOk()->assertSee('Alerts & Archive')->assertSee('Published alerts');
+        $this->actingAs($investor)->get(route('investor.archive.index'))->assertOk()->assertSee('Research Archive')->assertSee('Published alerts');
         $this->actingAs($investor)->get(route('investor.subscription.show'))->assertOk()->assertSee('Membership on this account')->assertSee('Paid through')->assertSee('Payment history');
         $this->actingAs($investor)->get(route('investor.profile'))->assertOk()->assertSee('Profile')->assertSee('Name')->assertSee('Email');
 

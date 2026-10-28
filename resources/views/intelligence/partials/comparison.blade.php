@@ -34,6 +34,8 @@
             <p><span class="font-medium text-lamu-900">Linked project.</span> {{ $comparison->project->name }} · {{ $comparison->project->project_status->label() }}</p>
             <p class="text-sm text-stone-700">{{ $comparison->project->project_status->statement() }}</p>
         @endif
+        <h2 class="font-semibold text-lamu-900">Limitations</h2>
+        <p class="text-sm text-stone-700">Imagery shows what was visible on the recorded acquisition dates. It is not a live feed, a parcel survey, or proof of ownership. Redistribution follows each scene licence.</p>
         <h2 class="font-semibold text-lamu-900">Evidence</h2>
         <ul class="text-sm">
             @forelse (collect($before?->files)->merge($after?->files ?? []) as $file)

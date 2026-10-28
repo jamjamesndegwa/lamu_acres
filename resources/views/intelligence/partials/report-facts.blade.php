@@ -24,6 +24,16 @@
         </dd>
     </div>
     <div class="sm:col-span-2">
+        <dt class="font-medium text-lamu-900">Location coverage</dt>
+        <dd class="text-stone-700">
+            @if ($report->localities->isNotEmpty())
+                {{ $report->localities->pluck('name')->join(', ') }}
+            @else
+                Not recorded on this report.
+            @endif
+        </dd>
+    </div>
+    <div class="sm:col-span-2">
         <dt class="font-medium text-lamu-900">Project status</dt>
         <dd class="text-stone-700">
             @forelse ($report->projects->filter(fn ($project) => $project->isReleased()) as $project)

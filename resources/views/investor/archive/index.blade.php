@@ -1,4 +1,4 @@
-<x-workspace-layout heading="Alerts & Archive">
+<x-workspace-layout heading="Research Archive">
     <p class="mt-3 max-w-3xl text-sm text-stone-600">Published alerts and history. Only published records that were delivered to this account are listed.</p>
     <ul class="mt-6 space-y-3">
         @forelse ($deliveries as $delivery)
