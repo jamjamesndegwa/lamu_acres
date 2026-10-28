@@ -10,22 +10,20 @@ use App\Models\ResearchReport;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\Subscription\InvestorPassBilling;
 use App\Services\Subscription\Memberships;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class InvestorIntelligenceLandingController extends Controller
 {
-    public function __invoke(Request $request, Memberships $memberships): View
+    public function __invoke(Request $request, Memberships $memberships, InvestorPassBilling $billing): View
     {
         $plan = SubscriptionPlan::investorPass();
         $user = $request->user();
 
-        $checkoutReady = $plan->checkout_amount !== null
-            && $plan->checkout_amount >= 1
-            && $plan->checkout_currency === 'KES'
-            && filled($plan->checkout_policy)
-            && $plan->is_active;
+        $checkoutReady = $billing->mpesaCheckoutReady($plan);
+        $mpesaAmountKes = $billing->mpesaAmountKes($plan);
 
         $subscription = $user !== null ? $memberships->find($user, $plan) : null;
         if ($subscription !== null) {
@@ -36,6 +34,8 @@ class InvestorIntelligenceLandingController extends Controller
         return view('public.investor-intelligence', [
             'plan' => $plan,
             'checkoutReady' => $checkoutReady,
+            'mpesaAmountKes' => $mpesaAmountKes,
+            'mpesaConversionSummary' => $billing->conversionSummary($plan),
             'mpesaConfigured' => config('mpesa.driver') !== 'unconfigured',
             'subscriptionCta' => $this->subscriptionCta($user, $subscription),
             'latestProjects' => DevelopmentProject::query()
@@ -88,6 +88,13 @@ class InvestorIntelligenceLandingController extends Controller
             return [
                 'label' => $this->renewalLabel($subscription),
                 'url' => route('broker.subscription.show'),
+            ];
+        }
+
+        if ($user->hasPermission('workspace.seller')) {
+            return [
+                'label' => $this->renewalLabel($subscription),
+                'url' => route('seller.subscription.show'),
             ];
         }
 

@@ -11,8 +11,8 @@
         ? $subscription->ends_at->toFormattedDateString()
         : ($passActive ? 'Open-ended' : 'Not scheduled');
     $startsLabel = $subscription?->starts_at?->toFormattedDateString() ?? 'Not recorded';
-    $checkoutLabel = $checkoutReady
-        ? 'KES '.number_format($plan->checkout_amount)
+    $checkoutLabel = $checkoutReady && $mpesaAmountKes
+        ? 'KES '.number_format($mpesaAmountKes)
         : 'Not configured';
     $canRequest = $routePrefix !== 'investor'
         && $plan->is_active
@@ -54,7 +54,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.14em] text-white/80">{{ $plan->name }}</p>
                 <p class="home-serif mt-1 text-2xl font-semibold text-white">{{ $plan->amountLabel() }}</p>
-                <p class="mt-1 text-sm text-white/80">Billed every {{ $plan->interval }} · payment method: M-Pesa (KES) when configured</p>
+                <p class="mt-1 text-sm text-white/80">Billed every {{ $plan->interval }} · choose M-Pesa or a manual finance request below</p>
                 <p class="mt-2 max-w-2xl text-sm leading-relaxed text-white/90">{{ $plan->terms }}</p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -73,6 +73,47 @@
             </div>
         </div>
     </div>
+
+    <section class="mt-6 max-w-5xl rounded-2xl border border-sand-200 bg-white p-5 shadow-sm" aria-labelledby="billing-method-heading">
+        <h2 id="billing-method-heading" class="home-serif text-lg font-semibold text-lamu-900">Billing method</h2>
+        <p class="mt-1 text-sm text-stone-600">List price: {{ $plan->amountLabel() }}. M-Pesa always collects Kenyan shillings on your phone.</p>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+            <article @class(['rounded-xl border p-4', 'border-lamu-800 bg-lamu-50' => $checkoutReady && $mpesaConfigured, 'border-sand-200 bg-sand-50 opacity-80' => ! ($checkoutReady && $mpesaConfigured)])>
+                <h3 class="text-sm font-semibold text-lamu-900">M-Pesa STK Push</h3>
+                @if ($checkoutReady && $mpesaAmountKes)
+                    <p class="mt-2 text-sm text-stone-700">Pay <span class="font-semibold">KES {{ number_format($mpesaAmountKes) }}</span> through Safaricom M-Pesa.</p>
+                    @if ($mpesaConversionSummary)
+                        <p class="mt-2 text-xs leading-relaxed text-stone-600">{{ $mpesaConversionSummary }}</p>
+                    @elseif (filled($plan->checkout_policy))
+                        <p class="mt-2 text-xs leading-relaxed text-stone-600">{{ $plan->checkout_policy }}</p>
+                    @endif
+                @else
+                    <p class="mt-2 text-sm text-stone-600">M-Pesa checkout is not available until a payable KES amount can be calculated (configure FX or a manual KES amount).</p>
+                @endif
+                @if ($canCheckout)
+                    <button type="button" class="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-lamu-900 px-4 text-sm font-medium text-white" onclick="document.getElementById('investor-checkout').showModal()">
+                        Pay with M-Pesa
+                    </button>
+                @elseif ($checkoutReady && ! $mpesaConfigured)
+                    <p class="mt-3 text-xs text-amber-800">Gateway not configured in this environment.</p>
+                @endif
+            </article>
+            <article class="rounded-xl border border-sand-200 bg-white p-4">
+                <h3 class="text-sm font-semibold text-lamu-900">Manual finance request</h3>
+                <p class="mt-2 text-sm text-stone-700">Ask staff to record payment outside M-Pesa (bank transfer, invoice, or in-office collection).</p>
+                @if ($canRequest)
+                    <form method="POST" action="{{ route($routePrefix.'.subscription.store') }}" class="mt-4">@csrf
+                        <input type="hidden" name="billing_method" value="manual">
+                        <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-full border border-lamu-900 px-4 text-sm font-semibold text-lamu-900 hover:bg-lamu-50">Request Investor Pass</button>
+                    </form>
+                @elseif ($passActive)
+                    <p class="mt-3 text-xs text-stone-500">Your pass is active. Use M-Pesa here when you renew.</p>
+                @else
+                    <p class="mt-3 text-xs text-stone-500">Available when you need staff to open membership without M-Pesa.</p>
+                @endif
+            </article>
+        </div>
+    </section>
 
     <section class="mt-6 max-w-5xl" aria-labelledby="pass-status-heading">
         <h2 id="pass-status-heading" class="sr-only">Membership status</h2>
@@ -111,8 +152,14 @@
                 <li class="flex gap-3"><span class="mt-0.5 text-lamu-700" aria-hidden="true">✓</span><span>{{ $plan->interval === 'year' ? 'Annual' : ucfirst($plan->interval) }} membership recorded after verified payment or staff activation.</span></li>
                 <li class="flex gap-3"><span class="mt-0.5 text-stone-400" aria-hidden="true">✕</span><span>Seller identity, parcel numbers, and exact directions to private holdings stay closed.</span></li>
             </ul>
-            @if ($checkoutReady)
-                <p class="mt-4 border-t border-sand-100 pt-4 text-sm text-stone-600">M-Pesa collects KES {{ number_format($plan->checkout_amount) }} (recorded separately from the {{ $plan->currency }} list price). {{ $plan->checkout_policy }}</p>
+            @if ($checkoutReady && $mpesaAmountKes)
+                <p class="mt-4 border-t border-sand-100 pt-4 text-sm text-stone-600">
+                    @if ($mpesaConversionSummary)
+                        {{ $mpesaConversionSummary }}
+                    @else
+                        M-Pesa collects KES {{ number_format($mpesaAmountKes) }}@if (filled($plan->checkout_policy)) · {{ $plan->checkout_policy }}@endif
+                    @endif
+                </p>
             @else
                 <p class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-stone-800">No payable KES amount has been set yet, so an M-Pesa prompt cannot be sent. You can still request membership for staff to record manually.</p>
             @endif
@@ -162,7 +209,7 @@
             @endif
 
             @if ($routePrefix === 'investor' && ! $passActive)
-                <p class="mt-4 text-sm text-stone-600">If your pass expired, open the Buyer workspace subscription page to renew.</p>
+                <p class="mt-4 text-sm text-stone-600">If your pass expired, open the Buyer, Broker, or Seller workspace subscription page to renew.</p>
             @endif
 
             @if ($subscription && $subscription->status === SubscriptionStatus::Active && $routePrefix !== 'staff')
@@ -228,9 +275,10 @@
                 <button class="text-sm font-medium text-stone-500 hover:text-lamu-900">Close</button>
             </form>
             <h2 class="home-serif text-xl font-semibold text-lamu-900">{{ $passActive ? 'Renew Investor Pass' : 'Investor Pass checkout' }}</h2>
-            <p class="mt-2 text-sm text-stone-600">Enter the M-Pesa number that should receive the STK prompt for KES {{ number_format($plan->checkout_amount) }}. @if ($passActive) Your renewal period extends only after payment is confirmed. @else Premium research stays closed until payment is confirmed. @endif</p>
+            <p class="mt-2 text-sm text-stone-600">Enter the M-Pesa number that should receive the STK prompt for KES {{ number_format($mpesaAmountKes) }}. @if ($passActive) Your renewal period extends only after payment is confirmed. @else Premium research stays closed until payment is confirmed. @endif</p>
             <form method="POST" action="{{ route($routePrefix.'.subscription.checkout') }}" data-turbo-frame="_top" data-confirm="Send this payment prompt?" class="mt-4 space-y-4">
                 @csrf
+                <input type="hidden" name="billing_method" value="mpesa">
                 <label class="block text-sm font-medium text-lamu-900">M-Pesa phone
                     <input name="phone" value="{{ old('phone') }}" placeholder="2547XXXXXXXX" required class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2 shadow-sm">
                 </label>

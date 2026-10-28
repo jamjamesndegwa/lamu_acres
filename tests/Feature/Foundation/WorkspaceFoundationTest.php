@@ -124,8 +124,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
     {
         $user = User::factory()->withRoles('buyer', 'broker')->create();
 
-        $buyerPage = $this->actingAs($user)->get('/buyer')->assertOk()->assertSee('Switch Workspace');
-        $this->assertMatchesRegularExpression('/id="switch-workspace"[^>]*data-turbo-frame="modal"/', $buyerPage->getContent());
+        $buyerPage = $this->actingAs($user)->get('/buyer')->assertOk()->assertSee('Switch workspace', false)->assertSee('Open Broker Partner workspace', false);
 
         $this->actingAs($user)
             ->withHeader('Turbo-Frame', 'modal')
@@ -161,7 +160,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->assertSee('Premium research, infrastructure tracking')
             ->assertSee('private parcel records stay closed');
 
-        $this->actingAs($subscriber)->get('/buyer')->assertOk()->assertSee('Switch Workspace');
+        $this->actingAs($subscriber)->get('/buyer')->assertOk()->assertSee('Open Investor workspace', false);
 
         $expired = User::factory()->withRoles('buyer')->withInvestorPass(now()->subDay())->create();
         $this->actingAs($expired)->get('/investor')->assertForbidden();

@@ -10,6 +10,7 @@ use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Models\SubscriptionReceipt;
 use App\Models\User;
+use App\Services\Subscription\InvestorPassBilling;
 use App\Services\Subscription\Memberships;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,7 +18,11 @@ use Illuminate\Validation\ValidationException;
 
 class MpesaCheckout
 {
-    public function __construct(private MpesaGateway $gateway, private Memberships $memberships) {}
+    public function __construct(
+        private MpesaGateway $gateway,
+        private Memberships $memberships,
+        private InvestorPassBilling $billing,
+    ) {}
 
     public function start(User $member, string $phone, string $idempotencyKey): SubscriptionPayment
     {
@@ -33,6 +38,7 @@ class MpesaCheckout
 
         $plan = SubscriptionPlan::investorPass();
         $amount = $this->payableAmount($plan);
+        $policy = (string) ($this->billing->checkoutPolicy($plan) ?? '');
         $subscription = $this->memberships->find($member, $plan);
 
         if ($subscription && in_array($subscription->status, [SubscriptionStatus::Pending, SubscriptionStatus::Active], true) === false) {
@@ -55,7 +61,7 @@ class MpesaCheckout
             'amount' => $amount,
             'currency' => 'KES',
             'status' => 'open',
-            'policy' => (string) $plan->checkout_policy,
+            'policy' => $policy !== '' ? $policy : (string) $plan->checkout_policy,
         ]);
 
         $payment = SubscriptionPayment::query()->create([
@@ -253,13 +259,15 @@ class MpesaCheckout
 
     private function payableAmount(SubscriptionPlan $plan): int
     {
-        if ($plan->checkout_currency !== 'KES' || $plan->checkout_amount === null || $plan->checkout_amount < 1 || blank($plan->checkout_policy)) {
+        $amount = $this->billing->mpesaAmountKes($plan);
+
+        if (! $this->billing->mpesaCheckoutReady($plan) || $amount === null) {
             throw ValidationException::withMessages([
-                'phone' => 'A payable KES amount and checkout policy have not been set. No request was sent.',
+                'phone' => 'A payable KES amount could not be calculated. Set a checkout amount or configure conversion for the plan currency.',
             ]);
         }
 
-        return (int) $plan->checkout_amount;
+        return $amount;
     }
 
     /**

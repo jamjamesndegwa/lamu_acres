@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Account\MembershipController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\HoldingController;
 use App\Http\Controllers\Seller\PropertyController;
@@ -40,6 +41,11 @@ Route::middleware(['auth', 'private.cache', 'workspace:seller'])
         Route::get('/transactions', [SalesController::class, 'transactions'])->name('transactions.index');
         Route::get('/sales/{salesTransaction}', [SalesController::class, 'showCompletedSale'])->name('sales.show');
         Route::get('/transactions/{propertyTransaction}', [SalesController::class, 'statement'])->name('transactions.show');
+        Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
+        Route::post('/subscription', [MembershipController::class, 'store'])->name('subscription.store');
+        Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');
+        Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
+        Route::post('/subscription/cancellation', [MembershipController::class, 'cancel'])->name('subscription.cancel');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::get('/notifications/{notification}', [WorkspaceNotificationController::class, 'open'])->name('notifications.open');

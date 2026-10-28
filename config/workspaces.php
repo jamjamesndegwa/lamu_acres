@@ -252,6 +252,13 @@ return [
                 ],
             ],
             [
+                'key' => 'investor',
+                'label' => 'Investor Pass',
+                'items' => [
+                    ['label' => 'Investor Pass', 'route' => 'seller.subscription.show', 'active' => 'seller.subscription.*'],
+                ],
+            ],
+            [
                 'key' => 'notifications',
                 'label' => 'Notifications',
                 'items' => [

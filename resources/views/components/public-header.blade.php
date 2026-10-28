@@ -67,12 +67,14 @@
                     @auth
                         <p class="text-xs text-stone-500">Signed in as</p>
                         <p class="mt-1 break-words text-base font-semibold text-lamu-900">{{ auth()->user()->name }}</p>
-                        <a href="{{ route('workspaces.index') }}" class="mt-2 inline-flex text-sm font-medium text-lamu-700 hover:underline">My account →</a>
                     @else
                         <a href="{{ route('login') }}" class="flex min-h-11 items-center justify-center rounded-lg bg-lamu-900 px-4 text-sm font-medium text-white">Login</a>
                         <a href="{{ route('register') }}" class="mt-3 block text-center text-sm text-lamu-700 hover:underline">Create an account</a>
                     @endauth
                 </div>
+                @auth
+                    <x-workspace-portal-switcher :current="$workspace ?? null" :workspaces="$workspaces ?? []" variant="mobile" />
+                @endauth
                 <nav class="public-mobile-links flex-1 overflow-y-auto px-3 py-4" aria-label="Mobile public navigation">
                     <a href="{{ route('home') }}" @if ($onHome) aria-current="page" @endif>Home</a>
                     <a href="{{ route('land.index') }}" @if ($exploreActive) aria-current="page" @endif>Explore Land</a>

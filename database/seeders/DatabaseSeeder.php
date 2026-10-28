@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
 
         $accounts = [
             ['name' => 'Buyer Account', 'email' => 'buyer@lamuacres.test', 'roles' => ['buyer']],
+            ['name' => 'Mburu Kamau', 'email' => 'mburu@lamuacres.test', 'roles' => ['buyer']],
             ['name' => 'Broker Account', 'email' => 'broker@lamuacres.test', 'roles' => ['broker']],
             ['name' => 'Landowner Account', 'email' => 'seller@lamuacres.test', 'roles' => ['seller']],
             ['name' => 'Investor Account', 'email' => 'investor@lamuacres.test', 'roles' => ['buyer'], 'investor_pass' => true],
@@ -40,9 +41,12 @@ class DatabaseSeeder extends Seeder
                 'staff.sales',
                 'staff.verification',
                 'staff.intelligence',
+                'intelligence.publish',
                 'staff.finance',
                 'staff.communications',
             ]],
+            ['name' => 'Research Officer', 'email' => 'research@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.intelligence']],
+            ['name' => 'Research Editor', 'email' => 'editor@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.intelligence', 'intelligence.publish']],
             ['name' => 'Verification Officer', 'email' => 'verification@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.verification']],
             ['name' => 'Finance Officer', 'email' => 'finance@lamuacres.test', 'roles' => ['staff'], 'permissions' => ['staff.finance', 'commissions.propose', 'commissions.approve', 'commissions.record', 'agency.propose', 'agency.record']],
             ['name' => 'Administrator', 'email' => 'administrator@lamuacres.test', 'roles' => ['admin']],
@@ -98,6 +102,13 @@ class DatabaseSeeder extends Seeder
                 );
             }
         }
+
+        if (! app()->environment('local')) {
+            return;
+        }
+
+        $this->call(LocalInvestorIntelligenceSeeder::class);
+        $this->call(LocalSubscriptionDemoSeeder::class);
     }
 
     private function localCapabilityReviewer(): User
@@ -121,6 +132,7 @@ class DatabaseSeeder extends Seeder
             'staff.sales',
             'staff.verification',
             'staff.intelligence',
+            'intelligence.publish',
             'staff.finance',
             'staff.communications',
         ]);

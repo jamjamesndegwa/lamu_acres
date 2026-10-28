@@ -36,7 +36,7 @@ class InvestorPassTest extends FoundationTestCase
 
         $this->assertSame(15000, SubscriptionPlan::investorPass()->fresh()->amount_cents);
 
-        $this->actingAs($seller)->post(route('buyer.subscription.store'))->assertForbidden();
+        $this->actingAs($seller)->post(route('seller.subscription.store'))->assertRedirect();
         $this->actingAs($buyer)->post(route('buyer.subscription.store'))->assertRedirect();
         $this->actingAs($broker)->post(route('broker.subscription.store'))->assertRedirect();
 

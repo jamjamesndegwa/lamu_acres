@@ -1,6 +1,6 @@
 @php
-    $checkoutLabel = $checkoutReady
-        ? 'KES '.number_format($plan->checkout_amount)
+    $checkoutLabel = $checkoutReady && ($mpesaAmountKes ?? null)
+        ? 'KES '.number_format($mpesaAmountKes)
         : null;
 @endphp
 <x-public-layout

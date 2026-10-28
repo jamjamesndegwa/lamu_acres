@@ -127,9 +127,13 @@ class InvestorIntelligenceLandingTest extends FoundationTestCase
 
     public function test_landing_shows_truthful_message_when_kes_checkout_is_not_configured(): void
     {
+        config(['subscription.fx_to_kes.USD' => null]);
+
         SubscriptionPlan::investorPass()->update([
+            'amount_cents' => 10000,
+            'currency' => 'USD',
             'checkout_amount' => null,
-            'checkout_currency' => 'KES',
+            'checkout_currency' => null,
             'checkout_policy' => null,
         ]);
 

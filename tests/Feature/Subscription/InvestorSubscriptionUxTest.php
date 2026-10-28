@@ -86,9 +86,11 @@ class InvestorSubscriptionUxTest extends FoundationTestCase
     {
         SubscriptionPlan::investorPass()->update([
             'checkout_amount' => null,
-            'checkout_currency' => 'KES',
+            'checkout_currency' => null,
             'checkout_policy' => null,
+            'currency' => 'USD',
         ]);
+        config(['subscription.fx_to_kes.USD' => null]);
 
         $buyer = User::factory()->withRoles('buyer')->create();
 

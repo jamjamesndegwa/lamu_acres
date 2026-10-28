@@ -29,7 +29,7 @@
         <label class="block text-sm">Payable checkout amount (KES)
             <input name="checkout_amount" value="{{ old('checkout_amount', $plan->checkout_amount) }}" inputmode="numeric" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
         </label>
-        <p class="text-xs text-lamu-800/60">Kenyan shillings are entered separately. They are not calculated from the list price.</p>
+        <p class="text-xs text-lamu-800/60">Leave blank to convert the list price to KES automatically at checkout using <code class="text-[11px]">config/subscription.php</code> FX rates. Enter a value here to override conversion.</p>
         <label class="block text-sm">Checkout policy
             <textarea name="checkout_policy" rows="3" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">{{ old('checkout_policy', $plan->checkout_policy) }}</textarea>
             @error('checkout_policy')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror

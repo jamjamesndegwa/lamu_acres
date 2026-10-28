@@ -32,6 +32,7 @@ use App\Models\SubscriptionPlan;
 use App\Services\Access\NavigationBuilder;
 use App\Services\Admin\ExecutiveReport;
 use App\Services\Intelligence\PriceObservatory;
+use App\Services\Subscription\InvestorPassBilling;
 use App\Services\Subscription\Memberships;
 use App\Support\Reporting\ReportingWindow;
 use Illuminate\Http\Request;
@@ -108,11 +109,7 @@ class WorkspaceDashboardController extends Controller
         $subscription?->refresh();
 
         $observatory = app(PriceObservatory::class);
-        $checkoutReady = $plan->checkout_amount !== null
-            && $plan->checkout_amount >= 1
-            && $plan->checkout_currency === 'KES'
-            && filled($plan->checkout_policy)
-            && $plan->is_active;
+        $checkoutReady = app(InvestorPassBilling::class)->mpesaCheckoutReady($plan);
 
         return [
             'premium' => $user->hasActiveInvestorPass(),

@@ -125,6 +125,8 @@
             @endforeach
         </nav>
 
+        <x-workspace-portal-switcher :current="$workspace" variant="sidebar" />
+
         @if (count($account) > 0)
             <div class="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
                 @foreach ($account as $item)
