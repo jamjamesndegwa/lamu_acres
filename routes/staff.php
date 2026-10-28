@@ -206,6 +206,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::get('/sales', [SalesPipelineController::class, 'index'])->name('sales.index');
             Route::get('/sales/completion', [SalesPipelineController::class, 'completion'])->name('sales.completion');
             Route::get('/sales/create', [SalesPipelineController::class, 'create'])->name('sales.create');
+            Route::get('/sales/create/context', [SalesPipelineController::class, 'createContext'])->name('sales.create.context');
             Route::post('/sales', [SalesPipelineController::class, 'store'])->name('sales.store');
             Route::get('/sales/{salesTransaction}', [SalesPipelineController::class, 'show'])->name('sales.show');
             Route::put('/sales/{salesTransaction}', [SalesPipelineController::class, 'update'])->name('sales.update');

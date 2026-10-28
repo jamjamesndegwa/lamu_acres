@@ -11,6 +11,7 @@ use App\Models\Enquiry;
 use App\Models\Property;
 use App\Models\SalesTransaction;
 use App\Models\User;
+use App\Services\Sales\SalesCreateContext;
 use App\Services\Sales\SalesPipeline;
 use App\Services\Sales\SalesReassessment;
 use Illuminate\Http\RedirectResponse;
@@ -48,10 +49,30 @@ class SalesPipelineController extends Controller
         return view('staff.sales.create', [
             'origins' => SalesOrigin::cases(),
             'agents' => User::permission('staff.sales')->orderBy('name')->get(['id', 'name']),
-            'properties' => Property::query()->orderBy('title')->limit(200)->get(['id', 'title']),
+            'properties' => Property::query()->orderBy('title')->limit(200)->get(['id', 'title', 'status']),
             'buyers' => User::role('buyer')->orderBy('name')->limit(200)->get(['id', 'name']),
             'enquiries' => Enquiry::query()->with('property:id,title')->latest()->limit(100)->get(),
             'introductions' => BrokerIntroduction::query()->latest()->limit(100)->get(['id', 'reference', 'buyer_name']),
+        ]);
+    }
+
+    public function createContext(Request $request, SalesCreateContext $context): View
+    {
+        $this->authorizeDesk($request);
+        $data = $request->validate([
+            'property_id' => ['nullable', 'integer', Rule::exists('properties', 'id')],
+            'buyer_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'origin' => ['nullable', Rule::enum(SalesOrigin::class)],
+        ]);
+
+        $origin = isset($data['origin']) ? SalesOrigin::from($data['origin']) : null;
+
+        return view('staff.sales.partials.create-context', [
+            'context' => $context->assemble(
+                isset($data['property_id']) ? (int) $data['property_id'] : null,
+                isset($data['buyer_id']) ? (int) $data['buyer_id'] : null,
+                $origin,
+            ),
         ]);
     }
 

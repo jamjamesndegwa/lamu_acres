@@ -747,6 +747,86 @@ document.addEventListener('DOMContentLoaded', () => bindPurchasePricing())
 document.addEventListener('turbo:frame-load', (event) => {
     if (event.target instanceof HTMLElement) {
         bindPurchasePricing(event.target)
+        if (event.target.id === 'sales-create-context') {
+            applySalesCreateSuggestions(event.target.closest('form[data-sales-create]'), event.target)
+        }
+    }
+})
+
+function salesCreateParams(form) {
+    const params = new URLSearchParams()
+    const propertyId = form.querySelector('[name="property_id"]')?.value
+    const buyerId = form.querySelector('[name="buyer_id"]')?.value
+    const origin = form.querySelector('[name="origin"]')?.value
+    if (propertyId) params.set('property_id', propertyId)
+    if (buyerId) params.set('buyer_id', buyerId)
+    if (origin) params.set('origin', origin)
+
+    return params
+}
+
+function refreshSalesCreateContext(form) {
+    const frame = form.querySelector('#sales-create-context')
+    const url = form.dataset.contextUrl
+    if (!(frame instanceof HTMLElement) || !url) return
+
+    const query = salesCreateParams(form).toString()
+    frame.src = query ? `${url}?${query}` : url
+}
+
+function applySalesCreateSuggestions(form, frameRoot) {
+    if (!(form instanceof HTMLFormElement)) return
+
+    const node = frameRoot?.querySelector('[data-sales-create-suggestions]')
+    if (!(node instanceof HTMLScriptElement) || !node.textContent) return
+
+    let suggestions = {}
+    try {
+        suggestions = JSON.parse(node.textContent)
+    } catch {
+        return
+    }
+
+    form.querySelectorAll('[data-sales-create-suggest]').forEach((field) => {
+        const key = field.dataset.salesCreateSuggest
+        const value = suggestions[key]
+        if (value === null || value === undefined || value === '') return
+
+        if (field instanceof HTMLSelectElement || field instanceof HTMLInputElement) {
+            if (field.value !== '') return
+            field.value = String(value)
+        }
+    })
+}
+
+function bindSalesCreateContext(root = document) {
+    root.querySelectorAll('form[data-sales-create]').forEach((form) => {
+        if (!(form instanceof HTMLFormElement) || form.dataset.salesCreateBound === 'true') return
+        form.dataset.salesCreateBound = 'true'
+
+        form.querySelectorAll('[data-sales-create-field]').forEach((field) => {
+            field.addEventListener('change', () => refreshSalesCreateContext(form))
+        })
+
+        form.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-apply-offer]')
+            if (!button || !form.contains(button)) return
+            event.preventDefault()
+            const origin = form.querySelector('[name="origin"]')
+            if (origin instanceof HTMLSelectElement) {
+                origin.value = 'offer'
+            }
+            refreshSalesCreateContext(form)
+        })
+
+        refreshSalesCreateContext(form)
+    })
+}
+
+document.addEventListener('DOMContentLoaded', () => bindSalesCreateContext())
+document.addEventListener('turbo:frame-load', (event) => {
+    if (event.target instanceof HTMLElement) {
+        bindSalesCreateContext(event.target)
     }
 })
 
