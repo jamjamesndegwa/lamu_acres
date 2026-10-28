@@ -15,27 +15,27 @@ class AppliedLandFilters
      * @param  array<string, mixed>  $filters
      * @return list<array{label: string, url: string}>
      */
-    public function chips(Request $request, array $filters, ?County $county = null, ?Locality $locality = null): array
+    public function chips(Request $request, array $filters, ?County $county = null, ?Locality $locality = null, string $indexRoute = 'land.index'): array
     {
         $chips = [];
 
         if ($county !== null) {
             $chips[] = [
                 'label' => 'Area: '.($locality !== null ? $locality->name.', ' : '').$county->name,
-                'url' => $this->url(route('land.index'), $this->query($request)),
+                'url' => $this->url($this->indexUrl($indexRoute, $county, $locality), $this->query($request)),
             ];
         }
 
         if (is_string($filters['q']) && $filters['q'] !== '') {
-            $chips[] = $this->chip($request, $county, $locality, 'Location: '.$filters['q'], ['q']);
+            $chips[] = $this->chip($request, $county, $locality, 'Location: '.$filters['q'], ['q'], $indexRoute);
         }
 
         if ($filters['purpose'] instanceof ListingPurpose) {
-            $chips[] = $this->chip($request, $county, $locality, $filters['purpose'] === ListingPurpose::Sale ? 'For sale' : 'For lease', ['purpose']);
+            $chips[] = $this->chip($request, $county, $locality, $filters['purpose'] === ListingPurpose::Sale ? 'For sale' : 'For lease', ['purpose'], $indexRoute);
         }
 
         if ($filters['type'] instanceof PropertyType) {
-            $chips[] = $this->chip($request, $county, $locality, 'Type: '.$filters['type']->label(), ['type']);
+            $chips[] = $this->chip($request, $county, $locality, 'Type: '.$filters['type']->label(), ['type'], $indexRoute);
         }
 
         foreach ([
@@ -56,7 +56,7 @@ class AppliedLandFilters
                 default => 'Max '.mb_strtolower($name).': '.$format($max),
             };
 
-            $chips[] = $this->chip($request, $county, $locality, $label, ['min_'.$key, 'max_'.$key]);
+            $chips[] = $this->chip($request, $county, $locality, $label, ['min_'.$key, 'max_'.$key], $indexRoute);
         }
 
         return $chips;
@@ -65,26 +65,29 @@ class AppliedLandFilters
     /**
      * Clear every filter while keeping the visitor's sort and view preference.
      */
-    public function clearUrl(Request $request): string
+    public function clearUrl(Request $request, ?County $county = null, ?Locality $locality = null, string $indexRoute = 'land.index'): string
     {
-        return $this->url(route('land.index'), Arr::only($this->query($request), ['sort', 'view']));
+        return $this->url($this->indexUrl($indexRoute, $county, $locality), Arr::only($this->query($request), ['sort', 'view']));
     }
 
     /**
      * @param  list<string>  $keys
      * @return array{label: string, url: string}
      */
-    private function chip(Request $request, ?County $county, ?Locality $locality, string $label, array $keys): array
+    private function chip(Request $request, ?County $county, ?Locality $locality, string $label, array $keys, string $indexRoute = 'land.index'): array
     {
-        $base = route('land.index', array_filter([
+        return [
+            'label' => $label,
+            'url' => $this->url($this->indexUrl($indexRoute, $county, $locality), Arr::except($this->query($request), $keys)),
+        ];
+    }
+
+    private function indexUrl(string $indexRoute, ?County $county, ?Locality $locality): string
+    {
+        return route($indexRoute, array_filter([
             'county' => $county?->slug,
             'locality' => $locality?->slug,
         ]));
-
-        return [
-            'label' => $label,
-            'url' => $this->url($base, Arr::except($this->query($request), $keys)),
-        ];
     }
 
     /**

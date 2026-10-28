@@ -288,6 +288,13 @@ return [
                 ],
             ],
             [
+                'key' => 'opportunities',
+                'label' => 'Investment Opportunities',
+                'items' => [
+                    ['label' => 'Investment Opportunities', 'route' => 'investor.opportunities.index', 'active' => 'investor.opportunities.*'],
+                ],
+            ],
+            [
                 'key' => 'tracker',
                 'label' => 'Infrastructure',
                 'items' => [

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Account\MembershipController;
 use App\Http\Controllers\Intelligence\LibraryController;
 use App\Http\Controllers\Intelligence\WatchlistController;
+use App\Http\Controllers\Investor\OpportunityController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
 use App\Http\Controllers\WorkspaceNotificationController;
@@ -13,6 +14,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:investor'])
     ->name('investor.')
     ->group(function () {
         Route::get('/', WorkspaceDashboardController::class)->name('dashboard');
+        Route::get('/opportunities/listing/{property}', [OpportunityController::class, 'show'])->name('opportunities.show');
+        Route::get('/opportunities/{county?}/{locality?}', [OpportunityController::class, 'index'])->name('opportunities.index');
         Route::get('/developments', [LibraryController::class, 'projects'])->name('projects.index');
         Route::get('/developments/{project}', [LibraryController::class, 'project'])->name('projects.show');
         Route::get('/imagery', [LibraryController::class, 'imagery'])->name('imagery.index');

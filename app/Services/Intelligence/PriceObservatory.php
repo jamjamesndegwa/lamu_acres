@@ -6,6 +6,7 @@ use App\Models\Locality;
 use App\Models\Property;
 use App\Models\PropertyPriceChange;
 use App\Models\VerifiedSale;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class PriceObservatory
@@ -24,51 +25,84 @@ class PriceObservatory
             ->with('areaLocality')
             ->get();
 
-        $minimumSample = $this->minMedianSample();
-
         return $listings
             ->groupBy('locality_id')
-            ->map(function (Collection $group) use ($minimumSample): array {
-                $prices = $group
-                    ->map(fn (Property $property): ?int => $property->pricePerAcre())
-                    ->filter(fn (?int $price): bool => $price !== null)
-                    ->sort()
-                    ->values();
-
-                $history = PropertyPriceChange::query()
-                    ->whereIn('property_id', $group->modelKeys())
-                    ->orderBy('created_at')
-                    ->get()
-                    ->map(fn (PropertyPriceChange $change): array => [
-                        'at' => $change->created_at,
-                        'label' => 'Asking price change',
-                        'amount' => (int) $change->price_amount,
-                        'per_acre' => null,
-                    ]);
-
-                foreach ($group as $property) {
-                    $history->push([
-                        'at' => $property->published_at,
-                        'label' => 'Current asking price',
-                        'amount' => (int) $property->price_amount,
-                        'per_acre' => $property->pricePerAcre(),
-                    ]);
-                }
-
-                $sample = $prices->count();
-
-                return [
-                    'locality' => $group->first()->areaLocality,
-                    'median' => $sample >= $minimumSample ? $this->median($prices) : null,
-                    'sample' => $sample,
-                    'min_median_sample' => $minimumSample,
-                    'fresh_at' => $group->max('published_at'),
-                    'listings' => $group->values(),
-                    'history' => $history->sortBy('at')->values(),
-                ];
-            })
+            ->map(fn (Collection $group): array => $this->askingRowFromListings($group))
             ->filter(fn (array $row): bool => $row['locality'] !== null && $row['sample'] > 0)
             ->values();
+    }
+
+    /**
+     * @return array{locality: ?Locality, median: ?int, sample: int, min_median_sample: int, fresh_at: mixed, listings: Collection<int, Property>, history: Collection<int, array{at: mixed, label: string, amount: int, per_acre: ?int}>}|null
+     */
+    public function askingForLocality(?Locality $locality): ?array
+    {
+        if ($locality === null) {
+            return null;
+        }
+
+        /** @var EloquentCollection<int, Property> $listings */
+        $listings = Property::query()
+            ->publiclyListed()
+            ->where('locality_id', $locality->id)
+            ->where('acreage', '>', 0)
+            ->with('areaLocality')
+            ->get();
+
+        if ($listings->isEmpty()) {
+            return null;
+        }
+
+        $row = $this->askingRowFromListings($listings);
+
+        return $row['sample'] > 0 ? $row : null;
+    }
+
+    /**
+     * @param  Collection<int, Property>|EloquentCollection<int, Property>  $group
+     * @return array{locality: ?Locality, median: ?int, sample: int, min_median_sample: int, fresh_at: mixed, listings: Collection<int, Property>, history: Collection<int, array{at: mixed, label: string, amount: int, per_acre: ?int}>}
+     */
+    private function askingRowFromListings(Collection|EloquentCollection $group): array
+    {
+        $minimumSample = $this->minMedianSample();
+
+        $prices = $group
+            ->map(fn (Property $property): ?int => $property->pricePerAcre())
+            ->filter(fn (?int $price): bool => $price !== null)
+            ->sort()
+            ->values();
+
+        $history = PropertyPriceChange::query()
+            ->whereIn('property_id', $group->modelKeys())
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (PropertyPriceChange $change): array => [
+                'at' => $change->created_at,
+                'label' => 'Asking price change',
+                'amount' => (int) $change->price_amount,
+                'per_acre' => null,
+            ]);
+
+        foreach ($group as $property) {
+            $history->push([
+                'at' => $property->published_at,
+                'label' => 'Current asking price',
+                'amount' => (int) $property->price_amount,
+                'per_acre' => $property->pricePerAcre(),
+            ]);
+        }
+
+        $sample = $prices->count();
+
+        return [
+            'locality' => $group->first()->areaLocality,
+            'median' => $sample >= $minimumSample ? $this->median($prices) : null,
+            'sample' => $sample,
+            'min_median_sample' => $minimumSample,
+            'fresh_at' => $group->max('published_at'),
+            'listings' => $group->values(),
+            'history' => $history->sortBy('at')->values(),
+        ];
     }
 
     public function minMedianSample(): int
