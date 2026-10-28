@@ -3,7 +3,7 @@
     $documentLabel = ucfirst(str_replace('_', ' ', $kind));
     $previewUrl = route('account.applications.evidence', [$application, $kind, 'preview' => 1]);
 @endphp
-<article class="overflow-hidden rounded-xl border border-sand-200 bg-sand-50">
+<article class="overflow-hidden rounded-xl border border-sand-200 bg-white shadow-sm ring-1 ring-sand-100">
     <h4 class="p-3 text-sm font-semibold text-lamu-900">{{ $documentLabel }}</h4>
     @if ($document)
         @if (in_array($document['mime'] ?? '', ['image/jpeg', 'image/png'], true))

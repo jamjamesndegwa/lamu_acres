@@ -176,8 +176,7 @@ class AccountAccessTest extends FoundationTestCase
         $this->actingAs($desk)->put(route('staff.applications.update', $application), [
             'status' => 'approved',
             'decision_reason' => 'Identity documents were accepted.',
-            'identity_outcome' => 'verified', 'identity_reference' => 'TEST identity review reference',
-            'identity_next_review_on' => now()->addYear()->toDateString(),
+            'identity_outcome' => 'verified',
         ])->assertRedirect(route('staff.applications.index'));
 
         $application->refresh();

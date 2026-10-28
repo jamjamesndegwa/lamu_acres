@@ -1,7 +1,11 @@
 @if ($modal)
     <turbo-frame id="modal">
         <x-modal title="Application decision" :close="route('staff.applications.index')">
-            @include('staff.applications.partials.decision', ['application' => $application])
+            @include('staff.applications.partials.decision', [
+                'application' => $application,
+                'verificationBlockers' => $verificationBlockers,
+                'reviewChecklist' => $reviewChecklist,
+            ])
         </x-modal>
     </turbo-frame>
 @else
@@ -10,8 +14,12 @@
             <a href="{{ route('staff.applications.index') }}" class="text-sm font-medium text-lamu-800 underline">Back to applications</a>
             <x-status-badge :label="$application->status->label()" />
         </div>
-        <div class="mt-6 max-w-6xl rounded-2xl border border-sand-200 bg-white p-4 sm:p-6">
-            @include('staff.applications.partials.decision', ['application' => $application])
+        <div class="mt-6 max-w-6xl">
+            @include('staff.applications.partials.decision', [
+                'application' => $application,
+                'verificationBlockers' => $verificationBlockers,
+                'reviewChecklist' => $reviewChecklist,
+            ])
         </div>
     </x-workspace-layout>
 @endif

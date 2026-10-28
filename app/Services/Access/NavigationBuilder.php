@@ -101,6 +101,7 @@ class NavigationBuilder
                 return [
                     'title' => $panel['title'],
                     'description' => $panel['description'],
+                    'icon' => $panel['icon'] ?? null,
                     'href' => is_string($route) && Route::has($route) ? route($route) : null,
                     'frame' => ($panel['modal'] ?? true) === false ? null : ($this->opensInModal($route) ? 'modal' : null),
                 ];

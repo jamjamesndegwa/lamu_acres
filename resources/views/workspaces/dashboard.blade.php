@@ -1,5 +1,11 @@
 <x-workspace-layout :heading="$heading">
-    <p class="mt-3 max-w-3xl text-stone-700">{{ $intro }}</p>
+    @if ($workspace === \App\Enums\Workspace::Staff)
+        <div class="mt-4 max-w-3xl rounded-2xl border border-lamu-800 bg-lamu-900 px-5 py-4 text-white shadow-md">
+            <p class="text-sm leading-relaxed text-white/90">{{ $intro }}</p>
+        </div>
+    @else
+        <p class="mt-3 max-w-3xl text-base leading-relaxed text-stone-800">{{ $intro }}</p>
+    @endif
 
     @if (is_array($investor ?? null))
         <section class="mt-8 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">
@@ -85,21 +91,27 @@
     @endif
 
     @if ($panels !== [])
-        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            @foreach ($panels as $panel)
-                <x-workspace.card
-                    :title="$panel['title']"
-                    :description="$panel['description']"
-                    :href="$panel['href']"
-                    :frame="$panel['frame'] ?? null"
-                />
-            @endforeach
-        </div>
+        <section class="mt-8" aria-labelledby="workspace-desks">
+            <h2 id="workspace-desks" class="home-serif text-lg font-semibold text-lamu-900">Your desks</h2>
+            <p class="mt-1 text-sm text-stone-800">Each card opens the queue you are allowed to work. Desks without a link are not switched on yet.</p>
+            <div class="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($panels as $panel)
+                    <x-workspace.card
+                        :title="$panel['title']"
+                        :description="$panel['description']"
+                        :href="$panel['href']"
+                        :frame="$panel['frame'] ?? null"
+                        :icon="$panel['icon'] ?? null"
+                    />
+                @endforeach
+            </div>
+        </section>
     @endif
 
     @unless (($executive ?? null) || ($executiveDenied ?? false))
-    <section class="mt-8" aria-labelledby="recent-activity">
-        <h2 id="recent-activity" class="font-semibold text-lamu-900">Recent activity</h2>
+    <section class="mt-10 rounded-2xl border border-sand-200 bg-white p-5 shadow-sm" aria-labelledby="recent-activity">
+        <h2 id="recent-activity" class="home-serif text-lg font-semibold text-lamu-900">Recent activity</h2>
+        <p class="mt-1 text-sm text-stone-800">Latest updates assigned to your account on this workspace.</p>
         <x-workspace.table class="mt-4" labelled-by="recent-activity" :columns="$activityColumns">
             @forelse ($activity as $entry)
                 <tr class="border-b border-sand-200 last:border-b-0">

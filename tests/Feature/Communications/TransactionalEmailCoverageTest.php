@@ -122,8 +122,6 @@ class TransactionalEmailCoverageTest extends FoundationTestCase
             'status' => 'approved',
             'decision_reason' => 'Identity documents were accepted.',
             'identity_outcome' => 'verified',
-            'identity_reference' => 'TEST identity review reference',
-            'identity_next_review_on' => now()->addYear()->toDateString(),
         ])->assertRedirect();
 
         $this->assertTrue(

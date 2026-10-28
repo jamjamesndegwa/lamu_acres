@@ -81,7 +81,7 @@ class PartnerVerificationTest extends FoundationTestCase
             $staff = $this->reviewer();
             $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'));
             $application = $buyer->capabilityApplications()->firstOrFail();
-            $this->actingAs($staff)->get(route('staff.applications.edit', $application))->assertOk()->assertSee('Record contact verification manually');
+            $this->actingAs($staff)->get(route('staff.applications.edit', $application))->assertOk()->assertSee('Manual contact verification');
             $this->post(route('staff.applications.contact-verification', $application), ['contact_channel' => $channel, 'contact_value' => $buyer->getAttribute($channel), 'verification_reference' => 'Independent confirmation reference 123', 'contact_confirmed' => 1])->assertSessionHasNoErrors();
             $this->assertNotNull($buyer->fresh()->getAttribute($channel.'_verified_at'));
             $entry = collect($application->fresh()->verification_history)->last();
@@ -116,14 +116,17 @@ class PartnerVerificationTest extends FoundationTestCase
         $application = $buyer->capabilityApplications()->firstOrFail();
 
         $response = $this->actingAs($staff)->get(route('staff.applications.edit', $application));
-        $response->assertOk()->assertSeeInOrder(['Step 1', 'Step 2', 'Step 3', 'Step 4'])
-            ->assertSee($buyer->email)->assertSee('Account phone')->assertSee('Not verified')
-            ->assertSee('TEST-DECLARED-123')->assertSee('Practising certificate preview')
-            ->assertSee('Identity preview')->assertSee('Approve is unavailable');
+        $response->assertOk()
+            ->assertSee('Review checklist')
+            ->assertSee('Email and phone verification are optional')
+            ->assertSee($buyer->email)
+            ->assertSee('TEST-DECLARED-123')
+            ->assertSee('Identity preview')
+            ->assertDontSee('Approve is unavailable');
         $document = new \DOMDocument;
         @$document->loadHTML($response->getContent());
         $disabledApproval = (new \DOMXPath($document))->query('//select[@name="status"]/option[@value="approved"][@disabled]');
-        $this->assertSame(1, $disabledApproval->length);
+        $this->assertSame(0, $disabledApproval->length);
     }
 
     public function test_staff_can_request_email_confirmation_but_cannot_confirm_it_for_the_applicant(): void
@@ -191,7 +194,7 @@ class PartnerVerificationTest extends FoundationTestCase
         $application = $buyer->capabilityApplications()->firstOrFail();
 
         $response = $this->actingAs($staff)->get(route('staff.applications.edit', $application));
-        $response->assertOk()->assertSee('+254700123456')->assertSee('Verified contact available')->assertDontSee('Approve is unavailable');
+        $response->assertOk()->assertSee('+254700123456')->assertSee('Verified contact on file')->assertDontSee('Approve is unavailable');
         $this->actingAs($staff)->put(route('staff.applications.update', $application), $this->decision(true))->assertSessionHasNoErrors();
         $this->assertTrue($buyer->fresh()->hasRole('broker'));
         $this->assertNull($buyer->fresh()->email_verified_at);
@@ -253,17 +256,12 @@ class PartnerVerificationTest extends FoundationTestCase
         $payload['role'] = 'broker';
         $payload['identity_outcome'] = 'verified';
         $payload['licence_outcome'] = 'verified';
-        $payload['earb_checked'] = 1;
         $this->actingAs($buyer)->post(route('account.applications.store'), $payload)->assertSessionHasNoErrors();
         $application = $buyer->capabilityApplications()->firstOrFail();
         $this->assertFalse($buyer->fresh()->hasRole('broker'));
         $this->assertSame('pending', $application->verification['licence']['outcome']);
         $this->actingAs($buyer)->put(route('staff.applications.update', $application), $this->decision(true))->assertForbidden();
 
-        $withoutEarb = $this->decision(true);
-        unset($withoutEarb['earb_checked']);
-        $this->actingAs($staff)->put(route('staff.applications.update', $application), $withoutEarb)->assertSessionHasErrors('earb_checked');
-        $this->assertSame(CapabilityApplicationStatus::Pending, $application->fresh()->status);
         $this->actingAs($staff)->put(route('staff.applications.update', $application), $this->decision(true))->assertSessionHasNoErrors();
         $this->assertTrue($buyer->fresh()->hasRole('broker'));
         $this->assertSame($staff->id, $application->fresh()->verification['licence']['reviewed_by']);
@@ -286,7 +284,7 @@ class PartnerVerificationTest extends FoundationTestCase
         $this->assertSame(0, Property::query()->where('submitted_by', $broker->id)->count());
     }
 
-    public function test_broker_needs_verified_contact_and_valid_certificate_and_firms_need_business_evidence(): void
+    public function test_broker_needs_valid_certificate_and_firms_need_business_evidence(): void
     {
         Storage::fake('local');
         $buyer = User::factory()->unverified()->withRoles('buyer')->create();
@@ -302,8 +300,9 @@ class PartnerVerificationTest extends FoundationTestCase
         $this->actingAs($buyer)->post(route('account.applications.store'), $firm)->assertSessionHasErrors(['organization', 'business_document']);
         $this->actingAs($buyer)->post(route('account.applications.store'), $this->payload('broker'))->assertSessionHasNoErrors();
         $application = $buyer->capabilityApplications()->firstOrFail();
-        $this->actingAs($staff)->put(route('staff.applications.update', $application), $this->decision(true))->assertSessionHasErrors('status');
-        $this->assertFalse($buyer->fresh()->hasRole('broker'));
+        $this->actingAs($staff)->put(route('staff.applications.update', $application), $this->decision(true))->assertSessionHasNoErrors();
+        $this->assertTrue($buyer->fresh()->hasRole('broker'));
+        $this->assertNull($buyer->fresh()->email_verified_at);
     }
 
     public function test_identity_evidence_is_private_and_restricted_to_the_applicant_and_review_desk(): void
@@ -346,9 +345,10 @@ class PartnerVerificationTest extends FoundationTestCase
         $this->actingAs($staff)->get(route('staff.applications.edit', $application))
             ->assertOk()
             ->assertSee('Back to applications')
-            ->assertSee('Uploaded documents')
+            ->assertSee('Review checklist')
+            ->assertSee('Identity documents')
             ->assertSee('title="Identity preview"', false)
-            ->assertSee('Record staff verification')
+            ->assertSee('Identity verification')
             ->assertSee('Record decision')
             ->assertSee('Review history')
             ->assertDontSee('role="dialog"', false);
@@ -481,11 +481,10 @@ class PartnerVerificationTest extends FoundationTestCase
     {
         $data = [
             'status' => 'approved', 'decision_reason' => 'Test-only staff review of identity evidence completed.',
-            'identity_outcome' => 'verified', 'identity_reference' => 'TEST identity review reference',
-            'identity_next_review_on' => now()->addYear()->toDateString(),
+            'identity_outcome' => 'verified',
         ];
         if ($broker) {
-            $data += ['licence_outcome' => 'verified', 'licence_reference' => 'TEST authoritative EARB record reference', 'licence_next_review_on' => now()->addYear()->toDateString(), 'earb_checked' => 1];
+            $data += ['licence_outcome' => 'verified'];
         }
 
         return $data;

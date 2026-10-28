@@ -170,17 +170,16 @@ class CapabilityReviewer
                 }
                 $record = Validator::make($verification, [
                     $check.'_outcome' => ['required', Rule::in(['verified', 'information_required', 'rejected'])],
-                    $check.'_reference' => ['required', 'string', 'min:8', 'max:500'],
-                    $check.'_next_review_on' => ['required_if:'.$check.'_outcome,verified', 'nullable', 'date', 'after_or_equal:'.now('Africa/Nairobi')->toDateString()],
-                    'earb_checked' => $check === 'licence' && $verification[$check.'_outcome'] === 'verified' ? ['accepted'] : ['nullable'],
                 ])->validate();
                 $profile[$check] = [
-                    'outcome' => $record[$check.'_outcome'], 'reviewed_by' => $actor->id,
+                    'outcome' => $record[$check.'_outcome'],
+                    'reviewed_by' => $actor->id,
                     'reviewed_at' => now()->toIso8601String(),
-                    'verified_at' => $record[$check.'_outcome'] === 'verified' ? now()->toIso8601String() : null, 'reference' => $record[$check.'_reference'],
-                    'next_review_on' => $record[$check.'_next_review_on'] ?? null,
-                    'authoritative_checked' => $check === 'licence' && ($record['earb_checked'] ?? false),
-                    'contact_fingerprint' => $this->contactFingerprint($locked->user),
+                    'verified_at' => $record[$check.'_outcome'] === 'verified' ? now()->toIso8601String() : null,
+                    'reference' => null,
+                    'next_review_on' => null,
+                    'authoritative_checked' => false,
+                    'contact_fingerprint' => null,
                 ];
             }
             if ($status === CapabilityApplicationStatus::Suspended) {
@@ -251,23 +250,104 @@ class CapabilityReviewer
             $issues[] = 'Provide the representative authority document.';
         }
         if (! $this->checkIsCurrent($profile['identity'] ?? [], $application)) {
-            $issues[] = 'Staff must complete identity verification with an evidence reference and next review date.';
+            $issues[] = 'Mark identity as verified after reviewing the uploaded ID or passport.';
         }
         if ($application->capability === PartnerCapability::Broker) {
-            if ($this->contactFingerprint($application->user) === null) {
-                $issues[] = 'Verify the account email or phone before granting broker capability.';
-            }
             if (blank($profile['earb_registration_number'] ?? null) || empty($evidence['practising_certificate']) || ! $this->dateIsCurrent($profile['certificate_expires_on'] ?? null)) {
-                $issues[] = 'Provide an EARB registration number and a current practising certificate with a valid expiry date.';
+                $issues[] = 'The broker application must include an EARB registration number, practising certificate, and a valid certificate expiry date.';
             }
             $licence = $profile['licence'] ?? [];
-            if (! $this->checkIsCurrent($licence, $application) || empty($licence['authoritative_checked'])
-                || ($licence['contact_fingerprint'] ?? null) !== $this->contactFingerprint($application->user)) {
-                $issues[] = 'Staff must verify professional standing against authoritative EARB records and record the reference and next review date.';
+            if (! $this->checkIsCurrent($licence, $application)) {
+                $issues[] = 'Mark professional standing as verified after reviewing the certificate and registration details.';
             }
         }
 
         return $issues;
+    }
+
+    /**
+     * @return list<array{key: string, label: string, state: string, detail: string}>
+     */
+    public function reviewChecklist(CapabilityApplication $application): array
+    {
+        $profile = $application->verification ?? [];
+        $evidence = $profile['evidence'] ?? [];
+        $type = $profile['applicant_type'] ?? null;
+        $isBroker = $application->capability === PartnerCapability::Broker;
+        $items = [];
+
+        $items[] = $this->checklistItem(
+            'legal_name',
+            'Legal name and applicant type',
+            filled($profile['legal_name'] ?? null) && filled($type),
+            filled($profile['legal_name'] ?? null) ? ($profile['legal_name'].' · '.str_replace('_', ' ', (string) $type)) : 'Missing from application',
+        );
+        $items[] = $this->checklistItem(
+            'identity_document',
+            'Identity document uploaded',
+            ! empty($evidence['identity']),
+            ! empty($evidence['identity']) ? 'Ready for staff review' : 'Applicant must upload ID or passport',
+        );
+        $items[] = $this->checklistItem(
+            'identity_review',
+            'Identity reviewed by staff',
+            $this->checkIsCurrent($profile['identity'] ?? [], $application),
+            ($profile['identity']['outcome'] ?? null) === 'verified' ? 'Verified' : 'Set outcome under Identity documents',
+        );
+
+        if (in_array($type, ['firm', 'company_representative'], true)) {
+            $items[] = $this->checklistItem(
+                'business_document',
+                'Business registration document',
+                filled($application->organization) && ! empty($evidence['business_document']),
+                filled($application->organization) ? $application->organization : 'Organisation name and document required',
+            );
+        }
+
+        if (in_array($type, ['authorized_representative', 'company_representative'], true)) {
+            $items[] = $this->checklistItem(
+                'representative_authority',
+                'Representative authority document',
+                ! empty($evidence['representative_authority']),
+                ! empty($evidence['representative_authority']) ? 'Uploaded' : 'Required for representatives',
+            );
+        }
+
+        if ($isBroker) {
+            $items[] = $this->checklistItem(
+                'earb_details',
+                'EARB registration and certificate expiry',
+                filled($profile['earb_registration_number'] ?? null) && $this->dateIsCurrent($profile['certificate_expires_on'] ?? null),
+                trim(($profile['earb_registration_number'] ?? 'No registration').' · expires '.($profile['certificate_expires_on'] ?? 'unknown')),
+            );
+            $items[] = $this->checklistItem(
+                'practising_certificate',
+                'Practising certificate uploaded',
+                ! empty($evidence['practising_certificate']),
+                ! empty($evidence['practising_certificate']) ? 'Ready for staff review' : 'Certificate file missing',
+            );
+            $items[] = $this->checklistItem(
+                'licence_review',
+                'Professional standing reviewed by staff',
+                $this->checkIsCurrent($profile['licence'] ?? [], $application),
+                ($profile['licence']['outcome'] ?? null) === 'verified' ? 'Verified' : 'Set outcome under Professional standing',
+            );
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array{key: string, label: string, state: string, detail: string}
+     */
+    private function checklistItem(string $key, string $label, bool $complete, string $detail): array
+    {
+        return [
+            'key' => $key,
+            'label' => $label,
+            'state' => $complete ? 'complete' : 'pending',
+            'detail' => $detail,
+        ];
     }
 
     public function hasCurrentCapability(User $user, PartnerCapability $capability): bool
@@ -287,9 +367,19 @@ class CapabilityReviewer
     /** @param array<string, mixed> $check */
     private function checkIsCurrent(array $check, CapabilityApplication $application): bool
     {
-        return ($check['outcome'] ?? null) === 'verified' && filled($check['verified_at'] ?? null)
-            && filled($check['reference'] ?? null) && ! empty($check['reviewed_by'])
-            && (int) $check['reviewed_by'] !== (int) $application->user_id && $this->dateIsCurrent($check['next_review_on'] ?? null);
+        if (($check['outcome'] ?? null) !== 'verified' || blank($check['verified_at'] ?? null)
+            || empty($check['reviewed_by'])
+            || (int) $check['reviewed_by'] === (int) $application->user_id) {
+            return false;
+        }
+
+        $nextReview = $check['next_review_on'] ?? null;
+
+        if (blank($nextReview)) {
+            return true;
+        }
+
+        return $this->dateIsCurrent($nextReview);
     }
 
     private function dateIsCurrent(?string $date): bool
