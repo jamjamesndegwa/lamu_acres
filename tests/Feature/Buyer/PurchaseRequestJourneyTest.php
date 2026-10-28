@@ -207,6 +207,67 @@ class PurchaseRequestJourneyTest extends FoundationTestCase
         $this->actingAs($buyer)
             ->get($property->publicUrl())
             ->assertOk()
-            ->assertSee('Request to buy', false);
+            ->assertSee("I'm interested in buying", false);
+    }
+
+    public function test_buyer_can_withdraw_active_purchase_interest_and_history_is_preserved(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $other = User::factory()->withRoles('buyer')->create();
+        $property = Property::factory()->published()->create();
+
+        $this->actingAs($buyer)->post(route('land.purchase-requests.store', $property), [
+            'requested_price' => 2_400_000,
+        ])->assertRedirect();
+
+        $enquiry = Enquiry::query()->sole();
+        $transaction = SalesTransaction::query()->sole();
+
+        $this->actingAs($buyer)
+            ->post(route('buyer.enquiries.withdraw', $enquiry), [
+                'note' => 'Timing no longer works.',
+            ])
+            ->assertRedirect(route('buyer.enquiries.show', $enquiry))
+            ->assertSessionHas('status');
+
+        $enquiry->refresh();
+        $transaction->refresh();
+
+        $this->assertSame(SalesOutcome::Withdrawn, $transaction->outcome);
+        $this->assertTrue($enquiry->purchase_request);
+        $this->assertNotNull($enquiry->closed_at);
+
+        $this->actingAs($buyer)
+            ->get(route('buyer.enquiries.show', $enquiry))
+            ->assertOk()
+            ->assertSee('Withdrawn', false)
+            ->assertSee('KSh 2,400,000', false);
+
+        $this->actingAs($other)
+            ->post(route('buyer.enquiries.withdraw', $enquiry))
+            ->assertForbidden();
+    }
+
+    public function test_buyer_can_open_a_new_purchase_request_after_withdrawing(): void
+    {
+        Notification::fake();
+
+        $buyer = User::factory()->withRoles('buyer')->create();
+        User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $property = Property::factory()->published()->create();
+
+        $this->actingAs($buyer)->post(route('land.purchase-requests.store', $property), [
+            'requested_price' => 1_000_000,
+        ])->assertRedirect();
+
+        $enquiry = Enquiry::query()->sole();
+        $this->actingAs($buyer)->post(route('buyer.enquiries.withdraw', $enquiry))->assertRedirect();
+
+        $this->actingAs($buyer)->post(route('land.purchase-requests.store', $property), [
+            'requested_price' => 1_050_000,
+        ])->assertRedirect();
+
+        $this->assertSame(2, Enquiry::query()->where('purchase_request', true)->count());
+        $this->assertSame(2, SalesTransaction::query()->count());
     }
 }

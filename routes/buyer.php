@@ -22,6 +22,7 @@ Route::middleware(['auth', 'private.cache', 'workspace:buyer'])
         Route::delete('/saved/{property}', [SavedPropertyController::class, 'destroy'])->name('saved.destroy');
         Route::get('/enquiries', [EnquiryController::class, 'index'])->name('enquiries.index');
         Route::get('/enquiries/{enquiry}', [EnquiryController::class, 'show'])->name('enquiries.show');
+        Route::post('/enquiries/{enquiry}/withdrawal', [EnquiryController::class, 'withdraw'])->name('enquiries.withdraw');
         Route::get('/sourcing', [SourcingRequestController::class, 'index'])->name('sourcing.index');
         Route::get('/sourcing/create', [SourcingRequestController::class, 'create'])->name('sourcing.create');
         Route::post('/sourcing', [SourcingRequestController::class, 'store'])->name('sourcing.store');

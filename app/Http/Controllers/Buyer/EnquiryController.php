@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\BuyerTimelineEntry;
 use App\Models\Enquiry;
+use App\Services\Buyer\InterestWorkflow;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -54,5 +56,20 @@ class EnquiryController extends Controller
             'enquiry' => $enquiry,
             'activity' => $activity,
         ]);
+    }
+
+    public function withdraw(Request $request, Enquiry $enquiry, InterestWorkflow $workflow): RedirectResponse
+    {
+        $this->authorize('withdrawPurchaseRequest', $enquiry);
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $workflow->withdrawPurchaseRequest($enquiry, $request->user(), $data['note'] ?? null);
+
+        return redirect()
+            ->route('buyer.enquiries.show', $enquiry)
+            ->with('status', 'Purchase interest withdrawn. Your history is kept on this page.');
     }
 }

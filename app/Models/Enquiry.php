@@ -101,4 +101,23 @@ class Enquiry extends Model
     {
         return $this->buyer_id === $user->id;
     }
+
+    public function buyerCanWithdrawPurchaseRequest(): bool
+    {
+        if (! $this->purchase_request || $this->closed_at !== null) {
+            return false;
+        }
+
+        if ($this->status === EnquiryStatus::Closed || $this->lead_status === LeadStatus::ClosedLost) {
+            return false;
+        }
+
+        $transaction = $this->salesTransaction;
+
+        if ($transaction === null || ! $transaction->isOpen()) {
+            return false;
+        }
+
+        return $transaction->outcome === null || ! $transaction->outcome->terminal();
+    }
 }

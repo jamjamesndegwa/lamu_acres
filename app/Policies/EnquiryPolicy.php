@@ -46,4 +46,11 @@ class EnquiryPolicy
     {
         return $this->respond($user, $enquiry);
     }
+
+    public function withdrawPurchaseRequest(User $user, Enquiry $enquiry): bool
+    {
+        return $enquiry->isOwnedBy($user)
+            && $user->canUseBuyerFeatures()
+            && $enquiry->buyerCanWithdrawPurchaseRequest();
+    }
 }

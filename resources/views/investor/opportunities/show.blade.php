@@ -152,7 +152,7 @@
                 <div class="mt-4 flex flex-col gap-2">
                     <a href="{{ route('land.enquiries.create', $property) }}" data-turbo-frame="modal" class="rounded-full bg-lamu-900 px-4 py-2.5 text-center text-sm font-medium text-white">Enquire</a>
                     @unless ($listing['is_lease'])
-                        <a href="{{ route('land.purchase-requests.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2.5 text-center text-sm font-medium text-lamu-900">Request to buy</a>
+                        <a href="{{ route('land.purchase-requests.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2.5 text-center text-sm font-medium text-lamu-900">I'm interested in buying</a>
                     @endunless
                     <a href="{{ route('land.visits.create', $property) }}" data-turbo-frame="modal" class="rounded-full border border-lamu-900 px-4 py-2.5 text-center text-sm font-medium text-lamu-900">Book site visit</a>
                     @if (auth()->user()?->hasPermission('workspace.buyer'))

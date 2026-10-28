@@ -31,6 +31,14 @@
             @else
                 <p class="mt-2 text-sm text-stone-700">Your request is being linked to the sales desk. Replies will appear here.</p>
             @endif
+            @can('withdrawPurchaseRequest', $enquiry)
+                <form method="POST" action="{{ route('buyer.enquiries.withdraw', $enquiry) }}" data-turbo-frame="_top" data-confirm="Withdraw your purchase interest? This does not complete or cancel a legal sale—it only closes your active request with Lamu Acres." class="mt-4 border-t border-lamu-200 pt-4">
+                    @csrf
+                    <label class="block text-sm font-medium text-lamu-900">Optional note to the desk</label>
+                    <textarea name="note" rows="2" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2 text-sm" placeholder="Tell us if your plans changed."></textarea>
+                    <button type="submit" class="mt-3 rounded-full border border-amber-800 px-4 py-2 text-sm font-medium text-amber-900">Withdraw purchase interest</button>
+                </form>
+            @endcan
         </section>
     @endif
     <section class="mt-6 max-w-3xl rounded-2xl border border-sand-200 bg-white p-5">

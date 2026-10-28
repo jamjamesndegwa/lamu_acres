@@ -3,9 +3,12 @@
 namespace App\Services\Buyer;
 
 use App\Enums\DocumentAccessStatus;
+use App\Enums\EnquiryStatus;
+use App\Enums\LeadStatus;
 use App\Enums\MessageEvent;
 use App\Enums\OfferStatus;
 use App\Enums\PropertyMatchStatus;
+use App\Enums\SalesOutcome;
 use App\Enums\SiteVisitStatus;
 use App\Models\BrokerIntroduction;
 use App\Models\BuyerTimelineEntry;
@@ -26,7 +29,10 @@ use App\Services\Communications\BuyerInterestNotifier;
 use App\Services\Communications\MessageDesk;
 use App\Services\Communications\SalesFinanceNotifier;
 use App\Services\Sales\SaleModeTerms;
+use App\Services\Sales\SalesPipeline;
+use App\Services\Staff\EnquiryDesk;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -517,6 +523,55 @@ class InterestWorkflow
         }
 
         return $offer;
+    }
+
+    public function withdrawPurchaseRequest(Enquiry $enquiry, User $buyer, ?string $note = null): Enquiry
+    {
+        if (! $enquiry->purchase_request || ! $enquiry->isOwnedBy($buyer)) {
+            throw ValidationException::withMessages([
+                'enquiry' => 'This purchase request cannot be withdrawn.',
+            ]);
+        }
+
+        if (! $enquiry->buyerCanWithdrawPurchaseRequest()) {
+            throw ValidationException::withMessages([
+                'enquiry' => 'This purchase request is no longer active.',
+            ]);
+        }
+
+        $transaction = $enquiry->salesTransaction;
+        if ($transaction === null) {
+            throw ValidationException::withMessages([
+                'enquiry' => 'This purchase request is not linked to a sales case yet.',
+            ]);
+        }
+
+        $enquiry->loadMissing('property');
+        $reason = filled($note) ? trim((string) $note) : 'Buyer withdrew purchase interest.';
+
+        return DB::transaction(function () use ($enquiry, $buyer, $transaction, $reason): Enquiry {
+            $pipeline = app(SalesPipeline::class);
+            $desk = app(EnquiryDesk::class);
+
+            $pipeline->outcome(
+                $transaction->fresh(),
+                SalesOutcome::Withdrawn,
+                $buyer,
+                (int) $transaction->lock_version,
+                $reason,
+            );
+
+            $desk->updateStatus($enquiry->fresh(), EnquiryStatus::Closed, LeadStatus::ClosedLost);
+
+            BuyerTimelineEntry::record(
+                $buyer,
+                'Purchase request withdrawn for '.$enquiry->property->title.'.',
+                ['property_id' => $enquiry->property_id],
+                $buyer,
+            );
+
+            return $enquiry->fresh(['property', 'salesTransaction']);
+        });
     }
 
     public function requestDocuments(PropertyMatch $match, User $buyer, ?string $note): DocumentAccessRequest
