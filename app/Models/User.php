@@ -6,6 +6,7 @@ use App\Enums\Workspace;
 use App\Models\Concerns\StoresFileUrls;
 use App\Notifications\QueuedResetPassword;
 use App\Services\Access\WorkspaceAccess;
+use App\Services\Communications\ExternalMailRegistry;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -172,6 +173,15 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new QueuedResetPassword((string) $token));
+        $notification = new QueuedResetPassword((string) $token);
+
+        app(ExternalMailRegistry::class)->recordQueued(
+            $this,
+            $notification,
+            'Password reset',
+            (string) config('communications.queues.critical'),
+        );
+
+        $this->notify($notification);
     }
 }

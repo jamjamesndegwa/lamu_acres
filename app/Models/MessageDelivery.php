@@ -33,6 +33,8 @@ class MessageDelivery extends Model
             'channel' => MessageChannel::class,
             'attempts' => 'integer',
             'sent_at' => 'datetime',
+            'queued_at' => 'datetime',
+            'last_attempt_at' => 'datetime',
             'provider_meta' => 'array',
         ];
     }

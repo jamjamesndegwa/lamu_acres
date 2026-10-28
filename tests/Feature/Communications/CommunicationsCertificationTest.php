@@ -116,12 +116,11 @@ class CommunicationsCertificationTest extends FoundationTestCase
         $this->assertSame('uncertain', $delivery->status);
         $this->assertSame(1, $sender->calls);
 
-        $staff = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        $staff = User::factory()->withRoles('staff')->withPermissions('communications.sms.view')->create();
         $this->actingAs($staff)
             ->get(route('staff.messages.deliveries'))
             ->assertOk()
-            ->assertSee('uncertain (provider outcome unknown)')
-            ->assertSee('1 awaiting confirmation');
+            ->assertSee('Uncertain');
     }
 
     public function test_bulk_batch_reference_kind_is_stored_separately_from_message_reference(): void

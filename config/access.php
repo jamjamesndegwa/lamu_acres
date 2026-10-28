@@ -66,6 +66,9 @@ return [
         'agency.record' => ['label' => 'Record agency fee collections', 'group' => 'finance'],
 
         'intelligence.publish' => ['label' => 'Publish intelligence', 'group' => 'intelligence'],
+
+        'communications.email.view' => ['label' => 'View external email register', 'group' => 'communications'],
+        'communications.sms.view' => ['label' => 'View external SMS register', 'group' => 'communications'],
     ],
 
     'roles' => [
@@ -122,7 +125,7 @@ return [
                 ['workspace.staff', 'workspace.admin'],
                 $staff,
                 $admin,
-                ['intelligence.publish'],
+                ['intelligence.publish', 'communications.email.view', 'communications.sms.view'],
             ),
         ],
     ],

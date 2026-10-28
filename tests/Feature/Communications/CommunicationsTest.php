@@ -256,7 +256,7 @@ class CommunicationsTest extends FoundationTestCase
     {
         $buyer = User::factory()->withRoles('buyer')->create();
         $properties = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
-        $comms = User::factory()->withRoles('staff')->withPermissions('staff.communications')->create();
+        $comms = User::factory()->withRoles('staff')->withPermissions('staff.communications', 'communications.email.view')->create();
         $template = MessageTemplate::query()->where('event', MessageEvent::AccountRegistered)->firstOrFail();
 
         $this->actingAs($buyer)->get(route('staff.messages.deliveries'))->assertForbidden();

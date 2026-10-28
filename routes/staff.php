@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Communications\ExternalCommunicationsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Staff\AgencyCollectionController;
 use App\Http\Controllers\Staff\AgencyFeeAgreementController;
@@ -241,10 +242,14 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/memberships/{subscription}/credit', [MembershipController::class, 'credit'])->name('memberships.credit');
         });
 
+        Route::middleware('role_or_permission:communications.email.view|communications.sms.view')->group(function () {
+            Route::get('/messages/deliveries', [ExternalCommunicationsController::class, 'index'])->name('messages.deliveries');
+            Route::get('/messages/deliveries/{messageDelivery}', [ExternalCommunicationsController::class, 'show'])->name('messages.deliveries.show');
+        });
+
         Route::middleware('permission:staff.communications')->group(function () {
             Route::get('/messages/templates', [CommunicationsController::class, 'templates'])->name('messages.templates');
             Route::put('/messages/templates/{messageTemplate}', [CommunicationsController::class, 'updateTemplate'])->name('messages.templates.update');
-            Route::get('/messages/deliveries', [CommunicationsController::class, 'deliveries'])->name('messages.deliveries');
             Route::get('/messages/campaigns', [CommunicationsController::class, 'campaigns'])->name('messages.campaigns');
             Route::get('/messages/campaigns/create', [CommunicationsController::class, 'createCampaign'])->name('messages.campaigns.create');
             Route::post('/messages/campaigns', [CommunicationsController::class, 'storeCampaign'])->name('messages.campaigns.store');

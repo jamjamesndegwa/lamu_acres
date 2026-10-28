@@ -8,6 +8,7 @@ use App\Models\CapabilityApplication;
 use App\Models\User;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Access\CapabilityReviewer;
+use App\Services\Communications\ExternalMailRegistry;
 use App\Support\ApprovalsReturn;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
@@ -92,7 +93,14 @@ class CapabilityApplicationController extends Controller
         if (! AccountEmailChanged::canDeliverEmail()) {
             throw ValidationException::withMessages(['email_delivery' => 'Email delivery is not configured. Configure a delivery mailer before sending verification emails; the log driver does not deliver to an inbox.']);
         }
-        $applicant->notify(new AccountEmailChanged(emailChanged: false));
+        $notification = new AccountEmailChanged(emailChanged: false);
+        app(ExternalMailRegistry::class)->recordQueued(
+            $applicant,
+            $notification,
+            'Confirm your email',
+            (string) config('communications.queues.critical'),
+        );
+        $applicant->notify($notification);
         DB::transaction(function () use ($application, $request): void {
             $locked = CapabilityApplication::query()->lockForUpdate()->findOrFail($application->id);
             $history = $locked->verification_history ?? [];

@@ -47,6 +47,8 @@ return [
 
     'critical_events' => [
         MessageEvent::PasswordChanged->value,
+        MessageEvent::PasswordResetRequested->value,
+        MessageEvent::EmailVerificationRequested->value,
         MessageEvent::AccountSuspended->value,
     ],
 

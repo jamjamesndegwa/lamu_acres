@@ -6,6 +6,7 @@ use App\Contracts\Auth\OtpSender;
 use App\Contracts\Communications\SmsSender;
 use App\Contracts\Payments\MpesaGateway;
 use App\Enums\Workspace;
+use App\Listeners\RecordExternalNotificationMail;
 use App\Services\Auth\UnconfiguredOtpSender;
 use App\Services\Communications\HttpSmsSender;
 use App\Services\Communications\UnconfiguredSmsSender;
@@ -13,7 +14,11 @@ use App\Services\Payments\DarajaMpesaGateway;
 use App\Services\Payments\UnconfiguredMpesaGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Notifications\Events\NotificationSending;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -37,6 +42,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $listener = RecordExternalNotificationMail::class;
+
+        Event::listen(NotificationSending::class, [$listener, 'handleSending']);
+        Event::listen(NotificationSent::class, [$listener, 'handleSent']);
+        Event::listen(NotificationFailed::class, [$listener, 'handleFailed']);
+
         Paginator::defaultView('vendor.pagination.tailwind');
         Paginator::defaultSimpleView('vendor.pagination.tailwind');
 

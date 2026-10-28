@@ -6,6 +6,8 @@ enum MessageEvent: string
 {
     case AccountRegistered = 'account_registered';
     case PasswordChanged = 'password_changed';
+    case PasswordResetRequested = 'password_reset_requested';
+    case EmailVerificationRequested = 'email_verification_requested';
     case AccountSuspended = 'account_suspended';
     case AccountRestored = 'account_restored';
     case BrokerApproved = 'broker_approved';
@@ -82,6 +84,8 @@ enum MessageEvent: string
         return match ($this) {
             self::AccountRegistered => 'Account registration',
             self::PasswordChanged => 'Password changed',
+            self::PasswordResetRequested => 'Password reset',
+            self::EmailVerificationRequested => 'Email verification',
             self::AccountSuspended => 'Account suspended',
             self::AccountRestored => 'Account restored',
             self::BrokerApproved => 'Broker approval',

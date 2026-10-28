@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\SystemOperationsController;
 use App\Http\Controllers\Admin\UserAccessController;
+use App\Http\Controllers\Communications\ExternalCommunicationsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkspaceDashboardController;
 use App\Http\Controllers\WorkspaceNotificationController;
@@ -80,6 +81,11 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
 
         Route::middleware('permission:admin.settings')->group(function () {
             Route::get('/operations', [SystemOperationsController::class, 'index'])->name('operations.index');
+        });
+
+        Route::middleware('role_or_permission:communications.email.view|communications.sms.view')->group(function () {
+            Route::get('/communications/external', [ExternalCommunicationsController::class, 'index'])->name('communications.external.index');
+            Route::get('/communications/external/{messageDelivery}', [ExternalCommunicationsController::class, 'show'])->name('communications.external.show');
         });
 
         Route::middleware('permission:admin.users')->group(function () {

@@ -4,6 +4,7 @@ namespace App\Services\Communications;
 
 use App\Contracts\Communications\SmsSender;
 use App\Enums\MessageChannel;
+use App\Enums\MessageDeliveryStatus;
 use App\Enums\MessageEvent;
 use App\Jobs\DeliverMessage;
 use App\Models\MessageDelivery;
@@ -40,13 +41,32 @@ class MessageDesk
                 continue;
             }
 
-            $status = 'queued';
-            if ($channel === MessageChannel::Sms && ! $this->sms->configured()) {
-                $status = 'skipped';
+            $skipReason = null;
+
+            if (in_array($channel, [MessageChannel::InApp, MessageChannel::Whatsapp], true)) {
+                $status = MessageDeliveryStatus::Queued->value;
+            } else {
+                $status = MessageDeliveryStatus::Queued->value;
+
+                if ($channel === MessageChannel::Sms && ! $this->sms->configured()) {
+                    $status = MessageDeliveryStatus::Skipped->value;
+                    $skipReason = 'policy: SMS provider not configured';
+                }
+
+                if ($channel === MessageChannel::Email && ! $this->emailDispatchReady()) {
+                    $status = MessageDeliveryStatus::Skipped->value;
+                    $skipReason = 'policy: SMTP not configured for delivery';
+                }
+
+                if ($destination === null) {
+                    $status = MessageDeliveryStatus::Skipped->value;
+                    $skipReason = 'policy: missing destination';
+                }
             }
-            if ($destination === null) {
-                $status = 'skipped';
-            }
+
+            $queueName = in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)
+                ? $this->queueFor($event)
+                : null;
 
             try {
                 $delivery = MessageDelivery::query()->create([
@@ -55,22 +75,27 @@ class MessageDesk
                     'event' => $event,
                     'channel' => $channel,
                     'status' => $status,
+                    'queue_name' => $queueName,
+                    'queued_at' => $status === MessageDeliveryStatus::Queued->value ? now() : null,
                     'subject' => $subject,
                     'body' => $body,
                     'destination' => $destination,
+                    'error' => $skipReason ?? null,
                 ]);
             } catch (QueryException) {
                 continue;
             }
 
-            if ($delivery->status === 'queued') {
+            if ($delivery->status === MessageDeliveryStatus::Queued->value) {
                 if (in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)) {
-                    DB::afterCommit(function () use ($delivery, $event): void {
+                    DB::afterCommit(function () use ($delivery, $event, $queueName): void {
                         try {
                             DeliverMessage::dispatch($delivery->idempotency_key)
-                                ->onQueue($this->queueFor($event));
+                                ->onQueue($queueName ?? $this->queueFor($event));
                         } catch (\Throwable $exception) {
-                            $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
+                            $delivery->refresh()->forceFill([
+                                'error' => 'Dispatch: '.class_basename($exception).': '.$exception->getMessage(),
+                            ])->save();
                         }
                     });
 
@@ -79,10 +104,24 @@ class MessageDesk
                 try {
                     DeliverMessage::dispatchSync($delivery->idempotency_key, $channel === MessageChannel::InApp ? $inAppNotification : null);
                 } catch (\Throwable $exception) {
-                    $delivery->refresh()->forceFill(['status' => 'failed', 'error' => class_basename($exception).': delivery failed.'])->save();
+                    $delivery->refresh()->forceFill([
+                        'status' => MessageDeliveryStatus::Failed->value,
+                        'error' => class_basename($exception).': delivery failed.',
+                    ])->save();
                 }
             }
         }
+    }
+
+    private function emailDispatchReady(): bool
+    {
+        $mailer = (string) config('mail.default');
+
+        if (in_array($mailer, ['log', 'array'], true)) {
+            return filled(config('mail.from.address'));
+        }
+
+        return (bool) (app(MailPreflight::class)->inspect()['smtp_ready'] ?? false);
     }
 
     /**

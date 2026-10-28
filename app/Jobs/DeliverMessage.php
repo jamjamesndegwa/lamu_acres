@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Contracts\Communications\SmsSender;
 use App\Data\Communications\SmsSendResult;
 use App\Enums\MessageChannel;
+use App\Enums\MessageDeliveryStatus;
 use App\Exceptions\Communications\SmsProviderException;
 use App\Exceptions\Communications\SmsUncertainDeliveryException;
 use App\Mail\DeskMessageMail;
@@ -48,14 +49,23 @@ class DeliverMessage implements ShouldBeUnique, ShouldQueue
     {
         $delivery = MessageDelivery::query()->where('idempotency_key', $this->idempotencyKey)->first();
 
-        if ($delivery === null || in_array($delivery->status, ['sent', 'skipped', 'uncertain'], true)) {
+        if ($delivery === null || in_array($delivery->status, [
+            MessageDeliveryStatus::Sent->value,
+            MessageDeliveryStatus::Skipped->value,
+            MessageDeliveryStatus::Uncertain->value,
+        ], true)) {
             return;
         }
+
+        $delivery->forceFill([
+            'status' => MessageDeliveryStatus::Processing->value,
+            'last_attempt_at' => now(),
+        ])->save();
 
         try {
             $result = $this->deliver($delivery, $sms);
             $delivery->forceFill([
-                'status' => 'sent',
+                'status' => MessageDeliveryStatus::Sent->value,
                 'attempts' => $this->attempts(),
                 'sent_at' => now(),
                 'error' => null,
@@ -64,7 +74,7 @@ class DeliverMessage implements ShouldBeUnique, ShouldQueue
             ])->save();
         } catch (SmsUncertainDeliveryException $exception) {
             $delivery->forceFill([
-                'status' => 'uncertain',
+                'status' => MessageDeliveryStatus::Uncertain->value,
                 'attempts' => $this->attempts(),
                 'error' => class_basename($exception).': outcome unknown.',
             ])->save();
@@ -72,7 +82,7 @@ class DeliverMessage implements ShouldBeUnique, ShouldQueue
             return;
         } catch (SmsProviderException $exception) {
             $delivery->forceFill([
-                'status' => 'failed',
+                'status' => MessageDeliveryStatus::Failed->value,
                 'attempts' => $this->attempts(),
                 'error' => class_basename($exception).': delivery failed.',
             ])->save();
@@ -84,7 +94,7 @@ class DeliverMessage implements ShouldBeUnique, ShouldQueue
             return;
         } catch (Throwable $exception) {
             $delivery->forceFill([
-                'status' => 'failed',
+                'status' => MessageDeliveryStatus::Failed->value,
                 'attempts' => $this->attempts(),
                 'error' => class_basename($exception).': delivery failed.',
             ])->save();

@@ -480,7 +480,7 @@ return [
                     ['label' => 'Messages and work updates', 'route' => 'staff.notifications.index', 'active' => 'staff.notifications.*'],
                     ['label' => 'Templates', 'route' => 'staff.messages.templates', 'active' => 'staff.messages.templates', 'permission' => 'staff.communications'],
                     ['label' => 'Bulk campaigns', 'route' => 'staff.messages.campaigns', 'active' => 'staff.messages.campaigns*', 'permission' => 'staff.communications'],
-                    ['label' => 'Delivery History', 'route' => 'staff.messages.deliveries', 'active' => 'staff.messages.deliveries', 'permission' => 'staff.communications'],
+                    ['label' => 'External communications', 'route' => 'staff.messages.deliveries', 'active' => ['staff.messages.deliveries', 'staff.messages.deliveries.show'], 'permission' => 'communications.email.view|communications.sms.view'],
                 ],
             ],
         ],
@@ -566,6 +566,14 @@ return [
                     ['label' => 'Commission Policy', 'route' => 'admin.commercial.commissions', 'active' => 'admin.commercial.commissions', 'modal' => false],
                     ['label' => 'Listing Rules', 'route' => 'admin.commercial.listings', 'active' => 'admin.commercial.listings', 'modal' => false],
                     ['label' => 'Verification Standards', 'route' => 'admin.commercial.verification', 'active' => 'admin.commercial.verification', 'modal' => false],
+                ],
+            ],
+            [
+                'key' => 'communications',
+                'label' => 'Communications',
+                'permission' => 'communications.email.view|communications.sms.view',
+                'items' => [
+                    ['label' => 'External communications', 'route' => 'admin.communications.external.index', 'active' => ['admin.communications.external.*']],
                 ],
             ],
             [

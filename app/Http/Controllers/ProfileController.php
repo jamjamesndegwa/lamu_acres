@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\Workspace;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
 use App\Notifications\AccountEmailChanged;
 use App\Services\Account\AccountAvatar;
 use App\Services\Auth\OtpLogin;
 use App\Services\Communications\AccountSecurityNotifier;
+use App\Services\Communications\ExternalMailRegistry;
 use App\Services\Communications\MessageDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -101,7 +103,7 @@ class ProfileController extends Controller
         }
 
         if ($emailChanged) {
-            $user->notify(new AccountEmailChanged);
+            $this->queueAccountEmailVerification($user, true);
         }
 
         if ($request->filled('password')) {
@@ -175,7 +177,7 @@ class ProfileController extends Controller
         if (! AccountEmailChanged::canDeliverEmail()) {
             throw ValidationException::withMessages(['email_delivery' => 'Email delivery is not configured. Ask the desk to configure email delivery before requesting a verification link.']);
         }
-        $request->user()->notify(new AccountEmailChanged(emailChanged: false));
+        $this->queueAccountEmailVerification($request->user(), false);
 
         return back()->with('status', 'Verification email sent. Open the link in your inbox while signed in to this account.');
     }
@@ -192,5 +194,19 @@ class ProfileController extends Controller
         }
 
         return redirect()->to($user->workspaceHomeUrl())->with('status', 'Email confirmed.');
+    }
+
+    private function queueAccountEmailVerification(User $user, bool $emailChanged): void
+    {
+        $notification = new AccountEmailChanged($emailChanged);
+
+        app(ExternalMailRegistry::class)->recordQueued(
+            $user,
+            $notification,
+            'Confirm your email',
+            (string) config('communications.queues.critical'),
+        );
+
+        $user->notify($notification);
     }
 }

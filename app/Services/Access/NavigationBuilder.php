@@ -222,6 +222,20 @@ class NavigationBuilder
 
     private function allowed(User $user, mixed $permission): bool
     {
-        return ! is_string($permission) || $user->hasPermission($permission);
+        if (! is_string($permission)) {
+            return true;
+        }
+
+        if (str_contains($permission, '|')) {
+            foreach (explode('|', $permission) as $name) {
+                if ($user->hasPermission(trim($name))) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return $user->hasPermission($permission);
     }
 }
