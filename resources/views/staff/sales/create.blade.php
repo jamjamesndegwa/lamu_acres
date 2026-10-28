@@ -1,8 +1,19 @@
 <x-crud-page title="Create sale" :close="route('staff.sales.index')" size="xl">
     <p class="mt-3 max-w-2xl text-sm text-stone-600">Link the buyer, the property, and the enquiry or referral that opened the deal. Opening a transaction does not complete a sale.</p>
+    @if ($errors->any())
+        <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            <p class="font-medium">This transaction could not be opened.</p>
+            <ul class="mt-2 list-disc pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
     <form
         method="POST"
         action="{{ route('staff.sales.store') }}"
+        data-turbo="false"
         data-turbo-frame="_top"
         data-confirm="Open this sales transaction?"
         data-sales-create

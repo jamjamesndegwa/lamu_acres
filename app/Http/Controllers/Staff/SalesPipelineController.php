@@ -82,18 +82,45 @@ class SalesPipelineController extends Controller
         $data = $request->validate([
             'origin' => ['required', Rule::enum(SalesOrigin::class)],
             'property_id' => ['required', 'integer', Rule::exists('properties', 'id')],
-            'buyer_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'enquiry_id' => ['nullable', 'integer', Rule::exists('enquiries', 'id')],
-            'sourcing_request_id' => ['nullable', 'integer', Rule::exists('sourcing_requests', 'id')],
-            'broker_introduction_id' => ['nullable', 'integer', Rule::exists('broker_introductions', 'id')],
-            'sale_instruction_id' => ['nullable', 'integer', Rule::exists('sale_instructions', 'id')],
+            'buyer_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id'),
+                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Offer),
+            ],
+            'enquiry_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('enquiries', 'id'),
+                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Enquiry),
+            ],
+            'sourcing_request_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('sourcing_requests', 'id'),
+                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Sourcing),
+            ],
+            'broker_introduction_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('broker_introductions', 'id'),
+                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Introduction),
+            ],
+            'sale_instruction_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('sale_instructions', 'id'),
+                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Instruction),
+            ],
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'acreage' => ['nullable', 'numeric', 'gt:0'],
         ]);
 
         $transaction = $pipeline->open($request->user(), $data);
 
-        return redirect()->route('staff.sales.show', $transaction)->with('status', 'Transaction '.$transaction->reference.' opened.');
+        return redirect()
+            ->route('staff.sales.show', $transaction)
+            ->with('status', 'Transaction '.$transaction->reference.' opened.');
     }
 
     public function show(Request $request, SalesTransaction $salesTransaction): View

@@ -11,6 +11,7 @@ use App\Models\Offer;
 use App\Models\Property;
 use App\Models\PropertyOwner;
 use App\Models\SaleInstruction;
+use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\SalesCreateContext;
 use Tests\Feature\Foundation\FoundationTestCase;
@@ -85,5 +86,22 @@ class SalesCreateContextTest extends FoundationTestCase
             ->assertOk()
             ->assertSee('Deal intelligence')
             ->assertSee('data-sales-create', false);
+    }
+
+    public function test_opening_from_enquiry_origin_without_enquiry_shows_validation_not_404(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $property = Property::factory()->published()->create();
+
+        $this->actingAs($staff)
+            ->from(route('staff.sales.create'))
+            ->post(route('staff.sales.store'), [
+                'origin' => 'enquiry',
+                'property_id' => $property->id,
+            ])
+            ->assertRedirect(route('staff.sales.create'))
+            ->assertSessionHasErrors('enquiry_id');
+
+        $this->assertSame(0, SalesTransaction::query()->count());
     }
 }

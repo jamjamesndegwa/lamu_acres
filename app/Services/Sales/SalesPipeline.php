@@ -336,20 +336,29 @@ class SalesPipeline
         ];
 
         if ($origin === SalesOrigin::Enquiry) {
-            $enquiry = Enquiry::query()->findOrFail($data['enquiry_id'] ?? 0);
+            $enquiry = Enquiry::query()->find($data['enquiry_id'] ?? null);
+            if ($enquiry === null) {
+                throw ValidationException::withMessages(['enquiry_id' => 'Select the enquiry that opened this sale.']);
+            }
             $this->sameProperty($enquiry->property_id, $property->id, 'enquiry_id');
             $links['enquiry_id'] = $enquiry->id;
             $links['buyer_id'] = $enquiry->buyer_id;
         }
 
         if ($origin === SalesOrigin::Sourcing) {
-            $request = SourcingRequest::query()->findOrFail($data['sourcing_request_id'] ?? 0);
+            $request = SourcingRequest::query()->find($data['sourcing_request_id'] ?? null);
+            if ($request === null) {
+                throw ValidationException::withMessages(['sourcing_request_id' => 'Enter a valid sourcing request id.']);
+            }
             $links['sourcing_request_id'] = $request->id;
             $links['buyer_id'] = $request->buyer_id;
         }
 
         if ($origin === SalesOrigin::Introduction) {
-            $introduction = BrokerIntroduction::query()->findOrFail($data['broker_introduction_id'] ?? 0);
+            $introduction = BrokerIntroduction::query()->find($data['broker_introduction_id'] ?? null);
+            if ($introduction === null) {
+                throw ValidationException::withMessages(['broker_introduction_id' => 'Select the broker introduction for this sale.']);
+            }
             if ($introduction->property_id !== null) {
                 $this->sameProperty($introduction->property_id, $property->id, 'broker_introduction_id');
             }
@@ -358,7 +367,10 @@ class SalesPipeline
         }
 
         if ($origin === SalesOrigin::Instruction) {
-            $instruction = SaleInstruction::query()->findOrFail($data['sale_instruction_id'] ?? 0);
+            $instruction = SaleInstruction::query()->find($data['sale_instruction_id'] ?? null);
+            if ($instruction === null) {
+                throw ValidationException::withMessages(['sale_instruction_id' => 'Enter a valid sale instruction id.']);
+            }
             $this->sameProperty($instruction->property_id, $property->id, 'sale_instruction_id');
             $links['sale_instruction_id'] = $instruction->id;
         }
@@ -369,7 +381,10 @@ class SalesPipeline
             }
             $links['buyer_id'] = (int) $buyerId;
             if (filled($data['broker_introduction_id'] ?? null)) {
-                $introduction = BrokerIntroduction::query()->findOrFail($data['broker_introduction_id']);
+                $introduction = BrokerIntroduction::query()->find($data['broker_introduction_id']);
+                if ($introduction === null) {
+                    throw ValidationException::withMessages(['broker_introduction_id' => 'Select a valid broker introduction.']);
+                }
                 if ($introduction->property_id !== null) {
                     $this->sameProperty($introduction->property_id, $property->id, 'broker_introduction_id');
                 }
