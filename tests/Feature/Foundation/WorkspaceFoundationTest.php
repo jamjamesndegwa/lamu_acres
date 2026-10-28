@@ -437,7 +437,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
         $this->actingAs($investor)->get(route('investor.reports.index'))->assertOk()->assertSee('Research Reports')->assertSee('No research report has been published');
         $this->actingAs($investor)->get(route('investor.watchlists.index'))->assertOk()->assertSee('My Watchlists')->assertSee('Watched locations')->assertSee('Watched projects');
         $this->actingAs($investor)->get(route('investor.archive.index'))->assertOk()->assertSee('Alerts & Archive')->assertSee('Published alerts');
-        $this->actingAs($investor)->get(route('investor.subscription.show'))->assertOk()->assertSee('Active entitlement')->assertSee('Renewal')->assertSee('Payment history');
+        $this->actingAs($investor)->get(route('investor.subscription.show'))->assertOk()->assertSee('Membership on this account')->assertSee('Paid through')->assertSee('Payment history');
         $this->actingAs($investor)->get(route('investor.profile'))->assertOk()->assertSee('Profile')->assertSee('Name')->assertSee('Email');
 
         auth()->logout();

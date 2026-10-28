@@ -26,6 +26,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:investor'])
         Route::post('/watchlists', [WatchlistController::class, 'store'])->name('watchlists.store');
         Route::get('/archive', [WatchlistController::class, 'archive'])->name('archive.index');
         Route::get('/subscription', [MembershipController::class, 'show'])->name('subscription.show');
+        Route::post('/subscription/checkout', [MembershipController::class, 'checkout'])->name('subscription.checkout');
+        Route::post('/subscription/payments/{subscriptionPayment}/retry', [MembershipController::class, 'retry'])->name('subscription.retry');
         Route::post('/subscription/cancellation', [MembershipController::class, 'cancel'])->name('subscription.cancel');
         Route::get('/notifications', [WorkspaceNotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [WorkspaceNotificationController::class, 'markAllRead'])->name('notifications.read-all');
