@@ -43,7 +43,7 @@ class InvestorSubscriptionUxTest extends FoundationTestCase
 
         $this->actingAs($subscriber)->get(route('investor.subscription.show'))
             ->assertOk()
-            ->assertSee('Renew with M-Pesa', false)
+            ->assertSee('Pay with M-Pesa', false)
             ->assertSee('Paid through', false);
 
         $this->actingAs($subscriber)->post(route('investor.subscription.checkout'), [

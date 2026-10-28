@@ -10,12 +10,9 @@ use Illuminate\Validation\ValidationException;
 
 class MpesaCallbackController extends Controller
 {
-    public function __invoke(Request $request, MpesaCheckout $checkout): Response
+    public function __invoke(Request $request, MpesaCheckout $checkout, ?string $token = null): Response
     {
-        $secret = (string) config('mpesa.callback_secret');
-        $given = (string) $request->header('X-Callback-Secret', '');
-
-        abort_if($secret === '' || ! hash_equals($secret, $given), 403);
+        abort_unless($this->authorized($request, $token), 403);
 
         try {
             $checkout->acceptCallback($request->all());
@@ -24,5 +21,22 @@ class MpesaCallbackController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    private function authorized(Request $request, ?string $token): bool
+    {
+        $secret = (string) config('mpesa.callback_secret');
+
+        if ($secret === '') {
+            return false;
+        }
+
+        if ($token !== null && hash_equals($secret, $token)) {
+            return true;
+        }
+
+        $header = (string) $request->header('X-Callback-Secret', '');
+
+        return $header !== '' && hash_equals($secret, $header);
     }
 }

@@ -5,7 +5,6 @@ namespace App\Services\Payments;
 use App\Contracts\Payments\MpesaGateway;
 use App\Enums\PaymentStatus;
 use App\Enums\SubscriptionStatus;
-use App\Models\Subscription;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
@@ -22,6 +21,8 @@ class MpesaCheckout
 
     public function start(User $member, string $phone, string $idempotencyKey): SubscriptionPayment
     {
+        $phone = MpesaPhone::normalize($phone);
+
         $existing = SubscriptionPayment::query()->where('idempotency_key', $idempotencyKey)->first();
 
         if ($existing !== null) {
@@ -116,7 +117,10 @@ class MpesaCheckout
         }
 
         $receipt = $this->callbackReceipt($payload);
-        $this->applyOutcome($payment, $this->ask($payment), (int) $resultCode, $receipt);
+        $resultDesc = data_get($payload, 'Body.stkCallback.ResultDesc');
+        $callbackDesc = is_string($resultDesc) ? $resultDesc : null;
+
+        $this->applyOutcome($payment, $this->ask($payment), (int) $resultCode, $receipt, $callbackDesc);
     }
 
     public function reconcileExpired(): int
@@ -128,7 +132,7 @@ class MpesaCheckout
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->each(function (SubscriptionPayment $payment) use (&$count): void {
-                $this->applyOutcome($payment, $this->ask($payment), null, null);
+                $this->applyOutcome($payment, $this->ask($payment), null, null, null);
                 $count++;
             });
 
@@ -156,9 +160,20 @@ class MpesaCheckout
         }
     }
 
-    private function applyOutcome(SubscriptionPayment $payment, StkOutcome $outcome, ?int $callbackCode, ?string $callbackReceipt): void
+    private function applyOutcome(SubscriptionPayment $payment, StkOutcome $outcome, ?int $callbackCode, ?string $callbackReceipt, ?string $callbackDesc = null): void
     {
         if ($payment->status === PaymentStatus::Succeeded) {
+            return;
+        }
+
+        if ($callbackCode !== null && $callbackCode !== 0) {
+            $payment->update([
+                'status' => PaymentStatus::Failed,
+                'provider_result_code' => (string) $callbackCode,
+                'provider_result_desc' => $callbackDesc ?: $outcome->description ?: 'The provider reported a failed payment.',
+                'reconciled_at' => now(),
+            ]);
+
             return;
         }
 
@@ -190,7 +205,7 @@ class MpesaCheckout
         $payment->update([
             'status' => $status,
             'provider_result_code' => $outcome->resultCode !== null ? (string) $outcome->resultCode : ($callbackCode !== null ? (string) $callbackCode : $payment->provider_result_code),
-            'provider_result_desc' => $outcome->description,
+            'provider_result_desc' => $outcome->description ?: $callbackDesc ?: $payment->provider_result_desc,
             'reconciled_at' => now(),
         ]);
     }

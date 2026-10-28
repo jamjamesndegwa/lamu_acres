@@ -16,7 +16,10 @@ class MembershipController extends Controller
         abort_unless($this->allowed($request = request()), 403);
 
         return view('staff.memberships.index', [
-            'subscriptions' => Subscription::query()->with(['user', 'plan', 'events'])->latest()->paginate(20),
+            'subscriptions' => Subscription::query()
+                ->with(['user', 'plan', 'events', 'invoices', 'payments.receipt'])
+                ->latest()
+                ->paginate(20),
         ]);
     }
 

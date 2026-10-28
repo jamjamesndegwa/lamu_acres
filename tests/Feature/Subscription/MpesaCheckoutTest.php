@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Subscription;
 
+use App\Contracts\Payments\MpesaGateway;
 use App\Enums\PaymentStatus;
 use App\Enums\SubscriptionStatus;
 use App\Models\SubscriptionPayment;
@@ -10,6 +11,7 @@ use App\Models\SubscriptionReceipt;
 use App\Models\User;
 use App\Services\Payments\FakeMpesaGateway;
 use App\Services\Payments\StkOutcome;
+use App\Services\Subscription\Memberships;
 use Illuminate\Support\Facades\Http;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -22,7 +24,7 @@ class MpesaCheckoutTest extends FoundationTestCase
         parent::setUp();
 
         $this->gateway = new FakeMpesaGateway;
-        $this->app->instance(\App\Contracts\Payments\MpesaGateway::class, $this->gateway);
+        $this->app->instance(MpesaGateway::class, $this->gateway);
         config(['mpesa.callback_secret' => 'callback-secret', 'mpesa.timeout_minutes' => 2]);
 
         SubscriptionPlan::investorPass()->update([
@@ -133,6 +135,50 @@ class MpesaCheckoutTest extends FoundationTestCase
         $this->assertSame(3, $this->gateway->pushes);
         $this->assertFalse($second->fresh()->hasActiveInvestorPass());
         $this->assertSame(PaymentStatus::Pending, SubscriptionPayment::query()->where('idempotency_key', 'timeout-2')->first()->status);
+    }
+
+    public function test_amount_mismatch_does_not_activate_membership(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+
+        $this->actingAs($buyer)->post(route('buyer.subscription.checkout'), [
+            'phone' => '254712345678',
+            'idempotency_key' => 'amount-mismatch',
+        ])->assertRedirect();
+
+        $payment = SubscriptionPayment::query()->firstOrFail();
+        $this->gateway->outcomes[$payment->checkout_request_id] = StkOutcome::paid('RCPT-MISMATCH', 1);
+
+        $this->withHeader('X-Callback-Secret', 'callback-secret')
+            ->post(route('payments.mpesa.callback'), $this->payload($payment, 0, 'RCPT-MISMATCH'))
+            ->assertNoContent();
+
+        $this->assertFalse($buyer->fresh()->hasActiveInvestorPass());
+        $this->assertNotSame(PaymentStatus::Succeeded, $payment->fresh()->status);
+    }
+
+    public function test_renewal_extends_from_existing_paid_through_date(): void
+    {
+        $buyer = User::factory()->withRoles('buyer')->create();
+        $finance = User::factory()->withRoles('staff')->withPermissions('staff.finance')->create();
+        $memberships = app(Memberships::class);
+        $subscription = $memberships->request($buyer);
+        $memberships->activate($finance, $subscription);
+        $paidThrough = $subscription->fresh()->ends_at->copy();
+
+        $this->actingAs($buyer)->post(route('buyer.subscription.checkout'), [
+            'phone' => '254712345678',
+            'idempotency_key' => 'renew-1',
+        ])->assertRedirect();
+
+        $payment = SubscriptionPayment::query()->latest('id')->firstOrFail();
+        $this->gateway->outcomes[$payment->checkout_request_id] = StkOutcome::paid('RCPT-RENEW', 12900);
+
+        $this->withHeader('X-Callback-Secret', 'callback-secret')
+            ->post(route('payments.mpesa.callback'), $this->payload($payment, 0, 'RCPT-RENEW'))
+            ->assertNoContent();
+
+        $this->assertTrue($subscription->fresh()->ends_at->equalTo($paidThrough->copy()->addYear()));
     }
 
     /**

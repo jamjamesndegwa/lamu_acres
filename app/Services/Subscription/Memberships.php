@@ -47,7 +47,10 @@ class Memberships
     public function recordVerifiedPayment(Subscription $subscription, string $note, int $amountCents, string $currency): Subscription
     {
         if ($subscription->status === SubscriptionStatus::Active && $subscription->ends_at?->isFuture()) {
-            return $this->extend($subscription, $subscription->user, 'renewed', $note, $amountCents, $currency);
+            $subscription = $this->extend($subscription, $subscription->user, 'renewed', $note, $amountCents, $currency);
+            $this->announce($subscription, MessageEvent::SubscriptionRenewed, 'Your subscription is renewed.');
+
+            return $subscription;
         }
 
         return $this->open($subscription, $subscription->user, 'activated', $note, $amountCents, $currency);

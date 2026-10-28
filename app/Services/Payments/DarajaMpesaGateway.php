@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 use App\Contracts\Payments\MpesaGateway;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -14,31 +15,38 @@ class DarajaMpesaGateway implements MpesaGateway
     {
         $this->guardConfigured();
         $timestamp = now()->format('YmdHis');
+        $accountReference = substr($reference, 0, 12);
 
         try {
             $response = Http::withToken($this->token())
-                ->timeout(20)
+                ->timeout((int) config('mpesa.http_timeout_seconds', 20))
                 ->post($this->base().'/mpesa/stkpush/v1/processrequest', [
                     'BusinessShortCode' => config('mpesa.shortcode'),
                     'Password' => $this->password($timestamp),
                     'Timestamp' => $timestamp,
-                    'TransactionType' => 'CustomerPayBillOnline',
+                    'TransactionType' => (string) config('mpesa.transaction_type', 'CustomerPayBillOnline'),
                     'Amount' => $amount,
                     'PartyA' => $phone,
                     'PartyB' => config('mpesa.shortcode'),
                     'PhoneNumber' => $phone,
                     'CallBackURL' => config('mpesa.callback_url'),
-                    'AccountReference' => $reference,
+                    'AccountReference' => $accountReference,
                     'TransactionDesc' => 'Investor Pass',
                 ]);
         } catch (ConnectionException $exception) {
             throw new MpesaTimeout('The provider did not accept the push.', 0, $exception);
         }
 
+        if ((string) $response->json('ResponseCode') !== '0') {
+            throw ValidationException::withMessages([
+                'phone' => (string) ($response->json('ResponseDescription') ?: 'The provider did not accept the push.'),
+            ]);
+        }
+
         $checkout = $response->json('CheckoutRequestID');
         $merchant = $response->json('MerchantRequestID');
 
-        if (! $response->successful() || ! is_string($checkout) || ! is_string($merchant)) {
+        if (! is_string($checkout) || $checkout === '' || ! is_string($merchant) || $merchant === '') {
             throw new RuntimeException('The provider did not accept the push.');
         }
 
@@ -52,7 +60,7 @@ class DarajaMpesaGateway implements MpesaGateway
 
         try {
             $response = Http::withToken($this->token())
-                ->timeout(20)
+                ->timeout((int) config('mpesa.http_timeout_seconds', 20))
                 ->post($this->base().'/mpesa/stkpushquery/v1/query', [
                     'BusinessShortCode' => config('mpesa.shortcode'),
                     'Password' => $this->password($timestamp),
@@ -72,7 +80,14 @@ class DarajaMpesaGateway implements MpesaGateway
         $description = (string) ($response->json('ResultDesc') ?: '');
 
         if ($code === 0) {
-            return StkOutcome::paid((string) $response->json('MpesaReceiptNumber'), (int) $response->json('Amount'));
+            $receipt = (string) ($response->json('MpesaReceiptNumber') ?: '');
+            $amount = (int) round((float) ($response->json('Amount') ?? 0));
+
+            if ($receipt === '' || $amount < 1) {
+                return StkOutcome::pending();
+            }
+
+            return StkOutcome::paid($receipt, $amount);
         }
 
         if ($code === 1037) {
@@ -86,28 +101,45 @@ class DarajaMpesaGateway implements MpesaGateway
         return StkOutcome::failed($code, $description);
     }
 
+    public function resolvedBaseUrl(): string
+    {
+        return $this->base();
+    }
+
     private function guardConfigured(): void
     {
-        foreach (['base_url', 'consumer_key', 'consumer_secret', 'passkey', 'shortcode', 'callback_url'] as $key) {
+        foreach (['consumer_key', 'consumer_secret', 'passkey', 'shortcode', 'callback_url'] as $key) {
             if (blank(config('mpesa.'.$key))) {
                 throw ValidationException::withMessages([
                     'phone' => 'M-Pesa is not configured. No request was sent.',
                 ]);
             }
         }
+
+        if (blank($this->base())) {
+            throw ValidationException::withMessages([
+                'phone' => 'M-Pesa is not configured. No request was sent.',
+            ]);
+        }
     }
 
     private function token(): string
     {
-        $response = Http::withBasicAuth((string) config('mpesa.consumer_key'), (string) config('mpesa.consumer_secret'))
-            ->timeout(15)
-            ->get($this->base().'/oauth/v1/generate', ['grant_type' => 'client_credentials']);
+        $cacheKey = 'mpesa.daraja.oauth.'.md5((string) config('mpesa.consumer_key'));
 
-        $token = $response->json('access_token');
+        $token = Cache::remember($cacheKey, max(60, (int) config('mpesa.oauth_cache_seconds', 3300)), function (): string {
+            $response = Http::withBasicAuth((string) config('mpesa.consumer_key'), (string) config('mpesa.consumer_secret'))
+                ->timeout((int) config('mpesa.http_timeout_seconds', 20))
+                ->get($this->base().'/oauth/v1/generate', ['grant_type' => 'client_credentials']);
 
-        if (! is_string($token) || $token === '') {
-            throw new RuntimeException('The provider did not issue an access token.');
-        }
+            $token = $response->json('access_token');
+
+            if (! is_string($token) || $token === '') {
+                throw new RuntimeException('The provider did not issue an access token.');
+            }
+
+            return $token;
+        });
 
         return $token;
     }
@@ -119,6 +151,14 @@ class DarajaMpesaGateway implements MpesaGateway
 
     private function base(): string
     {
-        return rtrim((string) config('mpesa.base_url'), '/');
+        $configured = config('mpesa.base_url');
+
+        if (filled($configured)) {
+            return rtrim((string) $configured, '/');
+        }
+
+        return config('mpesa.environment') === 'production'
+            ? rtrim((string) config('mpesa.production_base_url'), '/')
+            : rtrim((string) config('mpesa.sandbox_base_url'), '/');
     }
 }

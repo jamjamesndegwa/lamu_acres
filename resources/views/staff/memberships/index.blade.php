@@ -1,16 +1,40 @@
 <x-workspace-layout heading="Investor Pass memberships">
     <p class="mt-3 max-w-3xl text-stone-700">Recording a membership does not take a card payment. Access starts only after activation, and it uses the member’s existing account.</p>
     <div class="mt-6">
-        <x-workspace.table :columns="['Member', 'Status', 'Period', '']">
+        <x-workspace.table :columns="['Member', 'Status', 'Period', 'M-Pesa attempts', '']">
             @forelse ($subscriptions as $subscription)
-                <tr class="border-b border-sand-200">
-                    <td class="px-4 py-3">{{ $subscription->user->name }} · {{ $subscription->user->email }}</td>
+                <tr class="border-b border-sand-200 align-top">
+                    <td class="px-4 py-3">
+                        <p>{{ $subscription->user->name }} · {{ $subscription->user->email }}</p>
+                        <p class="mt-1 text-xs text-stone-500">{{ $subscription->plan?->name }} · list {{ $subscription->plan?->amountLabel() }}</p>
+                    </td>
                     <td class="px-4 py-3"><x-status-badge :label="$subscription->status->label()" /></td>
-                    <td class="px-4 py-3">{{ $subscription->starts_at?->toFormattedDateString() }} – {{ $subscription->ends_at?->toFormattedDateString() }}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <p>Starts {{ $subscription->starts_at?->toFormattedDateString() ?: '—' }}</p>
+                        <p>Expires {{ $subscription->ends_at?->toFormattedDateString() ?: '—' }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-stone-600">
+                        @forelse ($subscription->payments->sortByDesc('id')->take(3) as $payment)
+                            <p class="mb-2 rounded border border-sand-100 bg-sand-50 px-2 py-1">
+                                KES {{ number_format($payment->amount) }} · {{ $payment->status->label() }}
+                                @if ($payment->checkout_request_id)
+                                    · checkout {{ $payment->checkout_request_id }}
+                                @endif
+                                @if ($payment->receipt)
+                                    · receipt {{ $payment->receipt->provider_receipt }}
+                                @endif
+                                @if ($payment->provider_result_desc)
+                                    · {{ $payment->provider_result_desc }}
+                                @endif
+                            </p>
+                        @empty
+                            <p>No M-Pesa attempt recorded.</p>
+                        @endforelse
+                    </td>
                     <td class="px-4 py-3">
                         @php $invoice = $subscription->invoices->sortByDesc('id')->first(); @endphp
                         @if ($invoice)
-                            <p class="mb-2 text-xs text-stone-500">Provider invoice {{ $invoice->number }} · {{ $invoice->status }} · {{ $invoice->currency }} {{ number_format($invoice->amount / 100, 2) }}</p>
+                            <p class="mb-2 text-xs text-stone-500">Invoice {{ $invoice->number }} · {{ $invoice->status }} · KES {{ number_format($invoice->amount) }}</p>
                         @endif
                         @if ($subscription->status === \App\Enums\SubscriptionStatus::Pending)
                             <form method="POST" action="{{ route('staff.memberships.activate', $subscription) }}" data-confirm="Activate {{ $subscription->plan?->name ?? 'Investor Pass' }} for {{ $subscription->user->name }} ({{ $subscription->user->email }}). Amount {{ $subscription->plan?->amountLabel() ?? 'not priced' }}. No card payment is collected. Resulting state: Active.">@csrf <button class="text-sm text-lamu-800">Activate</button></form>

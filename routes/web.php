@@ -35,7 +35,7 @@ Route::middleware(['private.cache'])->group(function () {
     Route::get('/list-property/start', StartPropertyListingController::class)->name('list-property.start');
     Route::get('/account/applications/create', [CapabilityApplicationController::class, 'create'])->name('account.applications.create');
 });
-Route::post('/payments/mpesa/callback', MpesaCallbackController::class)->name('payments.mpesa.callback');
+Route::post('/payments/mpesa/callback/{token?}', MpesaCallbackController::class)->name('payments.mpesa.callback');
 
 Route::get('/intelligence/developments', [LibraryController::class, 'projects'])->name('intelligence.projects.index');
 Route::get('/intelligence/developments/{project}', [LibraryController::class, 'project'])->name('intelligence.projects.show');

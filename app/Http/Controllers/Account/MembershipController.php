@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Services\Payments\MpesaCheckout;
+use App\Services\Payments\MpesaPhone;
 use App\Services\Subscription\Memberships;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class MembershipController extends Controller
             'retryablePayments' => $subscription?->payments
                 ->filter(fn (SubscriptionPayment $payment): bool => in_array($payment->status, [PaymentStatus::Failed, PaymentStatus::TimedOut], true))
                 ->values() ?? collect(),
+            'latestPayment' => $subscription?->payments->sortByDesc('id')->first(),
         ]);
     }
 
@@ -52,11 +54,13 @@ class MembershipController extends Controller
         $this->assertCanManageSubscriptionPayment($request);
 
         $data = $request->validate([
-            'phone' => ['required', 'string', 'regex:/^254(7|1)\d{8}$/'],
+            'phone' => ['required', 'string', 'max:20'],
             'idempotency_key' => ['required', 'string', 'max:80'],
         ]);
 
-        $checkout->start($request->user(), $data['phone'], $data['idempotency_key']);
+        $phone = MpesaPhone::normalize($data['phone']);
+
+        $checkout->start($request->user(), $phone, $data['idempotency_key']);
 
         return back()->with('status', 'The payment prompt was sent. Premium research stays closed until the provider confirms it.');
     }

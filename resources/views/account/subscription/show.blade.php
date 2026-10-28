@@ -66,8 +66,8 @@
                     </form>
                 @endif
                 @if ($canCheckout)
-                    <button type="button" class="rounded-full border border-white/40 px-4 py-2 text-sm font-medium text-white hover:bg-white/10" onclick="document.getElementById('investor-checkout').showModal()">
-                        {{ $passActive ? 'Renew with M-Pesa' : 'Pay with M-Pesa' }}
+                    <button type="button" class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-lamu-900 hover:bg-sand-100" onclick="document.getElementById('investor-checkout').showModal()">
+                        Pay with M-Pesa
                     </button>
                 @endif
             </div>
@@ -84,14 +84,15 @@
         </div>
     </section>
 
-    @if ($hasPendingPayment)
+    @if ($hasPendingPayment && isset($latestPayment) && $latestPayment)
         <div class="mt-6 max-w-5xl rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-stone-800">
-            <p class="font-semibold text-lamu-900">Payment pending</p>
-            @if ($passActive)
-                <p class="mt-1">An M-Pesa prompt is waiting for confirmation. Your current pass stays open until it expires or is cancelled; the renewal period extends only after a verified receipt is reconciled.</p>
-            @else
-                <p class="mt-1">An M-Pesa prompt is waiting for confirmation. Premium research and the Investor workspace stay closed until finance reconciles a successful payment.</p>
-            @endif
+            <p class="font-semibold text-lamu-900">{{ \App\Services\Payments\MpesaPaymentStatus::headline($latestPayment) }}</p>
+            <p class="mt-1">{{ \App\Services\Payments\MpesaPaymentStatus::detail($latestPayment) }}</p>
+        </div>
+    @elseif (isset($latestPayment) && $latestPayment && ! auth()->user()->hasActiveInvestorPass())
+        <div class="mt-6 max-w-5xl rounded-xl border px-4 py-4 text-sm {{ $latestPayment->status === \App\Enums\PaymentStatus::Succeeded ? 'border-lamu-200 bg-lamu-50 text-lamu-900' : 'border-sand-200 bg-white text-stone-800' }}">
+            <p class="font-semibold text-lamu-900">{{ \App\Services\Payments\MpesaPaymentStatus::headline($latestPayment) }}</p>
+            <p class="mt-1">{{ \App\Services\Payments\MpesaPaymentStatus::detail($latestPayment) }}</p>
         </div>
     @endif
 
