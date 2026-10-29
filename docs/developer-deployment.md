@@ -143,11 +143,10 @@ Configure when going live on those channels:
 
 ### Recommended: deploy script
 
-SSH as the **cPanel account user** (`lamuacresco`), **not root**:
+SSH as the **cPanel account user** (`lamuacresco`), or as **root** (the script runs Composer/Artisan/npm as that user and fixes ownership):
 
 ```bash
 cd /home/lamuacresco/lamu_acres
-git pull   # if deploy script is not on server yet
 bash scripts/deploy-cpanel.sh
 ```
 
@@ -181,7 +180,7 @@ php artisan view:cache
 
 ## Rules that prevent outages
 
-1. **Run Artisan as the site user**, not root. Root breaks ownership on `storage/`, `bootstrap/cache/`, and SQLite (if used).
+1. **Run deploy as the site user when possible**, or use **`bash scripts/deploy-cpanel.sh` as root** (it delegates to `lamuacresco`). Avoid raw `php artisan` / `composer` as root without `sudo -u lamuacresco`.
 2. **Do not run `php artisan key:generate`** on production unless you intend to invalidate sessions and encrypted data. Keep exactly **one** `APP_KEY=` line in `.env`.
 3. **Do not run `config:cache` with an empty `APP_KEY`.**
 4. **Do not paste local `.env`** (localhost, SQLite, `APP_DEBUG=true`) onto the server.
