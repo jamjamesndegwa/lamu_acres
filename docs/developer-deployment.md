@@ -119,6 +119,16 @@ CLOUDFLARE_R2_PUBLIC_URL=
 
 Rotate keys if they were ever exposed in chat, tickets, or commits.
 
+After deploy or any `.env` change affecting R2, confirm uploads will work **before** testing staff land registration:
+
+```bash
+composer install --no-dev --optimize-autoloader --no-interaction
+rm -f config/octane.php   # only if Octane is not installed
+php artisan storage:verify-r2
+```
+
+Staff **register land** with a photo writes to **`r2_private`** (original) and **`r2`** (public derivative). A 500 with `PortableVisibilityConverter not found` means the S3 Flysystem package was missing from `vendor/` — not a Cloudflare outage. A failed `storage:verify-r2` means credentials, bucket name, or API token permissions.
+
 ### Mail, SMS, M-Pesa
 
 Configure when going live on those channels:

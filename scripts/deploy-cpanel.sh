@@ -30,6 +30,9 @@ if [[ -f config/octane.php ]] && ! php -r "require 'vendor/autoload.php'; exit(c
     rm -f config/octane.php
 fi
 
+echo "==> Cloudflare R2 (required for land registration photos)"
+php artisan storage:verify-r2
+
 echo "==> Database migrations"
 php artisan migrate --force
 
