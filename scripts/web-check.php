@@ -8,7 +8,8 @@
  */
 
 declare(strict_types=1);
-use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,8 +67,8 @@ try {
     require $appRoot.'/vendor/autoload.php';
     /** @var Application $app */
     $app = require $appRoot.'/bootstrap/app.php';
-    $kernel = $app->make(Kernel::class);
-    $kernel->bootstrap();
+    $console = $app->make(ConsoleKernel::class);
+    $console->bootstrap();
 
     $key = (string) config('app.key');
     $keyCount = substr_count($key, 'base64:');
@@ -80,11 +81,18 @@ try {
     DB::connection()->getPdo();
     echo "DB PDO: OK\n";
 
-    $response = $app->handleRequest(Request::create('/up', 'GET'));
-    echo '/up HTTP status: '.$response->getStatusCode()."\n";
+    /** @var HttpKernel $http */
+    $http = $app->make(HttpKernel::class);
 
-    $response = $app->handleRequest(Request::create('/', 'GET'));
-    echo '/ HTTP status: '.$response->getStatusCode()."\n";
+    foreach (['/up', '/', '/land'] as $path) {
+        $request = Request::create($path, 'GET');
+        $response = $http->handle($request);
+        echo $path.' HTTP status: '.$response->getStatusCode()."\n";
+        if ($response->getStatusCode() >= 500) {
+            echo substr($response->getContent(), 0, 500)."\n";
+        }
+        $http->terminate($request, $response);
+    }
 } catch (Throwable $exception) {
     echo "\nFAILED: ".$exception->getMessage()."\n";
     echo $exception->getFile().':'.$exception->getLine()."\n";
