@@ -22,10 +22,10 @@ class BootstrapAccount
             return ['name' => '', 'email' => '', 'password' => ''];
         }
 
-        if ($name === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || strlen($password) < 16) {
+        if ($name === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || $password === '') {
             if (app()->environment('production')) {
                 throw new RuntimeException(sprintf(
-                    'Set %s, %s, and a %s of at least 16 characters before seeding production.',
+                    'Set %s, %s, and %s before seeding production.',
                     self::envName($nameKey),
                     self::envName($emailKey),
                     self::envName($passwordKey),
@@ -33,7 +33,7 @@ class BootstrapAccount
             }
 
             throw new InvalidArgumentException(sprintf(
-                'Set a valid %s name, email, and password of at least 16 characters.',
+                'Set a valid %s name, email, and password.',
                 strtolower($label),
             ));
         }

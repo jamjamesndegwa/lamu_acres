@@ -15,7 +15,7 @@ class BootstrapAccountTest extends TestCase
         $this->app['env'] = 'production';
         Config::set('app.initial_admin.name', 'Admin');
         Config::set('app.initial_admin.email', 'admin@example.com');
-        Config::set('app.initial_admin.password', 'long-enough-password');
+        Config::set('app.initial_admin.password', 'password');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('@lamuacres.co.ke');
@@ -33,7 +33,7 @@ class BootstrapAccountTest extends TestCase
         $this->app['env'] = 'production';
         Config::set('app.initial_admin.name', 'Super Admin');
         Config::set('app.initial_admin.email', 'admin@lamuacres.co.ke');
-        Config::set('app.initial_admin.password', 'long-enough-password');
+        Config::set('app.initial_admin.password', 'password');
 
         $credentials = BootstrapAccount::credentials(
             'app.initial_admin.name',
@@ -43,6 +43,7 @@ class BootstrapAccountTest extends TestCase
         );
 
         $this->assertSame('admin@lamuacres.co.ke', $credentials['email']);
+        $this->assertSame('password', $credentials['password']);
     }
 
     public function test_local_skips_empty_bootstrap_credentials(): void
@@ -62,12 +63,12 @@ class BootstrapAccountTest extends TestCase
         $this->assertSame('', $credentials['email']);
     }
 
-    public function test_local_rejects_short_password_when_credentials_are_set(): void
+    public function test_local_rejects_empty_password_when_credentials_are_set(): void
     {
         Config::set('app.env', 'local');
         Config::set('app.initial_admin.name', 'Admin');
         Config::set('app.initial_admin.email', 'admin@lamuacres.test');
-        Config::set('app.initial_admin.password', 'short');
+        Config::set('app.initial_admin.password', '');
 
         $this->expectException(InvalidArgumentException::class);
 

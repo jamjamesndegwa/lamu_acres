@@ -100,7 +100,7 @@ Create the database and user in **cPanel → MySQL® Databases**, then grant the
 
 For production seeding only (`php artisan db:seed --force`), set:
 
-- `INITIAL_ADMIN_*` — super admin (`@lamuacres.co.ke`, password ≥ 16 characters).
+- `INITIAL_ADMIN_*` — super admin (`@lamuacres.co.ke`, non-empty password).
 - `INITIAL_STAFF_*` — operations staff (production only).
 
 Remove or rotate after first login. See `app/Support/BootstrapAccount.php` and `.env.example`.
