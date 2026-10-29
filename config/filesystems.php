@@ -74,15 +74,18 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Same Cloudflare R2 bucket and credentials as the public "r2" disk.
+         * Object visibility is private; do not use CLOUDFLARE_R2_PRIVATE_* (empty values break config:cache).
+         */
         'r2_private' => [
             'driver' => 's3',
-            'key' => env('CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID') ?: env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
-            'secret' => env('CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY') ?: env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+            'key' => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret' => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
             'region' => 'auto',
-            // Empty CLOUDFLARE_R2_PRIVATE_BUCKET_NAME in .env must fall back to the public bucket name.
-            'bucket' => env('CLOUDFLARE_R2_PRIVATE_BUCKET_NAME') ?: env('CLOUDFLARE_R2_BUCKET_NAME'),
+            'bucket' => env('CLOUDFLARE_R2_BUCKET_NAME'),
             'url' => null,
-            'endpoint' => env('CLOUDFLARE_R2_PRIVATE_ENDPOINT') ?: env('CLOUDFLARE_R2_ENDPOINT'),
+            'endpoint' => env('CLOUDFLARE_R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'visibility' => 'private',
             'throw' => true,

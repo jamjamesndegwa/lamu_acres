@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        R2Storage::mergePrivateDiskFromPublic();
+
         $this->app->bind(OtpSender::class, UnconfiguredOtpSender::class);
         $this->app->bind(SmsSender::class, function () {
             $sender = new HttpSmsSender;
@@ -43,8 +45,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        R2Storage::mergePrivateDiskFromPublic();
-
         $listener = RecordExternalNotificationMail::class;
 
         Event::listen(NotificationSending::class, [$listener, 'handleSending']);

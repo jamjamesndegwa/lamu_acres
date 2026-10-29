@@ -9,13 +9,11 @@ Public property photos and derivatives are served directly from Cloudflare R2 cu
 
 ## 1. Cloudflare R2 Bucket Configuration
 
-### A. Create R2 Buckets
-In the Cloudflare Dashboard (**R2 Object Storage**):
-1. **Public Media Bucket**: Create a bucket (e.g. `lamuacres-public` or `lamuacres`).
-   - Enable **Public access** or connect a custom domain (e.g. `https://media.lamuacres.co.ke` or use the assigned `https://pub-*.r2.dev` URL).
-   - Configure CORS policy allowing `GET` requests from application domains.
-2. **Private Documents Bucket**: Create a private bucket (e.g. `lamuacres-private`).
-   - Keep Public access disabled.
+### A. Create R2 Bucket
+In the Cloudflare Dashboard (**R2 Object Storage**), create one bucket (e.g. `lamuacres`):
+- Enable **Public access** or connect a custom domain (e.g. `https://media.lamuacres.co.ke` or use the assigned `https://pub-*.r2.dev` URL) for listing photos and derivatives.
+- Configure CORS policy allowing `GET` requests from application domains.
+- Private uploads (KYC, deeds, evidence) use the **same bucket** with S3 private visibility; access is via signed URLs in the app.
 
 ### B. Generate API Tokens
 1. In Cloudflare Dashboard, go to **R2** > **Manage R2 API Tokens**.
@@ -28,7 +26,7 @@ In the Cloudflare Dashboard (**R2 Object Storage**):
 
 ## 2. Environment Variables (.env)
 
-Add the five exact environment variables for public R2, plus optional private bucket overrides:
+Set **only** these five variables. Do **not** add `CLOUDFLARE_R2_PRIVATE_*` keys (especially not duplicate keys with empty values — they break `php artisan config:cache` and cause “non-empty parameter: Bucket” upload errors).
 
 ```dotenv
 CLOUDFLARE_R2_ENDPOINT="https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
@@ -36,15 +34,15 @@ CLOUDFLARE_R2_ACCESS_KEY_ID="<YOUR_R2_ACCESS_KEY_ID>"
 CLOUDFLARE_R2_SECRET_ACCESS_KEY="<YOUR_R2_SECRET_ACCESS_KEY>"
 CLOUDFLARE_R2_BUCKET_NAME="<YOUR_R2_BUCKET_NAME>"
 CLOUDFLARE_R2_PUBLIC_URL="https://media.lamuacres.co.ke"
-
-# Optional separate private bucket credentials (falls back to public R2 credentials if empty)
-CLOUDFLARE_R2_PRIVATE_ENDPOINT=""
-CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID=""
-CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY=""
-CLOUDFLARE_R2_PRIVATE_BUCKET_NAME=""
 ```
 
----
+After any `.env` change:
+
+```bash
+php artisan config:clear
+php artisan config:cache
+php artisan storage:verify-r2
+```
 
 ## 3. Deployment & Migration Steps
 
