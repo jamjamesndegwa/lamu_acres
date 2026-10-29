@@ -105,6 +105,12 @@ return [
         'password' => env('INITIAL_ADMIN_PASSWORD'),
     ],
 
+    'initial_staff' => [
+        'name' => env('INITIAL_STAFF_NAME'),
+        'email' => env('INITIAL_STAFF_EMAIL'),
+        'password' => env('INITIAL_STAFF_PASSWORD'),
+    ],
+
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))

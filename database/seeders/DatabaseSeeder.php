@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             GeographySeeder::class,
             SystemDefaultsSeeder::class,
             InitialAdministratorSeeder::class,
+            InitialStaffSeeder::class,
         ]);
 
         if (! app()->environment('local')) {
