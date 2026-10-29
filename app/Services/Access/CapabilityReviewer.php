@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\ApplicationSubmittedNotification;
 use App\Services\Communications\MessageDesk;
 use App\Services\Communications\StaffDeskNotifier;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -67,14 +68,10 @@ class CapabilityReviewer
                     throw ValidationException::withMessages(['capability' => 'This application cannot be resubmitted in its current status. Follow the application status page for the next step.']);
                 }
                 $application ??= new CapabilityApplication(['user_id' => $user->id, 'capability' => $capability]);
-                $privateBucket = config('filesystems.disks.r2_private.bucket');
-                $disk = filled($privateBucket) || filled(config('filesystems.disks.r2.bucket')) ? 'r2_private' : 'local';
+                $disk = R2Storage::privateUploadDisk();
                 foreach (self::EVIDENCE_TYPES as $kind) {
                     if (($data[$kind] ?? null) instanceof UploadedFile) {
-                        $path = $data[$kind]->store('partner-evidence/'.$user->id, $disk);
-                        if ($path === false) {
-                            throw ValidationException::withMessages([$kind => 'The private evidence could not be stored.']);
-                        }
+                        $path = R2Storage::store($data[$kind], 'partner-evidence/'.$user->id, $kind, $disk);
                         $stored[$kind] = ['disk' => $disk, 'path' => $path, 'mime' => $data[$kind]->getMimeType(), 'sha256' => hash_file('sha256', $data[$kind]->getRealPath())];
                     }
                 }

@@ -9,24 +9,18 @@ use App\Models\PlanningRecord;
 use App\Models\ResearchReport;
 use App\Models\User;
 use App\Models\VerifiedSale;
+use App\Support\R2Storage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class IntelligenceFiles
 {
     public function store(Model $subject, User $actor, UploadedFile $upload, string $kind): IntelligenceFile
     {
-        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
-        $path = $upload->store('intelligence/'.$subject->getTable().'/'.$subject->getKey(), $disk);
-
-        if ($path === false) {
-            throw ValidationException::withMessages([
-                'file' => 'The intelligence file could not be stored.',
-            ]);
-        }
+        $disk = R2Storage::privateUploadDisk();
+        $path = R2Storage::store($upload, 'intelligence/'.$subject->getTable().'/'.$subject->getKey(), 'file', $disk);
 
         try {
             return $subject->files()->create([

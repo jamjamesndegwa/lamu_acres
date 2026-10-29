@@ -50,6 +50,7 @@ use App\Services\Inventory\PropertyInventory;
 use App\Services\Sales\SaleModeTerms;
 use App\Services\Sales\SalesPipeline;
 use App\Services\Verification\VerificationDesk;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -573,14 +574,8 @@ class SellerPortal
      */
     public function storeDocument(Property $property, User $seller, UploadedFile $file, OwnershipDocumentType $type = OwnershipDocumentType::Other): OwnershipDocument
     {
-        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
-        $path = $file->store('ownership/'.$property->id, $disk);
-
-        if ($path === false) {
-            throw ValidationException::withMessages([
-                'document' => 'The document could not be stored.',
-            ]);
-        }
+        $disk = R2Storage::privateUploadDisk();
+        $path = R2Storage::store($file, 'ownership/'.$property->id, 'document', $disk);
 
         try {
             $document = $property->ownershipDocuments()->create([

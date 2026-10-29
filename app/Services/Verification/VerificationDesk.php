@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\VerificationItem;
 use App\Models\VerificationPassport;
 use App\Notifications\ReverificationDueNotification;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -43,14 +44,8 @@ class VerificationDesk
 
     public function storeEvidence(VerificationItem $item, User $uploader, UploadedFile $file, EvidenceSensitivity $sensitivity): EvidenceFile
     {
-        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
-        $path = $file->store('evidence/'.$item->property_id, $disk);
-
-        if ($path === false) {
-            throw ValidationException::withMessages([
-                'file' => 'The evidence file could not be stored.',
-            ]);
-        }
+        $disk = R2Storage::privateUploadDisk();
+        $path = R2Storage::store($file, 'evidence/'.$item->property_id, 'file', $disk);
 
         try {
             $evidence = $item->files()->create([

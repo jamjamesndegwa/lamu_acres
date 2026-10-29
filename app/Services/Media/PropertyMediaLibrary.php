@@ -5,6 +5,7 @@ namespace App\Services\Media;
 use App\Models\Property;
 use App\Models\PropertyMedia;
 use App\Models\User;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,12 +17,12 @@ class PropertyMediaLibrary
 
     public static function defaultOriginalDisk(): string
     {
-        return config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
+        return R2Storage::privateUploadDisk();
     }
 
     public static function defaultPublicDisk(): string
     {
-        return config('filesystems.disks.r2.bucket') ? 'r2' : 'local';
+        return R2Storage::publicUploadDisk();
     }
 
     public function storePhoto(User $actor, Property $property, UploadedFile $file, string $directory = 'property-originals'): PropertyMedia
@@ -31,13 +32,7 @@ class PropertyMediaLibrary
         $originalDisk = self::defaultOriginalDisk();
         $publicDisk = self::defaultPublicDisk();
 
-        $original = $file->store($directory.'/'.$property->id, $originalDisk);
-
-        if ($original === false) {
-            throw ValidationException::withMessages([
-                'photo' => 'The photo could not be stored.',
-            ]);
-        }
+        $original = R2Storage::store($file, $directory.'/'.$property->id, 'photo', $originalDisk);
 
         try {
             $derivative = $this->derivative($file, $property, $publicDisk);
@@ -80,11 +75,7 @@ class PropertyMediaLibrary
     public function storeVideoUpload(User $actor, Property $property, UploadedFile $file): PropertyMedia
     {
         $disk = self::defaultPublicDisk();
-        $path = $file->store('property-videos/'.$property->id, $disk);
-
-        if ($path === false) {
-            throw ValidationException::withMessages(['video' => 'The video could not be stored.']);
-        }
+        $path = R2Storage::store($file, 'property-videos/'.$property->id, 'video', $disk);
 
         try {
             return $property->media()->create([
@@ -291,10 +282,18 @@ class PropertyMediaLibrary
         }
 
         $path = 'property-derivatives/'.$property->id.'/'.Str::uuid().'.jpg';
-        if (! Storage::disk($disk)->put($path, $jpeg)) {
-            throw ValidationException::withMessages([
-                'photo' => 'The public copy of the photo could not be stored.',
-            ]);
+
+        try {
+            R2Storage::assertDiskReady($disk, 'photo');
+            if (! Storage::disk($disk)->put($path, $jpeg)) {
+                throw ValidationException::withMessages([
+                    'photo' => 'The public copy of the photo could not be stored.',
+                ]);
+            }
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw R2Storage::validationFailureForField($exception, 'photo');
         }
 
         return $path;

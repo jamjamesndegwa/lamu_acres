@@ -3,6 +3,7 @@
 namespace App\Services\Account;
 
 use App\Models\User;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -12,7 +13,7 @@ class AccountAvatar
 {
     public static function disk(): string
     {
-        return config('filesystems.disks.r2.bucket') ? 'r2' : 'local';
+        return R2Storage::publicUploadDisk();
     }
 
     public function store(User $user, UploadedFile $file): void
@@ -22,10 +23,18 @@ class AccountAvatar
         $path = 'avatars/'.$user->id.'-'.Str::random(8).'.jpg';
 
         $oldPath = $user->avatar_path;
-        if (! Storage::disk($disk)->put($path, $jpeg)) {
-            throw ValidationException::withMessages([
-                'avatar' => 'That photo could not be saved.',
-            ]);
+
+        try {
+            R2Storage::assertDiskReady($disk, 'avatar');
+            if (! Storage::disk($disk)->put($path, $jpeg)) {
+                throw ValidationException::withMessages([
+                    'avatar' => 'That photo could not be saved.',
+                ]);
+            }
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw R2Storage::validationFailureForField($exception, 'avatar');
         }
 
         try {

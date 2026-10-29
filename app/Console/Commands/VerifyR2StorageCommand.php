@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\R2Storage;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -15,6 +16,8 @@ class VerifyR2StorageCommand extends Command
 {
     public function handle(): int
     {
+        R2Storage::mergePrivateDiskFromPublic();
+
         if (! class_exists(PortableVisibilityConverter::class)) {
             $this->error('Missing league/flysystem-aws-s3-v3. Run: composer install --no-dev');
 

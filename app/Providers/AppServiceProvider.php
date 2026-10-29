@@ -12,6 +12,7 @@ use App\Services\Communications\HttpSmsSender;
 use App\Services\Communications\UnconfiguredSmsSender;
 use App\Services\Payments\DarajaMpesaGateway;
 use App\Services\Payments\UnconfiguredMpesaGateway;
+use App\Support\R2Storage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationFailed;
@@ -42,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        R2Storage::mergePrivateDiskFromPublic();
+
         $listener = RecordExternalNotificationMail::class;
 
         Event::listen(NotificationSending::class, [$listener, 'handleSending']);

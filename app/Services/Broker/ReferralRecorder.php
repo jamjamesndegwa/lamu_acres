@@ -12,6 +12,7 @@ use App\Notifications\ReferralDecidedNotification;
 use App\Notifications\ReferralSubmittedNotification;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Communications\MessageDesk;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -33,9 +34,11 @@ class ReferralRecorder
         $flags = $this->conflicts->detect($broker, $propertyIds, $email, $data['buyer_phone'] ?? null);
         $properties = Property::query()->publiclyListed()->whereIn('id', $propertyIds)->get();
 
-        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
-        $consentPath = $consent->store('broker-referrals/consent', $disk);
-        $evidencePath = $evidence?->store('broker-referrals/evidence', $disk);
+        $disk = R2Storage::privateUploadDisk();
+        $consentPath = R2Storage::store($consent, 'broker-referrals/consent', 'consent', $disk);
+        $evidencePath = $evidence instanceof UploadedFile
+            ? R2Storage::store($evidence, 'broker-referrals/evidence', 'evidence', $disk)
+            : null;
 
         try {
             $introduction = BrokerIntroduction::query()->create([

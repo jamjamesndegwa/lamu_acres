@@ -19,6 +19,7 @@ use App\Services\Communications\MessageDesk;
 use App\Services\Communications\StaffDeskNotifier;
 use App\Services\Inventory\PropertyInventory;
 use App\Services\Media\PropertyMediaLibrary;
+use App\Support\R2Storage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -203,8 +204,8 @@ class PropertySubmission
             return app(PropertyMediaLibrary::class)->storePhoto($broker, $property, $file, 'broker-listings');
         }
 
-        $disk = config('filesystems.disks.r2_private.bucket') || config('filesystems.disks.r2.bucket') ? 'r2_private' : 'local';
-        $path = $file->store('broker-listings/'.$property->id, $disk);
+        $disk = R2Storage::privateUploadDisk();
+        $path = R2Storage::store($file, 'broker-listings/'.$property->id, $kind === 'photo' ? 'photo' : 'file', $disk);
 
         try {
             return $property->media()->create([
