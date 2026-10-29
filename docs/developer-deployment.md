@@ -131,9 +131,34 @@ Staff **register land** with a photo writes to **`r2_private`** (original) and *
 
 ### Mail, SMS, M-Pesa
 
-Configure when going live on those channels:
+### Mail (cPanel SMTP)
 
-- **Mail:** `MAIL_MAILER=smtp`, host/port/TLS, `MAIL_*` credentials.
+Create **`notifications@lamuacres.co.ke`** in cPanel (**Email Accounts**). Use that mailbox for `MAIL_USERNAME` / `MAIL_FROM_ADDRESS` (a separate `info@` address is fine for humans, but the app should send as `notifications@` unless you change `.env`).
+
+On the server `.env`:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=null
+MAIL_HOST=mail.lamuacres.co.ke
+MAIL_PORT=587
+MAIL_USERNAME=notifications@lamuacres.co.ke
+MAIL_PASSWORD="your-cpanel-mailbox-password"
+MAIL_FROM_ADDRESS="notifications@lamuacres.co.ke"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+Quote `MAIL_PASSWORD` if it contains `#`, `&`, or spaces. Then:
+
+```bash
+php artisan config:clear
+php artisan config:cache
+php artisan communications:preflight
+php artisan mail:verify-smtp admin@lamuacres.co.ke
+```
+
+Many notifications are **queued** (`communications` queue). Run a worker under Supervisor or cron, e.g. `php artisan queue:work --queue=communications,critical,default --sleep=3 --tries=3`.
+
 - **SMS:** `BULK_SMS_*`, `BULK_SMS_ENABLED`, `BULK_SMS_DRY_RUN`.
 - **M-Pesa:** `MPESA_DRIVER=daraja` when ready; `MPESA_CALLBACK_URL` must match `https://lamuacres.co.ke/payments/mpesa/callback`.
 
