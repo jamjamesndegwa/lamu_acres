@@ -25,6 +25,11 @@ git pull --ff-only
 echo "==> PHP dependencies"
 composer install --no-dev --optimize-autoloader --no-interaction
 
+if [[ -f config/octane.php ]] && ! php -r "require 'vendor/autoload.php'; exit(class_exists('Laravel\\Octane\\Octane') ? 0 : 1);"; then
+    echo "==> Removing config/octane.php (Octane is not installed; cPanel uses Apache/PHP-FPM)"
+    rm -f config/octane.php
+fi
+
 echo "==> Database migrations"
 php artisan migrate --force
 

@@ -203,7 +203,8 @@ Without workers, queued mail and notifications may not send.
 | `Unsupported cipher or incorrect key length` | Merged or corrupt `APP_KEY` line | Remove all `APP_KEY=` lines; one `key:generate` as site user |
 | 500 on `/`, Laravel OK in custom PHP script | Wrong `public_html/index.php` | Copy from `scripts/cpanel-public_html/index.php` |
 | Unstyled page only on `something.php` URL | Assets resolved relative to script name | Use normal URLs via `index.php` + `/build` in `public_html` |
-| `Vite manifest not found` | Missing build | `npm run build` on server; check `public_html/build/manifest.json` |
+| `Class "League\Flysystem\AwsS3V3\PortableVisibilityConverter" not found` | S3/R2 adapter missing from `vendor/` | `composer install --no-dev` on the server |
+| `Class "Laravel\Octane\Octane" not found` in `octane.php` | Stale `config/octane.php` after `--no-dev` | `rm config/octane.php` then `composer dump-autoload -o` |
 
 Logs:
 
