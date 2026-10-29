@@ -17,29 +17,16 @@ class R2Storage
      */
     public static function mergePrivateDiskFromPublic(): void
     {
-        $publicBucket = config('filesystems.disks.r2.bucket');
-
-        if (! filled($publicBucket)) {
+        if (! self::cloudConfigured()) {
             return;
         }
 
         $privatePrefix = 'filesystems.disks.r2_private';
 
-        if (! filled(config("{$privatePrefix}.bucket"))) {
-            Config::set("{$privatePrefix}.bucket", $publicBucket);
-        }
-
-        if (! filled(config("{$privatePrefix}.key"))) {
-            Config::set("{$privatePrefix}.key", config('filesystems.disks.r2.key'));
-        }
-
-        if (! filled(config("{$privatePrefix}.secret"))) {
-            Config::set("{$privatePrefix}.secret", config('filesystems.disks.r2.secret'));
-        }
-
-        if (! filled(config("{$privatePrefix}.endpoint"))) {
-            Config::set("{$privatePrefix}.endpoint", config('filesystems.disks.r2.endpoint'));
-        }
+        Config::set("{$privatePrefix}.bucket", config('filesystems.disks.r2.bucket'));
+        Config::set("{$privatePrefix}.key", config('filesystems.disks.r2.key'));
+        Config::set("{$privatePrefix}.secret", config('filesystems.disks.r2.secret'));
+        Config::set("{$privatePrefix}.endpoint", config('filesystems.disks.r2.endpoint'));
     }
 
     public static function cloudConfigured(): bool

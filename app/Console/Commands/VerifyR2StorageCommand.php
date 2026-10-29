@@ -30,10 +30,19 @@ class VerifyR2StorageCommand extends Command
         $failed = false;
 
         foreach ($disks as $disk) {
+            R2Storage::mergePrivateDiskFromPublic();
             $config = config("filesystems.disks.{$disk}");
 
             if (! is_array($config) || ($config['bucket'] ?? '') === '') {
-                $this->warn("Disk [{$disk}]: no bucket configured — uploads may use local storage instead.");
+                if ($disk === 'r2_private' && filled(config('filesystems.disks.r2.bucket'))) {
+                    $this->error('Disk [r2_private]: no bucket configured but public R2 is set.');
+                    $this->line('  1. Remove every CLOUDFLARE_R2_PRIVATE_* line from .env (especially duplicate empty keys).');
+                    $this->line('  2. git checkout -- scripts/deploy-cpanel.sh && git pull origin main');
+                    $this->line('  3. php artisan config:clear && php artisan config:cache');
+                    $failed = true;
+                } else {
+                    $this->warn("Disk [{$disk}]: no bucket configured — uploads may use local storage instead.");
+                }
 
                 continue;
             }
@@ -66,7 +75,7 @@ class VerifyR2StorageCommand extends Command
 
         if ($failed) {
             $this->newLine();
-            $this->comment('Fix CLOUDFLARE_R2_* in .env and token permissions in Cloudflare, then run again.');
+            $this->comment('Partner/seller uploads use disk [r2_private]. It must pass verification before applications will work.');
 
             return self::FAILURE;
         }

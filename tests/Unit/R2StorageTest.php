@@ -35,6 +35,11 @@ class R2StorageTest extends TestCase
         Config::set('filesystems.disks.r2.endpoint', 'https://example.r2.cloudflarestorage.com');
         Config::set('filesystems.disks.r2_private.bucket', '');
 
+        Config::set('filesystems.disks.r2_private.key', 'stale-private-key');
+
+        R2Storage::mergePrivateDiskFromPublic();
+
+        $this->assertSame('public-key', config('filesystems.disks.r2_private.key'));
         $this->assertSame('r2_private', R2Storage::privateUploadDisk());
     }
 }
