@@ -1,38 +1,45 @@
-<div wire:keydown.escape.window="close" class="workspace-sidebar-shell lg:h-full lg:shrink-0">
-    <style>
-        #workspace-sidebar { width: min(16rem, calc(100vw - 2rem)); }
-        @media (min-width: 64rem) {
-            .workspace-sidebar-shell, #workspace-sidebar { width: 14rem; }
-        }
-    </style>
-    <button
-        type="button"
-        class="fixed left-3 top-2.5 z-50 rounded-lg bg-lamu-900 px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700 lg:hidden"
-        wire:click="toggle"
-        aria-controls="workspace-sidebar"
-        aria-expanded="{{ $open ? 'true' : 'false' }}"
-    >
-        Menu
-    </button>
-
-    @if ($open)
-        <button type="button" class="fixed inset-0 z-30 bg-stone-900/40 lg:hidden" wire:click="close" aria-label="Close menu"></button>
-    @endif
+<div
+    x-data="{ open: false }"
+    x-on:workspace-drawer-toggle.window="open = ! open"
+    x-on:workspace-drawer-close.window="open = false"
+    x-effect="document.documentElement.classList.toggle('workspace-drawer-open', open)"
+    class="workspace-sidebar-shell lg:h-full lg:shrink-0"
+>
+    <div
+        x-cloak
+        x-show="open"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-40 bg-stone-900/50 lg:hidden"
+        x-on:click="open = false"
+        aria-hidden="true"
+    ></div>
 
     <aside
         id="workspace-sidebar"
-        data-open="{{ $open ? 'true' : 'false' }}"
-        @class([
-            'fixed inset-y-0 left-0 z-40 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 transition lg:static lg:z-auto lg:h-full lg:translate-x-0',
-            'translate-x-0' => $open,
-            '-translate-x-full' => ! $open,
-        ])
+        x-bind:data-open="open ? 'true' : 'false'"
+        class="workspace-drawer-panel fixed inset-y-0 left-0 z-50 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 lg:static lg:z-auto lg:h-full lg:translate-x-0 lg:transition-none"
+        x-bind:class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
-        <div class="border-b border-white/10 px-4 py-4">
-            <x-brand-logo tone="dark" />
-            @if ($workspace)
-                <p class="mt-1 text-sm text-sand-200">{{ $eyebrow ?: $workspace->label() }}</p>
-            @endif
+        <div class="flex items-center justify-between border-b border-white/10 px-4 py-4 lg:block">
+            <div class="min-w-0">
+                <x-brand-logo tone="dark" />
+                @if ($workspace)
+                    <p class="mt-1 text-sm text-sand-200">{{ $eyebrow ?: $workspace->label() }}</p>
+                @endif
+            </div>
+            <button
+                type="button"
+                class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-sand-100 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200 lg:hidden"
+                x-on:click="open = false"
+                aria-label="Close menu"
+            >
+                <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+            </button>
         </div>
 
         <nav class="sidebar-scroll min-h-0 flex-1 space-y-1 px-2 py-3" aria-label="Workspace">
@@ -86,6 +93,7 @@
                     <a
                         href="{{ $module['href'] }}"
                         data-module="{{ $module['key'] }}"
+                        x-on:click="open = false"
                         @if ($module['active'])
                             aria-current="page"
                         @endif
@@ -93,7 +101,7 @@
                             data-turbo-frame="{{ $module['frame'] }}"
                         @endif
                         @class([
-                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
+                            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
                             'text-white/80 hover:bg-white/10' => ! $module['active'],
                         ])
@@ -105,6 +113,7 @@
                     <button
                         type="button"
                         wire:click="select('{{ $module['key'] }}')"
+                        x-on:click="open = false"
                         data-module="{{ $module['key'] }}"
                         @if ($module['active'])
                             aria-current="page"
@@ -113,7 +122,7 @@
                             data-turbo-frame="{{ $module['frame'] }}"
                         @endif
                         @class([
-                            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
+                            'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200',
                             'bg-white/10 text-white' => $module['active'],
                             'text-white/80 hover:bg-white/10' => ! $module['active'],
                         ])
@@ -128,7 +137,7 @@
         <x-workspace-portal-switcher :current="$workspace" variant="sidebar" />
 
         @if (count($account) > 0)
-            <div class="shrink-0 space-y-1 border-t border-white/10 px-3 py-3">
+            <div class="shrink-0 space-y-1 border-t border-white/10 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 @foreach ($account as $item)
                     @php
                         $accountIcon = match ($item['label']) {
@@ -138,9 +147,9 @@
                         };
                     @endphp
                     @if ($item['method'] === 'post' && $item['href'])
-                        <form method="POST" action="{{ $item['href'] }}" data-turbo="false" data-confirm="Log out of Lamu Acres?">
+                        <form method="POST" action="{{ $item['href'] }}" data-turbo="false" data-confirm="Log out of Lamu Acres">
                             @csrf
-                            <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
+                            <button type="submit" x-on:click="open = false" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
                                 <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
                                 <span>{{ $item['label'] }}</span>
                             </button>
@@ -148,13 +157,14 @@
                     @elseif ($item['available'])
                         <a
                             href="{{ $item['href'] }}"
+                            x-on:click="open = false"
                             @if ($item['active'])
                                 aria-current="page"
                             @endif
                             @if ($item['frame'])
                                 data-turbo-frame="{{ $item['frame'] }}"
                             @endif
-                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200"
                         >
                             <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
                             <span>{{ $item['label'] }}</span>

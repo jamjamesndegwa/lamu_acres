@@ -183,7 +183,23 @@ class VerificationOperations
      */
     public function blockers(Property $property): array
     {
+        if ($property->isStaffIntakeListing()) {
+            return $this->staffIntakeBlockers($property);
+        }
+
         return array_merge($this->passportBlockers($property), $this->listingBlockers($property));
+    }
+
+    /**
+     * Staff-registered listings only need complete listing details and public photos before publication.
+     *
+     * @return array<int, string>
+     */
+    public function staffIntakeBlockers(Property $property): array
+    {
+        $groups = $this->listingBlockerGroups($property);
+
+        return array_merge($groups['details'], $groups['photos']);
     }
 
     /**
@@ -230,6 +246,10 @@ class VerificationOperations
 
         if (! $hasPublicPhoto) {
             $blockers['photos'][] = 'At least one public photograph is required.';
+        }
+
+        if ($property->isStaffIntakeListing()) {
+            return $blockers;
         }
 
         if (! $property->isLamuAcresInventoryListing()) {
@@ -316,6 +336,11 @@ class VerificationOperations
     public function approvalSteps(Property $property, array $requirements): array
     {
         $groups = $this->listingBlockerGroups($property);
+
+        if ($property->isStaffIntakeListing()) {
+            return $this->staffIntakeApprovalSteps($groups);
+        }
+
         $documentIssues = [];
 
         foreach ($requirements as $requirement) {
@@ -332,6 +357,23 @@ class VerificationOperations
             ['authority', 'Confirm marketing authority', 'Confirm that an active, unexpired authority covers the sale or lease being advertised. A signed attachment also needs an authority decision.', $groups['authority'], 'marketing', 'Review marketing authority'],
             ['photos', 'Check public photographs', 'Review the gallery and cover image. At least one public photograph is required.', $groups['photos'], 'media', 'Review photographs'],
             ['verification', 'Complete the verification passport', 'Record a decision for every critical check and resolve overrides or critical exceptions. Document approvals do not automatically verify these checks.', $this->passportBlockers($property), 'verification', 'Complete verification checks'],
+        ];
+
+        return array_map(fn (array $step): array => [
+            'key' => $step[0], 'title' => $step[1], 'instruction' => $step[2],
+            'issues' => $step[3], 'complete' => $step[3] === [], 'tab' => $step[4], 'action' => $step[5],
+        ], $steps);
+    }
+
+    /**
+     * @param  array<string, list<string>>  $groups
+     * @return list<array{key: string, title: string, instruction: string, issues: list<string>, complete: bool, tab: string, action: string}>
+     */
+    private function staffIntakeApprovalSteps(array $groups): array
+    {
+        $steps = [
+            ['details', 'Check listing details', 'Confirm the parcel, location, acreage, asking price and description. Seller document, ownership and passport checks do not apply to staff-registered land.', $groups['details'], 'overview', 'Edit listing details'],
+            ['photos', 'Check public photographs', 'Upload at least one public photograph for the land directory.', $groups['photos'], 'media', 'Review photographs'],
         ];
 
         return array_map(fn (array $step): array => [
@@ -363,6 +405,10 @@ class VerificationOperations
      */
     private function passportBlockers(Property $property): array
     {
+        if ($property->isStaffIntakeListing()) {
+            return [];
+        }
+
         $property->loadMissing(['passport', 'verificationItems']);
         $blockers = [];
 

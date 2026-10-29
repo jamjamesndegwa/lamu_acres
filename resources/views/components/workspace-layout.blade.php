@@ -17,18 +17,28 @@
         <livewire:workspace-sidebar />
 
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-            <header class="relative z-20 shrink-0 border-b border-sand-200 bg-white">
-                {{-- Mobile: one row — room for fixed Menu button (sidebar) --}}
-                <div class="flex items-center gap-2 py-2.5 pl-[4.75rem] pr-3 lg:hidden">
+            <header class="relative z-20 shrink-0 border-b border-sand-200 bg-white pt-[env(safe-area-inset-top)] lg:pt-0">
+                {{-- Mobile app bar --}}
+                <div class="flex h-14 items-center gap-2 px-3 lg:hidden">
+                    <button
+                        type="button"
+                        data-workspace-drawer-toggle
+                        aria-controls="workspace-sidebar"
+                        aria-label="Open navigation menu"
+                        class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-sand-200 bg-white text-lamu-900 hover:bg-sand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700"
+                    >
+                        <svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-xs font-semibold uppercase tracking-[0.12em] text-lamu-700">
+                        <p class="truncate text-sm font-semibold text-lamu-900">{{ $heading }}</p>
+                        <p class="truncate text-xs text-stone-500">
                             {{ $currentWorkspace?->label() }}
+                            @if (($workspaceRoles ?? '') !== '')
+                                · {{ $workspaceRoles }}
+                            @endif
                         </p>
-                        @if (($workspaceRoles ?? '') !== '')
-                            <p class="truncate text-[11px] text-stone-500">{{ $workspaceRoles }}</p>
-                        @endif
                     </div>
-                    <div class="flex shrink-0 items-center gap-1.5">
+                    <div class="flex shrink-0 items-center gap-1">
                         @if ($currentWorkspace?->value === 'buyer')
                             <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" aria-label="New land search" class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-lamu-900 text-lg font-medium leading-none text-white hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
                                 +
@@ -68,14 +78,14 @@
 
             <livewire:workspace-subnav />
 
-            <main id="main" @class(['panel-scroll min-h-0 flex-1', 'px-3 py-5 sm:px-8 sm:py-8' => ! $fullWidth])>
+            <main id="main" @class(['panel-scroll min-h-0 flex-1 bg-sand-50', 'px-3 py-4 sm:px-8 sm:py-8' => ! $fullWidth])>
                 @if ($showHeading)
-                    <h1 class="text-xl font-semibold text-lamu-900 sm:text-2xl">{{ $heading }}</h1>
+                    <h1 class="hidden text-xl font-semibold text-lamu-900 sm:text-2xl lg:block">{{ $heading }}</h1>
                 @endif
                 {{ $slot }}
             </main>
 
-            <footer class="shrink-0 border-t border-sand-200 bg-white px-3 py-2.5 text-xs text-stone-500 sm:px-8 sm:py-3">
+            <footer class="hidden shrink-0 border-t border-sand-200 bg-white px-3 py-2.5 text-xs text-stone-500 sm:block sm:px-8 sm:py-3">
                 <p>&copy; {{ now()->year }} Lamu Acres</p>
             </footer>
         </div>

@@ -1,19 +1,28 @@
 @php
     $completedAreas = collect($approvalSteps)->where('complete', true)->count();
+    $totalAreas = count($approvalSteps);
     $nextStep = collect($approvalSteps)->firstWhere('complete', false);
     $published = $property->status === \App\Enums\PropertyStatus::Published;
+    $staffIntake = $property->isStaffIntakeListing();
     $canTransitionToPublished = in_array(\App\Enums\PropertyStatus::Published, $property->allowedTransitionsFor(auth()->user()), true);
     $readyToPublish = $blockers === [] && $canTransitionToPublished;
+    $publishStepNumber = $totalAreas + 1;
 @endphp
 <section aria-labelledby="approval-heading" class="mt-6 overflow-hidden rounded-2xl border border-sand-200 bg-white">
     <div class="bg-lamu-900 p-5 text-white sm:p-6">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-widest text-sand-200">Staff approval workflow</p>
-                <h2 id="approval-heading" class="mt-2 text-2xl font-semibold">{{ $published ? 'Listing published' : 'Take this listing through approval' }}</h2>
-                <p class="mt-2 max-w-3xl text-sm text-sand-100">Work through the review areas, record each decision, then approve publication. You can save your work and return to any step.</p>
+                <p class="text-xs font-semibold uppercase tracking-widest text-sand-200">{{ $staffIntake ? 'Staff registration' : 'Staff approval workflow' }}</p>
+                <h2 id="approval-heading" class="mt-2 text-2xl font-semibold">{{ $published ? 'Listing published' : ($staffIntake ? 'Prepare this listing for publication' : 'Take this listing through approval') }}</h2>
+                <p class="mt-2 max-w-3xl text-sm text-sand-100">
+                    @if ($staffIntake)
+                        You registered this land in the property register. Complete the listing details and photographs, then publish. Seller documents, ownership verification and the verification passport are not required for staff-registered listings.
+                    @else
+                        Work through the review areas, record each decision, then approve publication. You can save your work and return to any step.
+                    @endif
+                </p>
             </div>
-            <span class="rounded-full border border-white/30 px-4 py-2 text-sm font-medium">{{ $completedAreas }} of 6 review areas clear</span>
+            <span class="rounded-full border border-white/30 px-4 py-2 text-sm font-medium">{{ $completedAreas }} of {{ $totalAreas }} review {{ $totalAreas === 1 ? 'area' : 'areas' }} clear</span>
         </div>
         @if (! $published && $nextStep)
             <p class="mt-4 text-sm"><span class="font-semibold">Next review:</span> {{ $nextStep['title'] }}</p>
@@ -69,7 +78,7 @@
     <div id="publication-decision" class="border-t border-sand-200 p-5 sm:p-6">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="max-w-3xl">
-                <h3 class="font-semibold text-lamu-900">7. Approve and publish</h3>
+                <h3 class="font-semibold text-lamu-900">{{ $publishStepNumber }}. Approve and publish</h3>
                 <p class="mt-2 text-sm text-stone-600">
                     @if ($published)
                         This listing is already published. Continue to keep its documents, authority and verification checks current.
@@ -77,13 +86,15 @@
                         Publication is blocked. Resolve the outstanding checks below, then return here to publish.
                     @elseif (! $canTransitionToPublished)
                         The checks are clear, but the listing's current status does not allow publication. Review its status before proceeding.
+                    @elseif ($staffIntake)
+                        Listing details and photographs are ready. Publish when you are satisfied with the register entry.
                     @else
                         Publication checks are clear. Confirm that your document review is complete, then publish the listing.
                     @endif
                 </p>
             </div>
             @if (! $published && $canTransitionToPublished)
-                <form method="POST" action="{{ route('staff.properties.listing', $property) }}" data-turbo-frame="_top" data-confirm="Publish this listing? Every verification and listing check must be clear.">
+                <form method="POST" action="{{ route('staff.properties.listing', $property) }}" data-turbo-frame="_top" data-confirm="{{ $staffIntake ? 'Publish this staff-registered listing to the land directory?' : 'Publish this listing? Every verification and listing check must be clear.' }}">
                     @csrf
                     <button @disabled(! $readyToPublish) class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Approve and publish</button>
                 </form>

@@ -87,8 +87,7 @@ class PropertyInventory
 
         if (
             $status === PropertyStatus::Published
-            && $from === PropertyStatus::Draft
-            && $property->registeredByStaff($actor)
+            && $property->isStaffIntakeListing()
         ) {
             return app(SellerPortal::class)->finalizeStaffRegistration($actor, $property);
         }

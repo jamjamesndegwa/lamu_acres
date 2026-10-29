@@ -9,18 +9,6 @@ use Livewire\Component;
 
 class WorkspaceSidebar extends Component
 {
-    public bool $open = false;
-
-    public function toggle(): void
-    {
-        $this->open = ! $this->open;
-    }
-
-    public function close(): void
-    {
-        $this->open = false;
-    }
-
     public function select(string $key): void
     {
         $workspace = Workspace::tryFrom((string) session('workspace'));
@@ -36,8 +24,6 @@ class WorkspaceSidebar extends Component
         if (! is_array($module)) {
             return;
         }
-
-        $this->open = false;
 
         if (is_string($module['href']) && $module['href'] !== '') {
             $this->redirect($module['href']);

@@ -7,10 +7,39 @@ use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Verification\VerificationOperations;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PropertyWorkspaceTest extends FoundationTestCase
 {
+    public function test_staff_intake_listings_skip_seller_verification_workflow(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $property = Property::factory()->create([
+            'status' => PropertyStatus::Draft,
+            'represented_by' => $staff->id,
+            'submitted_by' => null,
+            'description' => 'Staff-registered coastal plot.',
+        ]);
+
+        $response = $this->actingAs($staff)->get(route('staff.properties.show', $property));
+
+        $response->assertOk()
+            ->assertSee('Staff registration', false)
+            ->assertSee('Check listing details', false)
+            ->assertSee('Check public photographs', false)
+            ->assertDontSee('Review seller documents', false)
+            ->assertDontSee('Complete the verification passport', false)
+            ->assertDontSee('Link and verify an owner', false)
+            ->assertDontSee('Title and ownership is Not supplied', false);
+
+        $steps = collect($response->viewData('approvalSteps'));
+        $this->assertCount(2, $steps);
+        $this->assertSame(['details', 'photos'], $steps->pluck('key')->all());
+        $blockers = app(VerificationOperations::class)->blockers($property);
+        $this->assertNotContains('Link and verify an owner or authorized representative on the Owners tab.', $blockers);
+    }
+
     public function test_marketing_tab_renders_the_public_link_for_a_published_property(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();

@@ -431,6 +431,24 @@ document.addEventListener('turbo:fetch-request-error', hidePageLoading)
 document.addEventListener('turbo:frame-missing', hidePageLoading)
 document.addEventListener('DOMContentLoaded', hidePageLoading)
 
+document.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-workspace-drawer-toggle]')
+
+    if (toggle) {
+        window.dispatchEvent(new CustomEvent('workspace-drawer-toggle'))
+
+        return
+    }
+})
+
+document.addEventListener('turbo:before-fetch-request', (event) => {
+    const source = event.target
+
+    if (source instanceof Element && source.closest('#workspace-sidebar')) {
+        window.dispatchEvent(new CustomEvent('workspace-drawer-close'))
+    }
+})
+
 function sameOriginPage(url) {
     return url.origin === window.location.origin
 }
