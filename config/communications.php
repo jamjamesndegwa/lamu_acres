@@ -26,13 +26,18 @@ return [
     | Synchronous delivery (no queue worker)
     |--------------------------------------------------------------------------
     |
-    | When true, transactional email/SMS from MessageDesk is sent in the HTTP
-    | request via DeliverMessage::dispatchSync. Set COMMUNICATIONS_SYNC_DELIVERY=true
-    | on hosts without Redis or a running queue:work process.
+    | true  = send MessageDesk email/SMS during the web request (cPanel default).
+    | false = push DeliverMessage jobs to the queue (requires queue:work).
+    |
+    | When COMMUNICATIONS_SYNC_DELIVERY is omitted, it defaults to true if
+    | QUEUE_CONNECTION=database (typical shared hosting without a worker).
     |
     */
 
-    'deliver_synchronously' => filter_var(env('COMMUNICATIONS_SYNC_DELIVERY', false), FILTER_VALIDATE_BOOL),
+    'deliver_synchronously' => match (env('COMMUNICATIONS_SYNC_DELIVERY')) {
+        null => env('QUEUE_CONNECTION', 'sync') === 'database',
+        default => filter_var(env('COMMUNICATIONS_SYNC_DELIVERY'), FILTER_VALIDATE_BOOL),
+    },
 
     /*
     |--------------------------------------------------------------------------

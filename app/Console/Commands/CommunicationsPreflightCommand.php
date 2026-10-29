@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\Communications\BulkSmsPreflight;
 use App\Services\Communications\MailPreflight;
+use App\Support\CommunicationsDelivery;
 use Illuminate\Console\Command;
 
 class CommunicationsPreflightCommand extends Command
@@ -23,6 +24,16 @@ class CommunicationsPreflightCommand extends Command
         $this->components->twoColumnDetail('SMTP ready', $mailReport['smtp_ready'] ? 'yes' : 'no');
         $this->components->twoColumnDetail('From address', (string) $mailReport['from_address']);
         $this->line((string) $mailReport['detail']);
+
+        $sync = CommunicationsDelivery::deliverSynchronously();
+        $this->components->twoColumnDetail(
+            'Transactional delivery',
+            $sync ? 'immediate (no queue worker)' : 'queued (requires queue:work)',
+        );
+
+        if (! $sync && config('queue.default') === 'database') {
+            $this->components->warn('COMMUNICATIONS_SYNC_DELIVERY=false with database queue — email stays queued until a worker runs. Set true or omit the variable on cPanel.');
+        }
 
         if (! $sms->configured()) {
             $this->components->warn('Bulk SMS is not configured. Set BULK_SMS_ENABLED and provider settings in the environment.');
