@@ -44,7 +44,17 @@
         </ul>
     @elseif ($tab === 'owners')
         <h2 class="mt-6 text-lg font-semibold text-lamu-900">Ownership and seller documents</h2>
-        <p class="mt-1 max-w-3xl text-sm text-stone-600">Review the uploaded files below, then confirm the owner's relationship to the property. These are separate decisions.</p>
+        @if ($property->isStaffIntakeListing())
+            <p class="mt-1 max-w-3xl text-sm text-stone-600">
+                @if ($property->isLamuAcresInventoryListing())
+                    This listing is staff-registered Lamu Acres inventory. A linked seller account is optional and is not required to publish.
+                @else
+                    Staff registered this land on behalf of a seller. Link and verify an owner when someone other than Lamu Acres is the seller; publication does not require seller document uploads for staff-registered listings.
+                @endif
+            </p>
+        @else
+            <p class="mt-1 max-w-3xl text-sm text-stone-600">Review the uploaded files below, then confirm the owner's relationship to the property. These are separate decisions.</p>
+        @endif
         <ul class="mt-6 max-w-3xl space-y-3">
             @forelse ($property->owners as $owner)
                 <li class="rounded-2xl border border-sand-200 bg-white p-4 text-sm">
@@ -66,9 +76,16 @@
                     @endif
                 </li>
             @empty
-                <li class="text-sm text-stone-600">No owner is linked to this property.</li>
+                <li class="text-sm text-stone-600">
+                    @if ($property->isStaffIntakeListing() && $property->isLamuAcresInventoryListing())
+                        No seller is linked. That is expected for Lamu Acres inventory.
+                    @else
+                        No owner is linked to this property.
+                    @endif
+                </li>
             @endforelse
         </ul>
+        @if (! $property->isStaffIntakeListing() || ! $property->isLamuAcresInventoryListing())
         <h2 class="mt-8 font-semibold text-lamu-900">Link an existing seller</h2>
         <form method="POST" action="{{ route('staff.properties.owners.store', $property) }}" class="mt-3 flex max-w-3xl flex-wrap items-end gap-3">
             @csrf
@@ -85,7 +102,12 @@
             <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Link owner</button>
         </form>
         <p class="mt-2 text-sm text-stone-600">The account must already be a seller. This does not create a new user.</p>
-        @include('staff.properties.partials.ownership-documents')
+        @endif
+        @if ($property->isStaffIntakeListing())
+            <p class="mt-8 max-w-3xl text-sm text-stone-600">Seller document uploads and reviews are not part of the staff registration publication path. Use the overview checklist to confirm listing details and photographs.</p>
+        @else
+            @include('staff.properties.partials.ownership-documents')
+        @endif
     @elseif ($tab === 'verification')
         <div class="mt-6 rounded-2xl border border-sand-200 bg-white p-5">
             <h2 class="font-semibold text-lamu-900">Record verification decisions</h2>

@@ -31,6 +31,7 @@ class PropertyInventory
     {
         $property = new Property;
         $this->fill($property, $data);
+        $this->markStaffRepresentative($actor, $property);
         $property->status = PropertyStatus::Draft;
         $property->availability = PropertyAvailability::Available;
         $property->save();
@@ -52,6 +53,7 @@ class PropertyInventory
         $previousPrice = $property->price_amount;
         $previousAvailability = $property->availability?->value;
         $this->fill($property, $data);
+        $this->markStaffRepresentative($actor, $property);
         $property->save();
         $this->recordPrice($property, $actor, $previousPrice);
 
@@ -66,15 +68,20 @@ class PropertyInventory
         return $property;
     }
 
-    public function transition(User $actor, Property $property, PropertyStatus $status, bool $authorizedSaleClosure = false): Property
+    public function transition(User $actor, Property $property, PropertyStatus $status, bool $authorizedSaleClosure = false, bool $skipStaffIntakeFinalize = false): Property
     {
         if ($status === PropertyStatus::Published && DB::transactionLevel() === 0) {
-            return DB::transaction(fn (): Property => $this->transition($actor, $property, $status, $authorizedSaleClosure), 3);
+            return DB::transaction(fn (): Property => $this->transition($actor, $property, $status, $authorizedSaleClosure, $skipStaffIntakeFinalize), 3);
         }
         if ($status === PropertyStatus::Published) {
             abort_unless($actor->can('update', $property), 403);
             Property::query()->whereKey($property->id)->lockForUpdate()->firstOrFail();
             $property->refresh();
+            $this->markStaffRepresentative($actor, $property);
+
+            if ($property->isDirty('represented_by')) {
+                $property->save();
+            }
         }
 
         $from = $property->status;
@@ -88,6 +95,7 @@ class PropertyInventory
         if (
             $status === PropertyStatus::Published
             && $property->isStaffIntakeListing()
+            && ! $skipStaffIntakeFinalize
         ) {
             return app(SellerPortal::class)->finalizeStaffRegistration($actor, $property);
         }
@@ -492,6 +500,15 @@ class PropertyInventory
 
         $property->restricted_latitude = $data['restricted_latitude'] ?? null;
         $property->restricted_longitude = $data['restricted_longitude'] ?? null;
+    }
+
+    private function markStaffRepresentative(User $actor, Property $property): void
+    {
+        if ($property->represented_by !== null || ! $actor->hasPermission('staff.properties')) {
+            return;
+        }
+
+        $property->represented_by = $actor->id;
     }
 
     private function applyStatus(Property $property, PropertyStatus $status): void

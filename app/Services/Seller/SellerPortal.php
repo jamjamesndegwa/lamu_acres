@@ -152,7 +152,7 @@ class SellerPortal
                 throw ValidationException::withMessages($gaps);
             }
 
-            if ($property->isStaffRepresentedListing()) {
+            if ($property->isStaffRepresentedListing() && $property->owners()->exists()) {
                 $owner = $property->owners()->firstOrFail();
                 $this->verifyLink($owner, $staff, null, 'Staff intake: owner identity and authority confirmed at registration.', true);
 
@@ -182,7 +182,7 @@ class SellerPortal
                 $property->refresh();
             }
 
-            $property = $this->inventory->publish($staff, $property);
+            $property = $this->inventory->transition($staff, $property, PropertyStatus::Published, skipStaffIntakeFinalize: true);
 
             PropertyAudit::query()->create([
                 'property_id' => $property->id,

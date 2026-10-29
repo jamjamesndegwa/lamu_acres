@@ -530,7 +530,11 @@ class Property extends Model
             return false;
         }
 
-        return true;
+        $representative = $this->relationLoaded('representative')
+            ? $this->representative
+            : $this->representative()->first();
+
+        return $representative?->hasPermission('staff.properties') ?? false;
     }
 
     /**

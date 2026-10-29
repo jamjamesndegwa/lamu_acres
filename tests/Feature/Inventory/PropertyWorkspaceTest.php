@@ -2,16 +2,48 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Enums\MarketingRole;
 use App\Enums\PropertyStatus;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
 use App\Models\User;
+use App\Services\Inventory\PropertyInventory;
 use App\Services\Verification\VerificationOperations;
 use Tests\Feature\Foundation\FoundationTestCase;
 
 class PropertyWorkspaceTest extends FoundationTestCase
 {
+    public function test_staff_inventory_draft_without_owner_is_marked_staff_intake(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $county = County::query()->create(['name' => 'Lamu', 'slug' => 'lamu-intake', 'is_active' => true]);
+        $locality = Locality::query()->create([
+            'county_id' => $county->id,
+            'name' => 'Mokowe',
+            'slug' => 'mokowe-intake',
+            'kind' => 'place',
+            'is_active' => true,
+        ]);
+
+        $property = app(PropertyInventory::class)->create($staff, [
+            'title' => 'Agency draft',
+            'description' => 'Staff-held coastal plot.',
+            'county_id' => $locality->county_id,
+            'locality_id' => $locality->id,
+            'property_type' => \App\Enums\PropertyType::Agricultural->value,
+            'land_use' => \App\Enums\LandUse::Agricultural->value,
+            'purpose' => \App\Enums\ListingPurpose::Sale->value,
+            'acreage' => 5,
+            'price_amount' => 500_000,
+            'marketing_role' => MarketingRole::AuthorizedMarketer->value,
+        ]);
+
+        $this->assertSame($staff->id, $property->represented_by);
+        $this->assertTrue($property->isStaffIntakeListing());
+        $this->assertTrue($property->isLamuAcresInventoryListing());
+    }
+
     public function test_staff_intake_listings_skip_seller_verification_workflow(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
