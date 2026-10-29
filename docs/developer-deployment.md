@@ -143,10 +143,18 @@ Configure when going live on those channels:
 
 ### Recommended: deploy script
 
-SSH as the **cPanel account user** (`lamuacresco`), or as **root** (the script runs Composer/Artisan/npm as that user and fixes ownership):
+SSH from the app directory (runs as **whoever you are** — root, `lamuacresco`, etc.). If deploy user ≠ owner of `public_html`, the script fixes `storage/` / cache ownership for PHP-FPM:
 
 ```bash
 cd /home/lamuacresco/lamu_acres
+bash scripts/deploy-cpanel.sh
+```
+
+If `git pull` inside the script fails due to local edits on the server, reset the deploy script then pull once:
+
+```bash
+git checkout -- scripts/deploy-cpanel.sh
+git pull
 bash scripts/deploy-cpanel.sh
 ```
 

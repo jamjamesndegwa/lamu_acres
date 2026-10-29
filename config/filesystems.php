@@ -76,12 +76,13 @@ return [
 
         'r2_private' => [
             'driver' => 's3',
-            'key' => env('CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID', env('CLOUDFLARE_R2_ACCESS_KEY_ID')),
-            'secret' => env('CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY', env('CLOUDFLARE_R2_SECRET_ACCESS_KEY')),
+            'key' => env('CLOUDFLARE_R2_PRIVATE_ACCESS_KEY_ID') ?: env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret' => env('CLOUDFLARE_R2_PRIVATE_SECRET_ACCESS_KEY') ?: env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
             'region' => 'auto',
-            'bucket' => env('CLOUDFLARE_R2_PRIVATE_BUCKET_NAME', env('CLOUDFLARE_R2_BUCKET_NAME')),
+            // Empty CLOUDFLARE_R2_PRIVATE_BUCKET_NAME in .env must fall back to the public bucket name.
+            'bucket' => env('CLOUDFLARE_R2_PRIVATE_BUCKET_NAME') ?: env('CLOUDFLARE_R2_BUCKET_NAME'),
             'url' => null,
-            'endpoint' => env('CLOUDFLARE_R2_PRIVATE_ENDPOINT', env('CLOUDFLARE_R2_ENDPOINT')),
+            'endpoint' => env('CLOUDFLARE_R2_PRIVATE_ENDPOINT') ?: env('CLOUDFLARE_R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'visibility' => 'private',
             'throw' => true,
