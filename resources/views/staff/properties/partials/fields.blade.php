@@ -94,6 +94,21 @@
             <input name="restricted_longitude" value="{{ old('restricted_longitude', $property->restricted_longitude) }}" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
         </label>
     </div>
+    @if ($property->exists && $property->status === \App\Enums\PropertyStatus::Draft && $property->registeredByStaff(auth()->user()))
+        <fieldset class="rounded-xl border border-sand-200 bg-stone-50 p-4">
+            <legend class="px-1 text-sm font-semibold text-lamu-900">Listing visibility</legend>
+            <p class="text-sm text-stone-600">You registered this land. When details, photos, and checks are complete, you can publish it from here.</p>
+            <label class="mt-3 block text-sm font-medium">After saving
+                <select name="listing_action" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="save" @selected(old('listing_action', 'save') === 'save')>Keep as draft</option>
+                    <option value="publish" @selected(old('listing_action') === 'publish')>Publish to land directory</option>
+                </select>
+            </label>
+            @error('listing')
+                <p class="mt-2 text-sm text-red-700">{{ $message }}</p>
+            @enderror
+        </fieldset>
+    @endif
     @if ($errors->any())
         <p class="text-sm text-red-700">{{ $errors->first() }}</p>
     @endif

@@ -443,6 +443,37 @@ class Property extends Model
         ));
     }
 
+    /**
+     * Status changes available to a given staff member (includes draft publish for the registering staff member).
+     *
+     * @return array<int, PropertyStatus>
+     */
+    public function allowedTransitionsFor(?User $actor = null): array
+    {
+        $transitions = $this->allowedTransitions();
+
+        if (
+            $actor !== null
+            && $this->status === PropertyStatus::Draft
+            && $this->registeredByStaff($actor)
+            && ! in_array(PropertyStatus::Published, $transitions, true)
+        ) {
+            $transitions[] = PropertyStatus::Published;
+        }
+
+        return $transitions;
+    }
+
+    /**
+     * Staff member who registered this listing through staff intake (`represented_by`).
+     */
+    public function registeredByStaff(?User $staff): bool
+    {
+        return $staff !== null
+            && $this->isStaffIntakeListing()
+            && (int) $this->represented_by === (int) $staff->id;
+    }
+
     public function hasOpenInformationRequest(): bool
     {
         return $this->informationRequests()->whereNull('responded_at')->exists();

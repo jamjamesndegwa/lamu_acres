@@ -19,6 +19,8 @@ use App\Models\Locality;
 use App\Models\Property;
 use App\Models\PropertyAudit;
 use App\Models\User;
+use App\Services\Media\PropertyMediaLibrary;
+use App\Services\Seller\SellerPortal;
 use Illuminate\Http\UploadedFile;
 use Tests\Feature\Foundation\FoundationTestCase;
 
@@ -140,6 +142,110 @@ class PropertyInventoryTest extends FoundationTestCase
             ->assertSee('Register land', false)
             ->assertSee('data-property-location-map', false)
             ->assertSee('Register and publish listing', false);
+    }
+
+    public function test_registering_staff_can_publish_a_draft_from_property_edit(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $locality = $this->locality();
+        $registration = $this->payload($locality, overrides: [
+            'title' => 'Draft beach plot',
+            'owner_user_id' => null,
+            'owner_relationship' => null,
+            'marketing_role' => null,
+        ]);
+        unset($registration['owner_user_id'], $registration['owner_relationship'], $registration['marketing_role'], $registration['photos']);
+
+        $property = app(SellerPortal::class)->registerByStaff($staff, $registration);
+        app(PropertyMediaLibrary::class)->storePhoto($staff, $property, UploadedFile::fake()->image('plot.jpg'));
+
+        $this->assertSame(PropertyStatus::Draft, $property->fresh()->status);
+        $this->assertTrue($property->registeredByStaff($staff));
+
+        $this->actingAs($staff)
+            ->put(route('staff.properties.update', $property), $this->inventoryUpdatePayload($property) + [
+                'listing_action' => 'publish',
+            ])
+            ->assertRedirect(route('staff.properties.show', $property));
+
+        $this->assertSame(PropertyStatus::Published, $property->fresh()->status);
+    }
+
+    public function test_other_staff_cannot_publish_a_registering_staff_draft_from_property_edit(): void
+    {
+        $registrar = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $other = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $locality = $this->locality();
+        $registration = $this->payload($locality, overrides: [
+            'title' => 'Another draft plot',
+            'owner_user_id' => null,
+            'owner_relationship' => null,
+            'marketing_role' => null,
+        ]);
+        unset($registration['owner_user_id'], $registration['owner_relationship'], $registration['marketing_role'], $registration['photos']);
+
+        $property = app(SellerPortal::class)->registerByStaff($registrar, $registration);
+        app(PropertyMediaLibrary::class)->storePhoto($registrar, $property, UploadedFile::fake()->image('plot.jpg'));
+
+        $this->actingAs($other)
+            ->put(route('staff.properties.update', $property), $this->inventoryUpdatePayload($property) + [
+                'listing_action' => 'publish',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(PropertyStatus::Draft, $property->fresh()->status);
+    }
+
+    public function test_only_registering_staff_sees_publish_on_draft_status_changes(): void
+    {
+        $registrar = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $other = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $property = Property::factory()->listedIn($this->locality())->create([
+            'status' => PropertyStatus::Draft,
+            'represented_by' => $registrar->id,
+            'submitted_by' => null,
+            'description' => 'Draft agency holding.',
+            'marketing_role' => MarketingRole::AuthorizedMarketer,
+        ]);
+
+        $this->assertContains(
+            PropertyStatus::Published,
+            $property->allowedTransitionsFor($registrar),
+        );
+        $this->assertNotContains(
+            PropertyStatus::Published,
+            $property->allowedTransitionsFor($other),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function inventoryUpdatePayload(Property $property): array
+    {
+        $property->loadMissing('areaCounty', 'areaLocality');
+
+        $payload = [
+            'title' => $property->title,
+            'description' => $property->description,
+            'county_id' => $property->county_id,
+            'locality_id' => $property->locality_id,
+            'property_type' => $property->property_type->value,
+            'land_use' => $property->land_use->value,
+            'purpose' => $property->purpose->value,
+            'marketing_role' => $property->marketing_role->value,
+            'acreage' => $property->acreage,
+            'offered_acreage' => $property->offered_acreage,
+            'price_basis' => $property->price_basis->value,
+        ];
+
+        if ($property->priceBasis()->isPerAcre()) {
+            $payload['price_rate'] = $property->price_rate;
+        } else {
+            $payload['price_amount'] = $property->price_amount;
+        }
+
+        return $payload;
     }
 
     /**

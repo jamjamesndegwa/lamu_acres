@@ -16,6 +16,7 @@ use App\Models\PropertyTransaction;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use App\Services\Sales\SaleModeTerms;
+use App\Services\Seller\SellerPortal;
 use App\Services\Verification\VerificationOperations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -84,7 +85,15 @@ class PropertyInventory
             ]);
         }
 
-        if (! in_array($status, $property->allowedTransitions(), true)) {
+        if (
+            $status === PropertyStatus::Published
+            && $from === PropertyStatus::Draft
+            && $property->registeredByStaff($actor)
+        ) {
+            return app(SellerPortal::class)->finalizeStaffRegistration($actor, $property);
+        }
+
+        if (! in_array($status, $property->allowedTransitionsFor($actor), true)) {
             throw ValidationException::withMessages([
                 'status' => in_array($status, $from->transitions(), true)
                     ? 'A '.strtolower($property->purpose?->label() ?? 'listing').' listing cannot be marked '.strtolower($status->label()).'.'
@@ -477,7 +486,7 @@ class PropertyInventory
             'public_latitude' => $data['public_latitude'] ?? null,
             'public_longitude' => $data['public_longitude'] ?? null,
             'marketing_role' => $data['marketing_role'],
-            'represented_by' => $data['represented_by'] ?? null,
+            'represented_by' => $data['represented_by'] ?? $property->represented_by,
             'parent_id' => $parent?->id,
             'portion_label' => $data['portion_label'] ?? null,
         ]);

@@ -2,7 +2,7 @@
     $completedAreas = collect($approvalSteps)->where('complete', true)->count();
     $nextStep = collect($approvalSteps)->firstWhere('complete', false);
     $published = $property->status === \App\Enums\PropertyStatus::Published;
-    $canTransitionToPublished = in_array(\App\Enums\PropertyStatus::Published, $property->allowedTransitions(), true);
+    $canTransitionToPublished = in_array(\App\Enums\PropertyStatus::Published, $property->allowedTransitionsFor(auth()->user()), true);
     $readyToPublish = $blockers === [] && $canTransitionToPublished;
 @endphp
 <section aria-labelledby="approval-heading" class="mt-6 overflow-hidden rounded-2xl border border-sand-200 bg-white">

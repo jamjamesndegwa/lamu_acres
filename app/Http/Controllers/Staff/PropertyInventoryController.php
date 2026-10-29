@@ -113,10 +113,21 @@ class PropertyInventoryController extends Controller
         ]);
     }
 
-    public function update(PropertyInventoryRequest $request, Property $property, PropertyInventory $inventory): RedirectResponse
+    public function update(PropertyInventoryRequest $request, Property $property, PropertyInventory $inventory, SellerPortal $portal): RedirectResponse
     {
         $this->authorize('update', $property);
         $inventory->update($request->user(), $property, $request->validated());
+
+        if ($request->input('listing_action') === 'publish') {
+            abort_unless($property->registeredByStaff($request->user()), 403);
+            abort_unless($property->fresh()->status === PropertyStatus::Draft, 422);
+
+            $portal->finalizeStaffRegistration($request->user(), $property->fresh(['media', 'owners', 'authorities']));
+
+            return redirect()
+                ->route('staff.properties.show', $property)
+                ->with('status', 'Property updated and published to the land directory.');
+        }
 
         return redirect()->route('staff.properties.show', $property)->with('status', 'Property updated.');
     }
