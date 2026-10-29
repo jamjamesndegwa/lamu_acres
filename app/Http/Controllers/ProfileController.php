@@ -11,6 +11,7 @@ use App\Services\Auth\OtpLogin;
 use App\Services\Communications\AccountSecurityNotifier;
 use App\Services\Communications\ExternalMailRegistry;
 use App\Services\Communications\MessageDesk;
+use App\Support\CommunicationsDelivery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -206,6 +207,12 @@ class ProfileController extends Controller
             'Confirm your email',
             (string) config('communications.queues.critical'),
         );
+
+        if (CommunicationsDelivery::deliverSynchronously()) {
+            $user->notifyNow($notification);
+
+            return;
+        }
 
         $user->notify($notification);
     }

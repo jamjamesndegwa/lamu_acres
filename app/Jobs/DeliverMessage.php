@@ -121,7 +121,9 @@ class DeliverMessage implements ShouldBeUnique, ShouldQueue
 
     private function email(User $user, MessageDelivery $delivery): ?string
     {
-        Mail::to($user->email)->send(new DeskMessageMail((string) $delivery->subject, $delivery->body));
+        $address = filled($delivery->destination) ? (string) $delivery->destination : (string) $user->email;
+
+        Mail::to($address)->send(new DeskMessageMail((string) $delivery->subject, $delivery->body));
 
         return null;
     }

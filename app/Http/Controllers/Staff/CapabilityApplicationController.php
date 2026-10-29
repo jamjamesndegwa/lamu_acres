@@ -10,6 +10,7 @@ use App\Notifications\AccountEmailChanged;
 use App\Services\Access\CapabilityReviewer;
 use App\Services\Communications\ExternalMailRegistry;
 use App\Support\ApprovalsReturn;
+use App\Support\CommunicationsDelivery;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -101,7 +102,12 @@ class CapabilityApplicationController extends Controller
             'Confirm your email',
             (string) config('communications.queues.critical'),
         );
-        $applicant->notify($notification);
+
+        if (CommunicationsDelivery::deliverSynchronously()) {
+            $applicant->notifyNow($notification);
+        } else {
+            $applicant->notify($notification);
+        }
         DB::transaction(function () use ($application, $request): void {
             $locked = CapabilityApplication::query()->lockForUpdate()->findOrFail($application->id);
             $history = $locked->verification_history ?? [];

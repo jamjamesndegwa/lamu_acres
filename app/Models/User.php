@@ -7,6 +7,7 @@ use App\Models\Concerns\StoresFileUrls;
 use App\Notifications\QueuedResetPassword;
 use App\Services\Access\WorkspaceAccess;
 use App\Services\Communications\ExternalMailRegistry;
+use App\Support\CommunicationsDelivery;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -181,6 +182,12 @@ class User extends Authenticatable
             'Password reset',
             (string) config('communications.queues.critical'),
         );
+
+        if (CommunicationsDelivery::deliverSynchronously()) {
+            $this->notifyNow($notification);
+
+            return;
+        }
 
         $this->notify($notification);
     }

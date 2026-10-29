@@ -11,9 +11,11 @@ use App\Models\MessageDelivery;
 use App\Models\MessageTemplate;
 use App\Models\NotificationPreference;
 use App\Models\User;
+use App\Support\CommunicationsDelivery;
 use Illuminate\Database\QueryException;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MessageDesk
 {
@@ -92,16 +94,7 @@ class MessageDesk
 
             if ($delivery->status === MessageDeliveryStatus::Queued->value) {
                 if (in_array($channel, [MessageChannel::Email, MessageChannel::Sms], true)) {
-                    DB::afterCommit(function () use ($delivery, $event, $queueName): void {
-                        try {
-                            DeliverMessage::dispatch($delivery->idempotency_key)
-                                ->onQueue($queueName ?? $this->queueFor($event));
-                        } catch (\Throwable $exception) {
-                            $delivery->refresh()->forceFill([
-                                'error' => 'Dispatch: '.class_basename($exception).': '.$exception->getMessage(),
-                            ])->save();
-                        }
-                    });
+                    $this->dispatchDeliverMessage($delivery, $event);
 
                     continue;
                 }
@@ -115,6 +108,89 @@ class MessageDesk
                 }
             }
         }
+    }
+
+    /**
+     * Admin/staff one-off email to a user, optionally to a different inbox than their account email.
+     *
+     * @throws ValidationException
+     */
+    public function sendStaffManualEmail(User $recipient, string $subject, string $body, ?string $destinationOverride = null): MessageDelivery
+    {
+        $subject = $this->scrub(trim($subject));
+        $body = $this->scrub(trim($body));
+
+        if ($subject === '' || $body === '') {
+            throw ValidationException::withMessages([
+                'subject' => 'Subject and message are required.',
+            ]);
+        }
+
+        $destination = filled($destinationOverride)
+            ? trim($destinationOverride)
+            : ($recipient->email ?? '');
+
+        if (! filter_var($destination, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages([
+                'destination_email' => 'Provide a valid email address for this user.',
+            ]);
+        }
+
+        if (! $this->emailDispatchReady()) {
+            throw ValidationException::withMessages([
+                'subject' => 'SMTP is not configured for outbound email.',
+            ]);
+        }
+
+        $event = MessageEvent::StaffManualEmail;
+        $key = $event->value.':'.$recipient->id.':manual:'.now()->format('YmdHis').':'.substr(hash('sha256', $subject.$body.$destination), 0, 12);
+
+        $delivery = MessageDelivery::query()->create([
+            'idempotency_key' => $key,
+            'user_id' => $recipient->id,
+            'event' => $event,
+            'channel' => MessageChannel::Email,
+            'status' => MessageDeliveryStatus::Queued->value,
+            'queue_name' => $this->queueFor($event),
+            'queued_at' => now(),
+            'subject' => $subject,
+            'body' => $body,
+            'destination' => $destination,
+        ]);
+
+        $this->dispatchDeliverMessage($delivery, $event);
+
+        return $delivery->refresh();
+    }
+
+    private function dispatchDeliverMessage(MessageDelivery $delivery, MessageEvent $event): void
+    {
+        $queueName = $this->queueFor($event);
+        $key = $delivery->idempotency_key;
+
+        if (CommunicationsDelivery::deliverSynchronously()) {
+            try {
+                DeliverMessage::dispatchSync($key);
+            } catch (\Throwable $exception) {
+                $delivery->refresh()->forceFill([
+                    'status' => MessageDeliveryStatus::Failed->value,
+                    'error' => class_basename($exception).': delivery failed.',
+                ])->save();
+            }
+
+            return;
+        }
+
+        DB::afterCommit(function () use ($delivery, $key, $queueName): void {
+            try {
+                DeliverMessage::dispatch($key)
+                    ->onQueue($queueName);
+            } catch (\Throwable $exception) {
+                $delivery->refresh()->forceFill([
+                    'error' => 'Dispatch: '.class_basename($exception).': '.$exception->getMessage(),
+                ])->save();
+            }
+        });
     }
 
     private function emailDispatchReady(): bool

@@ -69,6 +69,7 @@ enum MessageEvent: string
     case SubscriptionRenewed = 'subscription_renewed';
     case SubscriptionExpired = 'subscription_expired';
     case MarketingBroadcast = 'marketing_broadcast';
+    case StaffManualEmail = 'staff_manual_email';
 
     public function isMarketing(): bool
     {
@@ -148,6 +149,7 @@ enum MessageEvent: string
             self::SubscriptionRenewed => 'Subscription renewal',
             self::SubscriptionExpired => 'Subscription expiration',
             self::MarketingBroadcast => 'Marketing broadcast',
+            self::StaffManualEmail => 'Staff manual email',
         };
     }
 }

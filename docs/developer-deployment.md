@@ -159,6 +159,8 @@ php artisan mail:verify-smtp admin@lamuacres.co.ke
 
 Many notifications are **queued** (`communications` queue). Run a worker under Supervisor or cron, e.g. `php artisan queue:work --queue=communications,critical,default --sleep=3 --tries=3`.
 
+On cPanel without Redis or a queue worker, set **`COMMUNICATIONS_SYNC_DELIVERY=true`** (included in `.env.production`) so transactional email and SMS from MessageDesk send immediately during the web request.
+
 - **SMS:** `BULK_SMS_*`, `BULK_SMS_ENABLED`, `BULK_SMS_DRY_RUN`.
 - **M-Pesa:** `MPESA_DRIVER=daraja` when ready; `MPESA_CALLBACK_URL` must match `https://lamuacres.co.ke/payments/mpesa/callback`.
 

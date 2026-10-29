@@ -588,6 +588,7 @@ return [
                 'permission' => 'communications.email.view|communications.sms.view',
                 'items' => [
                     ['label' => 'External communications', 'route' => 'admin.communications.external.index', 'active' => ['admin.communications.external.*']],
+                    ['label' => 'Send manual email', 'route' => 'admin.communications.manual-email.create', 'active' => 'admin.communications.manual-email.*', 'permission' => 'communications.email.view'],
                 ],
             ],
             [

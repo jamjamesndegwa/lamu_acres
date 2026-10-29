@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminReportExportController;
 use App\Http\Controllers\Admin\ApprovalsController;
 use App\Http\Controllers\Admin\GeographyController;
 use App\Http\Controllers\Admin\InfrastructureController;
+use App\Http\Controllers\Admin\ManualEmailController;
 use App\Http\Controllers\Admin\MapLayerController;
 use App\Http\Controllers\Admin\OversightController;
 use App\Http\Controllers\Admin\ReportController;
@@ -86,6 +87,10 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
         Route::middleware('role_or_permission:communications.email.view|communications.sms.view')->group(function () {
             Route::get('/communications/external', [ExternalCommunicationsController::class, 'index'])->name('communications.external.index');
             Route::get('/communications/external/{messageDelivery}', [ExternalCommunicationsController::class, 'show'])->name('communications.external.show');
+            Route::middleware('permission:communications.email.view')->group(function () {
+                Route::get('/communications/manual-email', [ManualEmailController::class, 'create'])->name('communications.manual-email.create');
+                Route::post('/communications/manual-email', [ManualEmailController::class, 'store'])->name('communications.manual-email.store');
+            });
         });
 
         Route::middleware('permission:admin.users')->group(function () {

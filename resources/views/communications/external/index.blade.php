@@ -1,4 +1,10 @@
 <x-workspace-layout heading="External communications">
+    <div class="mt-4 flex flex-wrap gap-2">
+        @if (Route::has('admin.communications.manual-email.create') && auth()->user()?->hasPermission('communications.email.view'))
+            <a href="{{ route('admin.communications.manual-email.create') }}" class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white">Send manual email</a>
+        @endif
+    </div>
+
     @if ($stalledQueueWarning)
         <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {{ $stalledQueueWarning }}

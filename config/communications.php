@@ -23,6 +23,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Synchronous delivery (no queue worker)
+    |--------------------------------------------------------------------------
+    |
+    | When true, transactional email/SMS from MessageDesk is sent in the HTTP
+    | request via DeliverMessage::dispatchSync. Set COMMUNICATIONS_SYNC_DELIVERY=true
+    | on hosts without Redis or a running queue:work process.
+    |
+    */
+
+    'deliver_synchronously' => filter_var(env('COMMUNICATIONS_SYNC_DELIVERY', false), FILTER_VALIDATE_BOOL),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mandatory transactional events
     |--------------------------------------------------------------------------
     |
