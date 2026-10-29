@@ -1,8 +1,8 @@
-@props(['workspace' => null, 'count' => 0])
+@props(['workspace' => null, 'count' => 0, 'compact' => false])
 
 @if ($workspace && auth()->check())
     <style>
-        .notification-popover { position: fixed; inset: 5rem .75rem auto; z-index: 60; max-height: min(75dvh, calc(100dvh - 6rem)); overflow-y: auto; }
+        .notification-popover { position: fixed; inset: 3.75rem .75rem auto; z-index: 60; max-height: min(75dvh, calc(100dvh - 5rem)); overflow-y: auto; }
         @media (min-width: 640px) { .notification-popover { position: absolute; inset: calc(100% + .75rem) 0 auto auto; width: min(24rem, calc(100vw - 1.5rem)); } }
     </style>
     @php
@@ -11,8 +11,12 @@
         $attentionIds = $inbox->attention(auth()->user()->notifications()->getQuery(), auth()->user())->whereKey($recent->modelKeys())->pluck('id')->all();
     @endphp
     <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.stop="open = false; $refs.bell.focus()">
-        <button type="button" x-ref="bell" @click="open = !open" :aria-expanded="open" aria-controls="notification-dropdown" aria-label="Notifications, {{ (int) $count }} unread" class="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-stone-900 hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
-            <svg aria-hidden="true" viewBox="0 0 24 24" style="display: block; width: 30px; height: 30px; fill: #1c1917; opacity: 1; visibility: visible"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1z" /></svg>
+        <button type="button" x-ref="bell" @click="open = !open" :aria-expanded="open" aria-controls="notification-dropdown" aria-label="Notifications, {{ (int) $count }} unread" @class([
+            'relative flex shrink-0 items-center justify-center rounded-full bg-white text-stone-900 hover:bg-sand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700',
+            'size-9' => $compact,
+            'size-11' => ! $compact,
+        ])>
+            <svg aria-hidden="true" viewBox="0 0 24 24" @class(['block fill-stone-900', 'h-6 w-6' => $compact, 'h-[30px] w-[30px]' => ! $compact])><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1z" /></svg>
             @if ((int) $count > 0)
                 <span data-unread-badge class="absolute -right-0.5 top-0 z-10 min-w-5 rounded-full bg-red-600 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white ring-2 ring-white" aria-hidden="true">{{ (int) $count > 99 ? '99+' : (int) $count }}</span>
             @endif

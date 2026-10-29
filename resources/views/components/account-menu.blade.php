@@ -2,6 +2,7 @@
     'role' => '',
     'workspace' => null,
     'workspaces' => [],
+    'compact' => false,
 ])
 
 @php
@@ -15,15 +16,19 @@
 @endphp
 
 <details class="relative">
-    <summary class="flex cursor-pointer list-none items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700" aria-label="Account menu">
+    <summary @class([
+        'flex cursor-pointer list-none items-center rounded-full text-sm font-medium text-lamu-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700',
+        'gap-0 p-0.5' => $compact,
+        'gap-2 py-1 pl-1 pr-3' => ! $compact,
+    ]) aria-label="Account menu">
         @if ($user->avatarUrl())
-            <img src="{{ $user->avatarUrl() }}" alt="" class="h-9 w-9 rounded-full object-cover">
+            <img src="{{ $user->avatarUrl() }}" alt="" @class(['rounded-full object-cover', 'h-8 w-8' => $compact, 'h-9 w-9' => ! $compact])>
         @else
-            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-lamu-900 text-xs font-medium text-white" aria-hidden="true">{{ $initials }}</span>
+            <span @class(['flex items-center justify-center rounded-full bg-lamu-900 font-medium text-white', 'h-8 w-8 text-[10px]' => $compact, 'h-9 w-9 text-xs' => ! $compact]) aria-hidden="true">{{ $initials }}</span>
         @endif
-        <span>{{ $user->name }}</span>
+        <span @class(['truncate', 'sr-only' => $compact, 'max-w-[9rem]' => ! $compact])>{{ $user->name }}</span>
     </summary>
-    <div class="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-sand-200 bg-white p-3 shadow-sm">
+    <div class="absolute right-0 z-30 mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border border-sand-200 bg-white p-3 shadow-sm sm:w-72">
         <div class="flex items-center gap-3 px-1">
             @if ($user->avatarUrl())
                 <img src="{{ $user->avatarUrl() }}" alt="" class="h-14 w-14 rounded-full object-cover">

@@ -7,7 +7,7 @@
     </style>
     <button
         type="button"
-        class="fixed left-4 top-4 z-50 rounded-md bg-lamu-900 px-3 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700 lg:hidden"
+        class="fixed left-3 top-2.5 z-50 rounded-lg bg-lamu-900 px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700 lg:hidden"
         wire:click="toggle"
         aria-controls="workspace-sidebar"
         aria-expanded="{{ $open ? 'true' : 'false' }}"

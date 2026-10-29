@@ -18,7 +18,29 @@
 
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
             <header class="relative z-20 shrink-0 border-b border-sand-200 bg-white">
-                <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 max-lg:pl-24 sm:px-8 sm:py-4">
+                {{-- Mobile: one row — room for fixed Menu button (sidebar) --}}
+                <div class="flex items-center gap-2 py-2.5 pl-[4.75rem] pr-3 lg:hidden">
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs font-semibold uppercase tracking-[0.12em] text-lamu-700">
+                            {{ $currentWorkspace?->label() }}
+                        </p>
+                        @if (($workspaceRoles ?? '') !== '')
+                            <p class="truncate text-[11px] text-stone-500">{{ $workspaceRoles }}</p>
+                        @endif
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                        @if ($currentWorkspace?->value === 'buyer')
+                            <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" aria-label="New land search" class="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-lamu-900 text-lg font-medium leading-none text-white hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
+                                +
+                            </a>
+                        @endif
+                        <x-notification-centre :workspace="$currentWorkspace" :count="$unreadNotifications ?? 0" compact />
+                        <x-account-menu :role="$accountRole" :workspace="$currentWorkspace" :workspaces="$availableWorkspaces" compact />
+                    </div>
+                </div>
+
+                {{-- Desktop --}}
+                <div class="hidden flex-wrap items-center justify-between gap-x-6 gap-y-3 px-8 py-4 lg:flex">
                     <div class="min-w-0">
                         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-lamu-700">
                             {{ $currentWorkspace?->label() }} workspace
@@ -31,12 +53,11 @@
                             @endif
                         </p>
                     </div>
-                    <div class="ml-auto flex items-center gap-3 sm:gap-4">
+                    <div class="ml-auto flex items-center gap-4">
                         @if ($currentWorkspace?->value === 'buyer')
                             <a href="{{ route('buyer.sourcing.create') }}" data-turbo-frame="_top" class="inline-flex min-h-10 items-center gap-2 rounded-full bg-lamu-900 px-4 text-sm font-medium text-white transition hover:bg-lamu-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">
                                 <span aria-hidden="true" class="text-lg leading-none">+</span>
-                                <span class="hidden sm:inline">New land search</span>
-                                <span class="sm:hidden">New search</span>
+                                <span>New land search</span>
                             </a>
                         @endif
                         <x-notification-centre :workspace="$currentWorkspace" :count="$unreadNotifications ?? 0" />
@@ -47,14 +68,14 @@
 
             <livewire:workspace-subnav />
 
-            <main id="main" @class(['panel-scroll min-h-0 flex-1', 'px-4 py-8 sm:px-8' => ! $fullWidth])>
+            <main id="main" @class(['panel-scroll min-h-0 flex-1', 'px-3 py-5 sm:px-8 sm:py-8' => ! $fullWidth])>
                 @if ($showHeading)
-                    <h1 class="text-2xl font-semibold text-lamu-900">{{ $heading }}</h1>
+                    <h1 class="text-xl font-semibold text-lamu-900 sm:text-2xl">{{ $heading }}</h1>
                 @endif
                 {{ $slot }}
             </main>
 
-            <footer class="shrink-0 border-t border-sand-200 bg-white px-4 py-3 text-xs text-stone-500 sm:px-8">
+            <footer class="shrink-0 border-t border-sand-200 bg-white px-3 py-2.5 text-xs text-stone-500 sm:px-8 sm:py-3">
                 <p>&copy; {{ now()->year }} Lamu Acres</p>
             </footer>
         </div>
