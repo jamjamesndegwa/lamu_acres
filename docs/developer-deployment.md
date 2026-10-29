@@ -16,7 +16,7 @@ This document is for engineers working on **Lamu Acres**: what the app uses, how
 | Database (production) | **MySQL** (cPanel) | SQLite is for local/XAMPP only unless you explicitly choose otherwise. |
 | Sessions & cache | **Database** drivers in production | Requires `sessions` and `cache` tables (default Laravel migrations). |
 | Object storage | **Cloudflare R2** (S3-compatible) | Public listing media + private documents; see [r2-storage.md](./r2-storage.md). |
-| Email | **SMTP** (cPanel / domain mail) | e.g. `mail.lamuacres.co.ke`, `notifications@lamuacres.co.ke`. |
+| Email | **SMTP** (cPanel / domain mail) | e.g. `mail.lamuacres.co.ke`, `info@lamuacres.co.ke`. |
 | SMS | **Bulk SMS API** (optional) | `BULK_SMS_*` in `.env`; dry-run by default. |
 | Payments | **M-Pesa Daraja** (optional) | `MPESA_*`; `unconfigured` until credentials are set. |
 | Hosting (production) | **cPanel** on `lamuacres.co.ke` | App code outside web root; see layout below. |
@@ -133,7 +133,7 @@ Staff **register land** with a photo writes to **`r2_private`** (original) and *
 
 ### Mail (cPanel SMTP)
 
-Create **`notifications@lamuacres.co.ke`** in cPanel (**Email Accounts**). Use that mailbox for `MAIL_USERNAME` / `MAIL_FROM_ADDRESS` (a separate `info@` address is fine for humans, but the app should send as `notifications@` unless you change `.env`).
+Create the mailbox in cPanel (**Email Accounts**), e.g. **`info@lamuacres.co.ke`**, and use the same address for `MAIL_USERNAME` and `MAIL_FROM_ADDRESS`.
 
 On the server `.env`:
 
@@ -142,9 +142,9 @@ MAIL_MAILER=smtp
 MAIL_SCHEME=null
 MAIL_HOST=mail.lamuacres.co.ke
 MAIL_PORT=587
-MAIL_USERNAME=notifications@lamuacres.co.ke
+MAIL_USERNAME=info@lamuacres.co.ke
 MAIL_PASSWORD="your-cpanel-mailbox-password"
-MAIL_FROM_ADDRESS="notifications@lamuacres.co.ke"
+MAIL_FROM_ADDRESS="info@lamuacres.co.ke"
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
