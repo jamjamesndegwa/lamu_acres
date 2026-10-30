@@ -6,6 +6,7 @@ use App\Enums\CommissionStatus;
 use App\Enums\SaleMode;
 use App\Enums\SalesOutcome;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPolicy;
 use App\Models\Property;
 use App\Models\SaleInstruction;
 use App\Models\SalesTransaction;
@@ -20,17 +21,21 @@ class CommissionAgreementTest extends FoundationTestCase
     {
         [$sales, $broker, $transaction] = $this->deal();
 
+        CommissionPolicy::standard()->update([
+            'default_rate_percent' => 12,
+            'apply_defaults' => true,
+        ]);
+
         $this->actingAs($sales)
             ->post(route('staff.commissions.store', $transaction), [
                 'broker_id' => $broker->id,
-                'rate_percent' => 10,
                 'funding_party' => 'seller',
                 'protection_ends_at' => now()->addMonths(6)->toDateString(),
-                'payment_due_days' => 30,
             ])
             ->assertRedirect();
 
         $agreement = CommissionAgreement::query()->firstOrFail();
+        $this->assertSame('12.00', $agreement->rate_percent);
         $this->assertSame(CommissionStatus::Proposed, $agreement->status);
         $this->assertNull($agreement->earned_amount);
 

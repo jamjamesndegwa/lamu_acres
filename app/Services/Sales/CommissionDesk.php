@@ -6,6 +6,7 @@ use App\Enums\CommissionStatus;
 use App\Enums\QualifyingEvent;
 use App\Enums\SalesStage;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPolicy;
 use App\Models\SalesTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,8 @@ class CommissionDesk
      */
     public function propose(SalesTransaction $transaction, User $actor, array $data): CommissionAgreement
     {
+        $data = $this->mergeProposalDefaults($data);
+
         $this->guardBrokerAuthority($transaction, (int) $data['broker_id']);
         $this->guardClaim($transaction, (int) $data['broker_id']);
 
@@ -195,6 +198,29 @@ class CommissionDesk
                 'broker_id' => 'This broker already has an open commission claim on the transaction.',
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function mergeProposalDefaults(array $data): array
+    {
+        $policy = CommissionPolicy::query()->where('code', CommissionPolicy::DEFAULT)->first();
+
+        if ($policy === null || ! $policy->apply_defaults) {
+            return $data;
+        }
+
+        $defaults = $policy->proposalDefaults();
+
+        foreach ($defaults as $key => $value) {
+            if (! array_key_exists($key, $data) || blank($data[$key])) {
+                $data[$key] = $value;
+            }
+        }
+
+        return $data;
     }
 
     private function reference(): string

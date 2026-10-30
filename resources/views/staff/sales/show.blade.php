@@ -344,6 +344,12 @@
             @endforelse
         </ul>
         @if ($canProposeCommission)
+            @php
+                $commissionDefaults = $commissionPolicy->apply_defaults ? $commissionPolicy->proposalDefaults() : [];
+            @endphp
+            @if ($commissionPolicy->apply_defaults)
+                <p class="mt-3 text-sm text-stone-600">Defaults from commission policy: {{ $commissionPolicy->summaryLabel() }}</p>
+            @endif
             <form method="POST" action="{{ route('staff.commissions.store', $transaction) }}" data-turbo-frame="_top" data-confirm="Propose this commission agreement? Proposing it does not earn or pay commission." class="mt-3 grid max-w-xl gap-2">
                 @csrf
                 <label class="text-sm font-medium text-stone-700">Introducing broker
@@ -354,15 +360,15 @@
                         @endforeach
                     </select>
                 </label>
-                <input name="rate_percent" placeholder="Rate percent" class="rounded-lg border border-sand-200 px-3 py-2">
-                <input name="fixed_amount" placeholder="Or a fixed amount" class="rounded-lg border border-sand-200 px-3 py-2">
+                <input name="rate_percent" value="{{ old('rate_percent', $commissionDefaults['rate_percent'] ?? '') }}" placeholder="Rate percent" class="rounded-lg border border-sand-200 px-3 py-2">
+                <input name="fixed_amount" value="{{ old('fixed_amount', $commissionDefaults['fixed_amount'] ?? '') }}" placeholder="Or a fixed amount" class="rounded-lg border border-sand-200 px-3 py-2">
                 <select name="funding_party" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
-                    <option value="seller">Seller funds it</option>
-                    <option value="buyer">Buyer funds it</option>
-                    <option value="brokerage">Brokerage funds it</option>
+                    @foreach (\App\Enums\CommissionFunding::cases() as $party)
+                        <option value="{{ $party->value }}" @selected(old('funding_party', $commissionDefaults['funding_party'] ?? 'seller') === $party->value)>{{ $party->label() }} funds it</option>
+                    @endforeach
                 </select>
-                <input type="date" name="protection_ends_at" required class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Protection end date">
-                <input name="payment_due_days" value="14" class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Payment due in days">
+                <input type="date" name="protection_ends_at" value="{{ old('protection_ends_at', $commissionDefaults['protection_ends_at'] ?? '') }}" required class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Protection end date">
+                <input name="payment_due_days" value="{{ old('payment_due_days', $commissionDefaults['payment_due_days'] ?? 14) }}" class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Payment due in days">
                 <button class="rounded-full border border-sand-200 px-4 py-2 text-sm">Propose agreement</button>
             </form>
         @else

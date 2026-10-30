@@ -7,6 +7,7 @@ use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
 use App\Http\Controllers\Controller;
 use App\Models\BrokerIntroduction;
+use App\Models\CommissionPolicy;
 use App\Models\Enquiry;
 use App\Models\Property;
 use App\Models\SalesTransaction;
@@ -158,6 +159,7 @@ class SalesPipelineController extends Controller
                 ? User::role('broker')->orderBy('name')->get(['id', 'name'])
                 : collect(),
             'canProposeCommission' => $request->user()->hasPermission('commissions.propose'),
+            'commissionPolicy' => CommissionPolicy::standard(),
         ]);
     }
 

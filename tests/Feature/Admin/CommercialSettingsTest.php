@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\CommissionPolicy;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Tests\Feature\Foundation\FoundationTestCase;
@@ -37,8 +38,10 @@ class CommercialSettingsTest extends FoundationTestCase
         $this->actingAs($admin)->get(route('admin.commercial.commissions'))
             ->assertOk()
             ->assertSee('No commission agreement has been recorded.')
-            ->assertSee('Missing configuration: commission templates are not a managed contract.')
+            ->assertSee('Save commission policy')
+            ->assertSee('Standard broker commission')
             ->assertSee('Open commission management')
+            ->assertDontSee('Missing configuration: commission templates are not a managed contract.')
             ->assertDontSee('Current price')
             ->assertDontSee('Publication status');
 
@@ -84,6 +87,32 @@ class CommercialSettingsTest extends FoundationTestCase
         $this->assertSame(10000, $plan->amount_cents);
         $this->assertSame('USD', $plan->currency);
         $this->assertTrue($plan->is_active);
+    }
+
+    public function test_an_administrator_can_update_the_commission_policy(): void
+    {
+        $admin = User::factory()->withRoles('admin')->create();
+
+        $this->actingAs($admin)->from(route('admin.commercial.commissions'))
+            ->put(route('admin.commercial.commissions.update'), [
+                'name' => 'Broker desk standard',
+                'default_rate_percent' => '8.5',
+                'default_fixed_amount' => '',
+                'default_funding_party' => 'buyer',
+                'default_payment_due_days' => '21',
+                'default_protection_months' => '9',
+                'terms' => 'Buyer-funded broker commission at eight and a half percent unless otherwise agreed in writing.',
+                'apply_defaults' => '1',
+            ])
+            ->assertRedirect(route('admin.commercial.commissions'))
+            ->assertSessionHas('status', 'Commission policy updated.');
+
+        $policy = CommissionPolicy::standard()->fresh();
+        $this->assertSame('Broker desk standard', $policy->name);
+        $this->assertSame('8.50', $policy->default_rate_percent);
+        $this->assertSame('buyer', $policy->default_funding_party);
+        $this->assertSame(21, $policy->default_payment_due_days);
+        $this->assertTrue($policy->apply_defaults);
     }
 
     public function test_a_super_administrator_can_open_the_operational_desks(): void

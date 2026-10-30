@@ -8,7 +8,9 @@ use App\Enums\PropertyStatus;
 use App\Enums\VerificationCategory;
 use App\Enums\VerificationLevel;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateCommissionPolicyRequest;
 use App\Models\CommissionAgreement;
+use App\Models\CommissionPolicy;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +36,32 @@ class SubscriptionPlanController extends Controller
             'agreements' => CommissionAgreement::query()->with('property')->latest()->limit(12)->get(),
             'fundingParties' => CommissionFunding::cases(),
             'canOpenCommissions' => $this->canOpenCommissions($request),
+            'policy' => CommissionPolicy::standard(),
         ]);
+    }
+
+    public function updateCommissions(UpdateCommissionPolicyRequest $request): RedirectResponse
+    {
+        $this->authorizeCommercial($request);
+
+        $policy = CommissionPolicy::standard();
+        $policy->fill([
+            'name' => $request->validated('name'),
+            'default_rate_percent' => filled($request->input('default_rate_percent'))
+                ? $request->validated('default_rate_percent')
+                : null,
+            'default_fixed_amount' => filled($request->input('default_fixed_amount'))
+                ? $request->validated('default_fixed_amount')
+                : null,
+            'default_funding_party' => $request->validated('default_funding_party'),
+            'default_payment_due_days' => $request->validated('default_payment_due_days'),
+            'default_protection_months' => $request->validated('default_protection_months'),
+            'terms' => $request->validated('terms'),
+            'apply_defaults' => $request->boolean('apply_defaults'),
+        ]);
+        $policy->save();
+
+        return back()->with('status', 'Commission policy updated.');
     }
 
     public function listings(Request $request): View
