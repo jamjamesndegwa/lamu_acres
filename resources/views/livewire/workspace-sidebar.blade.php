@@ -1,29 +1,14 @@
-<div
-    x-data="{ open: false }"
-    x-on:workspace-drawer-toggle.window="open = ! open"
-    x-on:workspace-drawer-close.window="open = false"
-    x-effect="document.documentElement.classList.toggle('workspace-drawer-open', open)"
-    class="workspace-sidebar-shell lg:h-full lg:shrink-0"
->
+<div class="workspace-sidebar-shell lg:h-full lg:shrink-0">
     <div
-        x-cloak
-        x-show="open"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        class="fixed inset-0 z-40 bg-stone-900/50 lg:hidden"
-        x-on:click="open = false"
+        id="workspace-drawer-backdrop"
+        class="workspace-drawer-backdrop fixed inset-0 z-40 bg-stone-900/50 lg:hidden"
         aria-hidden="true"
     ></div>
 
     <aside
         id="workspace-sidebar"
-        x-bind:data-open="open ? 'true' : 'false'"
-        class="workspace-drawer-panel fixed inset-y-0 left-0 z-50 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 lg:static lg:z-auto lg:h-full lg:translate-x-0 lg:transition-none"
-        x-bind:class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+        data-open="false"
+        class="workspace-drawer-panel fixed inset-y-0 left-0 z-50 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 lg:static lg:z-auto lg:h-full lg:translate-x-0"
     >
         <div class="flex items-center justify-between border-b border-white/10 px-4 py-4 lg:block">
             <div class="min-w-0">
@@ -34,8 +19,8 @@
             </div>
             <button
                 type="button"
+                data-workspace-drawer-close
                 class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-sand-100 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200 lg:hidden"
-                x-on:click="open = false"
                 aria-label="Close menu"
             >
                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
@@ -93,7 +78,7 @@
                     <a
                         href="{{ $module['href'] }}"
                         data-module="{{ $module['key'] }}"
-                        x-on:click="open = false"
+                        data-workspace-drawer-close
                         @if ($module['active'])
                             aria-current="page"
                         @endif
@@ -113,7 +98,7 @@
                     <button
                         type="button"
                         wire:click="select('{{ $module['key'] }}')"
-                        x-on:click="open = false"
+                        data-workspace-drawer-close
                         data-module="{{ $module['key'] }}"
                         @if ($module['active'])
                             aria-current="page"
@@ -149,7 +134,7 @@
                     @if ($item['method'] === 'post' && $item['href'])
                         <form method="POST" action="{{ $item['href'] }}" data-turbo="false" data-confirm="Log out of Lamu Acres">
                             @csrf
-                            <button type="submit" x-on:click="open = false" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
+                            <button type="submit" data-workspace-drawer-close class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200">
                                 <i class="fa-solid {{ $accountIcon }} w-4 text-center text-sand-200" aria-hidden="true"></i>
                                 <span>{{ $item['label'] }}</span>
                             </button>
@@ -157,7 +142,7 @@
                     @elseif ($item['available'])
                         <a
                             href="{{ $item['href'] }}"
-                            x-on:click="open = false"
+                            data-workspace-drawer-close
                             @if ($item['active'])
                                 aria-current="page"
                             @endif

@@ -5,10 +5,14 @@ namespace App\Livewire;
 use App\Enums\Workspace;
 use App\Services\Access\NavigationBuilder;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class WorkspaceSidebar extends Component
 {
+    #[On('refresh-workspace-sidebar')]
+    public function refreshNavigation(): void {}
+
     public function select(string $key): void
     {
         $workspace = Workspace::tryFrom((string) session('workspace'));

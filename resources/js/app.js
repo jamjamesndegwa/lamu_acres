@@ -390,6 +390,50 @@ function hidePageLoading() {
 
 let livewireNavigationPending = false
 
+const WORKSPACE_DRAWER_CLASS = 'workspace-drawer-open'
+
+function setWorkspaceDrawerOpen(open) {
+    document.documentElement.classList.toggle(WORKSPACE_DRAWER_CLASS, open)
+
+    const sidebar = document.getElementById('workspace-sidebar')
+
+    if (sidebar) {
+        sidebar.dataset.open = open ? 'true' : 'false'
+    }
+
+    document.querySelectorAll('[data-workspace-drawer-toggle]').forEach((button) => {
+        button.setAttribute('aria-expanded', open ? 'true' : 'false')
+    })
+}
+
+function toggleWorkspaceDrawer() {
+    setWorkspaceDrawerOpen(! document.documentElement.classList.contains(WORKSPACE_DRAWER_CLASS))
+}
+
+function closeWorkspaceDrawer() {
+    setWorkspaceDrawerOpen(false)
+}
+
+function bindWorkspaceDrawer() {
+    setWorkspaceDrawerOpen(document.documentElement.classList.contains(WORKSPACE_DRAWER_CLASS))
+}
+
+function shouldSkipPageLoadingForTurboFetch(event) {
+    const headers = event.detail?.fetchOptions?.headers
+
+    if (headers && new Headers(headers).get('X-Sec-Purpose') === 'prefetch') {
+        return true
+    }
+
+    const target = event.target
+
+    if (target instanceof HTMLElement && target.id === 'workspace-main') {
+        return true
+    }
+
+    return false
+}
+
 function clearModalFrame() {
     const frame = document.getElementById('modal')
 
@@ -411,41 +455,62 @@ document.addEventListener('livewire:navigated', () => {
     hidePageLoading()
 })
 document.addEventListener('livewire:initialized', () => {
-    window.Livewire?.interceptMessage(({ onSend, onFinish }) => {
-        onSend(showPageLoading)
+    window.Livewire?.interceptMessage(({ message, onSend, onFinish }) => {
+        const componentName = message?.component?.name ?? ''
+
+        onSend(() => {
+            if (componentName !== 'workspace-sidebar') {
+                showPageLoading()
+            }
+        })
+
         onFinish(() => {
-            if (! livewireNavigationPending) hidePageLoading()
+            if (! livewireNavigationPending) {
+                hidePageLoading()
+            }
         })
     })
 })
 document.addEventListener('turbo:before-fetch-request', (event) => {
-    const headers = event.detail?.fetchOptions?.headers
-
-    if (headers && new Headers(headers).get('X-Sec-Purpose') === 'prefetch') return
+    if (shouldSkipPageLoadingForTurboFetch(event)) {
+        return
+    }
 
     showPageLoading()
 })
 document.addEventListener('turbo:load', hidePageLoading)
-document.addEventListener('turbo:frame-load', hidePageLoading)
+document.addEventListener('turbo:frame-load', (event) => {
+    hidePageLoading()
+
+    if (event.target instanceof HTMLElement && event.target.id === 'workspace-main') {
+        closeWorkspaceDrawer()
+        window.Livewire?.dispatch('refresh-workspace-sidebar')
+    }
+})
 document.addEventListener('turbo:fetch-request-error', hidePageLoading)
 document.addEventListener('turbo:frame-missing', hidePageLoading)
-document.addEventListener('DOMContentLoaded', hidePageLoading)
+document.addEventListener('DOMContentLoaded', () => {
+    hidePageLoading()
+    bindWorkspaceDrawer()
+})
 
 document.addEventListener('click', (event) => {
-    const toggle = event.target.closest('[data-workspace-drawer-toggle]')
-
-    if (toggle) {
-        window.dispatchEvent(new CustomEvent('workspace-drawer-toggle'))
+    if (event.target.closest('[data-workspace-drawer-toggle]')) {
+        event.preventDefault()
+        event.stopPropagation()
+        toggleWorkspaceDrawer()
 
         return
     }
-})
 
-document.addEventListener('turbo:before-fetch-request', (event) => {
-    const source = event.target
+    if (event.target.closest('[data-workspace-drawer-close]') || event.target.closest('#workspace-drawer-backdrop')) {
+        closeWorkspaceDrawer()
+    }
+}, true)
 
-    if (source instanceof Element && source.closest('#workspace-sidebar')) {
-        window.dispatchEvent(new CustomEvent('workspace-drawer-close'))
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeWorkspaceDrawer()
     }
 })
 
@@ -526,7 +591,7 @@ document.addEventListener('click', (event) => {
         return
     }
 
-    const workspaceFrame = document.getElementById('workspace-shell')
+    const workspaceFrame = document.getElementById('workspace-main')
 
     if (workspaceFrame && sameOriginPage(url)) {
         event.preventDefault()
@@ -563,7 +628,7 @@ document.addEventListener('submit', (event) => {
 
     action.search = params.toString()
 
-    const workspaceFrame = document.getElementById('workspace-shell')
+    const workspaceFrame = document.getElementById('workspace-main')
 
     if (workspaceFrame && sameOriginPage(action)) {
         event.preventDefault()

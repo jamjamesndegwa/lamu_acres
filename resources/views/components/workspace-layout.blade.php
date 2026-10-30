@@ -13,10 +13,10 @@
 <body class="h-dvh overflow-hidden bg-sand-50 text-stone-900 antialiased">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
 
-    <turbo-frame id="workspace-shell" data-turbo-action="advance" data-turbo-prefetch="false" class="flex h-dvh min-h-0">
+    <div class="flex h-dvh min-h-0">
         <livewire:workspace-sidebar />
 
-        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <turbo-frame id="workspace-main" data-turbo-action="advance" data-turbo-prefetch="false" class="flex min-h-0 min-w-0 flex-1 flex-col">
             <header class="relative z-20 shrink-0 border-b border-sand-200 bg-white pt-[env(safe-area-inset-top)] lg:pt-0">
                 {{-- Mobile app bar --}}
                 <div class="flex h-14 items-center gap-2 px-3 lg:hidden">
@@ -24,6 +24,7 @@
                         type="button"
                         data-workspace-drawer-toggle
                         aria-controls="workspace-sidebar"
+                        aria-expanded="false"
                         aria-label="Open navigation menu"
                         class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-sand-200 bg-white text-lamu-900 hover:bg-sand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700"
                     >
@@ -88,8 +89,8 @@
             <footer class="hidden shrink-0 border-t border-sand-200 bg-white px-3 py-2.5 text-xs text-stone-500 sm:block sm:px-8 sm:py-3">
                 <p>&copy; {{ now()->year }} Lamu Acres</p>
             </footer>
-        </div>
-    </turbo-frame>
+        </turbo-frame>
+    </div>
 
     <x-page-loading />
     <x-flash />
