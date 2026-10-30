@@ -1,5 +1,5 @@
 <turbo-frame id="modal">
-    <x-modal title="Account access" :close="route('admin.users.index')">
+    <x-modal title="Account access" :close="route('admin.users.show', $account)">
         <p class="text-sm text-stone-600">{{ $account->name }} · {{ $account->email }}</p>
         <form method="POST" action="{{ route('admin.users.suspension.update', $account) }}" data-turbo-frame="_top" data-confirm="Update access for this account?" class="mt-5 space-y-4">
             @csrf

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ManualEmailController;
 use App\Http\Controllers\Admin\MapLayerController;
 use App\Http\Controllers\Admin\OversightController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\SystemOperationsController;
 use App\Http\Controllers\Admin\UserAccessController;
@@ -80,6 +81,15 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
             Route::get('/reports/audit', ReportController::class)->name('reports.audit');
         });
 
+        Route::middleware('permission:admin.settings|admin.users')->group(function () {
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        });
+
+        Route::middleware('permission:admin.users')->group(function () {
+            Route::get('/settings/permissions', [SettingsController::class, 'permissions'])->name('settings.permissions');
+            Route::get('/settings/roles', [SettingsController::class, 'roles'])->name('settings.roles');
+        });
+
         Route::middleware('permission:admin.settings')->group(function () {
             Route::get('/operations', [SystemOperationsController::class, 'index'])->name('operations.index');
         });
@@ -96,6 +106,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
         Route::middleware('permission:admin.users')->group(function () {
             Route::get('/users/export', [UserAccessController::class, 'export'])->name('users.export');
             Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
+            Route::get('/users/{user}', [UserAccessController::class, 'show'])->name('users.show');
+            Route::put('/users/{user}/password', [UserAccessController::class, 'updatePassword'])->name('users.password.update');
             Route::get('/users/{user}/roles', [UserAccessController::class, 'edit'])->name('users.roles.edit');
             Route::put('/users/{user}/roles', [UserAccessController::class, 'update'])->name('users.roles.update');
             Route::get('/users/{user}/suspension', [UserAccessController::class, 'editSuspension'])->name('users.suspension.edit');

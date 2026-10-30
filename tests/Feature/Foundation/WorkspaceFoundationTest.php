@@ -321,8 +321,7 @@ class WorkspaceFoundationTest extends FoundationTestCase
             ->get(route('admin.users.index'))
             ->assertOk()
             ->assertSee('User directory')
-            ->assertSee('User Directory')
-            ->assertSee('Access History')
+            ->assertSee('Manage')
             ->assertDontSee('Sales Performance');
 
         $this->actingAs($administrator)

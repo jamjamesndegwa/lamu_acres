@@ -556,9 +556,7 @@ return [
                 'label' => 'Users',
                 'permission' => 'admin.users',
                 'items' => [
-                    ['label' => 'User Directory', 'route' => 'admin.users.index', 'active' => 'admin.users.*'],
-                    ['label' => 'Roles'],
-                    ['label' => 'Access History'],
+                    ['label' => 'User directory', 'route' => 'admin.users.index', 'active' => ['admin.users.index', 'admin.users.show', 'admin.users.roles.*', 'admin.users.suspension.*']],
                 ],
             ],
             [
@@ -593,14 +591,17 @@ return [
             ],
             [
                 'key' => 'settings',
-                'label' => 'System Operations',
-                'permission' => 'admin.settings',
+                'label' => 'Settings',
+                'permission' => 'admin.settings|admin.users',
                 'items' => [
-                    ['label' => 'Application Health', 'route' => 'admin.operations.index', 'active' => 'admin.operations.*', 'fragment' => 'health'],
-                    ['label' => 'Background Jobs', 'route' => 'admin.operations.index', 'active' => 'admin.operations.jobs', 'fragment' => 'jobs'],
-                    ['label' => 'Scheduled Tasks', 'route' => 'admin.operations.index', 'active' => 'admin.operations.schedules', 'fragment' => 'schedules'],
-                    ['label' => 'Integrations', 'route' => 'admin.operations.index', 'active' => 'admin.operations.integrations', 'fragment' => 'integrations'],
-                    ['label' => 'Audit', 'route' => 'admin.operations.index', 'active' => 'admin.operations.audit', 'fragment' => 'audit'],
+                    ['label' => 'Overview', 'route' => 'admin.settings.index', 'active' => ['admin.settings.index']],
+                    ['label' => 'Permissions', 'route' => 'admin.settings.permissions', 'active' => 'admin.settings.permissions', 'permission' => 'admin.users'],
+                    ['label' => 'Roles', 'route' => 'admin.settings.roles', 'active' => 'admin.settings.roles', 'permission' => 'admin.users'],
+                    ['label' => 'Application Health', 'route' => 'admin.operations.index', 'active' => 'admin.operations.*', 'fragment' => 'health', 'permission' => 'admin.settings'],
+                    ['label' => 'Background Jobs', 'route' => 'admin.operations.index', 'active' => 'admin.operations.jobs', 'fragment' => 'jobs', 'permission' => 'admin.settings'],
+                    ['label' => 'Scheduled Tasks', 'route' => 'admin.operations.index', 'active' => 'admin.operations.schedules', 'fragment' => 'schedules', 'permission' => 'admin.settings'],
+                    ['label' => 'Integrations', 'route' => 'admin.operations.index', 'active' => 'admin.operations.integrations', 'fragment' => 'integrations', 'permission' => 'admin.settings'],
+                    ['label' => 'Audit', 'route' => 'admin.operations.index', 'active' => 'admin.operations.audit', 'fragment' => 'audit', 'permission' => 'admin.settings'],
                 ],
             ],
             [
@@ -628,7 +629,8 @@ return [
         'panels' => [
             ['title' => 'Sales performance', 'description' => 'Completed and open sales.', 'permission' => 'admin.oversight', 'route' => 'admin.oversight.sales'],
             ['title' => 'Approvals', 'description' => 'Decisions waiting for a controller.', 'permission' => 'admin.approvals', 'route' => 'admin.approvals.index'],
-            ['title' => 'User access', 'description' => 'Review who can open each workspace.', 'permission' => 'admin.users', 'route' => 'admin.users.index'],
+            ['title' => 'User access', 'description' => 'Manage accounts, roles, passwords, and login access.', 'permission' => 'admin.users', 'route' => 'admin.users.index'],
+            ['title' => 'Settings', 'description' => 'Permissions, roles, commercial controls, and system operations.', 'permission' => 'admin.settings|admin.users', 'route' => 'admin.settings.index', 'modal' => false],
             ['title' => 'Geography', 'description' => 'Counties, localities, and map layers.', 'permission' => 'admin.geography', 'route' => 'admin.geography.index'],
             ['title' => 'Commercial settings', 'description' => 'Investor Pass, recorded commissions, listing rules, and verification standards.', 'permission' => 'admin.commercial', 'route' => 'admin.plans.edit', 'modal' => false],
             ['title' => 'System operations', 'description' => 'Integrations, queues, and activity.', 'permission' => 'admin.settings', 'route' => 'admin.operations.index'],

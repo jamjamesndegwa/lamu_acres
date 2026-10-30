@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AssignRolesRequest;
+use App\Http\Requests\Admin\ResetUserPasswordRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Access\RoleAssigner;
@@ -12,6 +13,7 @@ use App\Support\CsvExport;
 use App\Support\Turbo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,6 +28,32 @@ class UserAccessController extends Controller
         }
 
         return view('admin.users.index', compact('users'));
+    }
+
+    public function show(User $user): View
+    {
+        abort_unless(request()->user()?->hasPermission('admin.users'), 403);
+
+        return view('admin.users.show', [
+            'account' => $user->load('roles'),
+        ]);
+    }
+
+    public function updatePassword(ResetUserPasswordRequest $request, User $user): RedirectResponse
+    {
+        $user->forceFill([
+            'password' => $request->validated('password'),
+        ])->save();
+
+        DB::table(config('session.table', 'sessions'))
+            ->where('user_id', $user->id)
+            ->delete();
+
+        app(AccountSecurityNotifier::class)->passwordChanged($user->fresh());
+
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with('status', 'Password reset. The user must sign in with the new password.');
     }
 
     public function edit(User $user): View
@@ -47,7 +75,7 @@ class UserAccessController extends Controller
         $roles->sync($user, $request->validated('roles') ?? []);
 
         return redirect()
-            ->route('admin.users.index')
+            ->route('admin.users.show', $user)
             ->with('status', 'Roles updated.');
     }
 
@@ -85,7 +113,7 @@ class UserAccessController extends Controller
             $status = 'Account restored.';
         }
 
-        return redirect()->route('admin.users.index')->with('status', $status);
+        return redirect()->route('admin.users.show', $user)->with('status', $status);
     }
 
     public function export(): StreamedResponse
