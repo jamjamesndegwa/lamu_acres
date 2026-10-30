@@ -21,6 +21,7 @@ use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -45,6 +46,20 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if ($this->app->environment('local')) {
+            $this->app->booted(function (): void {
+                if ($this->app->runningInConsole() && ! $this->app->runningUnitTests()) {
+                    return;
+                }
+
+                $rootUrl = request()->getSchemeAndHttpHost();
+
+                if ($rootUrl !== '') {
+                    URL::forceRootUrl($rootUrl);
+                }
+            });
+        }
+
         $listener = RecordExternalNotificationMail::class;
 
         Event::listen(NotificationSending::class, [$listener, 'handleSending']);

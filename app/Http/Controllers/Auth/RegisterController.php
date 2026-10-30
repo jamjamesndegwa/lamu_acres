@@ -41,14 +41,14 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
+        $request->session()->regenerate();
+
         app(MessageDesk::class)->send($user, MessageEvent::AccountRegistered, [
             'name' => $user->name,
             'title' => 'Welcome to Lamu Acres',
             'summary' => 'Your buyer account is ready.',
             'url' => route('buyer.dashboard'),
         ], 'user:'.$user->id);
-
-        $request->session()->regenerate();
 
         if ($capability = $request->validated('capability')) {
             return redirect()->route('account.applications.create', ['capability' => $capability]);

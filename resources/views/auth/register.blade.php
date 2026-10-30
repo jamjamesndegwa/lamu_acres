@@ -14,7 +14,13 @@
         <a href="{{ route('register', ['capability' => 'broker']) }}" class="underline">Register as a broker</a>
     </div>
 
-    <form method="POST" action="{{ route('register', array_filter(['return_to' => $returnTo ?? null])) }}" class="mt-8 space-y-4">
+    @if ($errors->has('session'))
+        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+            {{ $errors->first('session') }}
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('register', array_filter(['return_to' => $returnTo ?? null]), false) }}" data-turbo="false" class="mt-8 space-y-4">
         @csrf
         @if ($selectedCapability)
             <input type="hidden" name="capability" value="{{ $selectedCapability }}">

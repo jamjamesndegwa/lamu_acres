@@ -1,7 +1,7 @@
 <x-auth-layout title="Forgot password — Lamu Acres">
     <h1 class="text-2xl font-semibold text-lamu-900">Reset password</h1>
     <p class="mt-2 text-sm text-stone-600">For accounts that sign in with a password. A reset link is sent to the email on file.</p>
-    <form method="POST" action="{{ route('password.email') }}" class="mt-8 space-y-4">
+    <form method="POST" action="{{ route('password.email', absolute: false) }}" data-turbo="false" class="mt-8 space-y-4">
         @csrf
         <div>
             <label for="email" class="block text-sm font-medium">Email</label>

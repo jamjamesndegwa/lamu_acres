@@ -1,6 +1,6 @@
 <x-auth-layout title="Choose a new password — Lamu Acres">
     <h1 class="text-2xl font-semibold text-lamu-900">Choose a new password</h1>
-    <form method="POST" action="{{ route('password.update') }}" class="mt-8 space-y-4">
+    <form method="POST" action="{{ route('password.update', absolute: false) }}" data-turbo="false" class="mt-8 space-y-4">
         @csrf
         <input type="hidden" name="token" value="{{ $token }}">
         <div>

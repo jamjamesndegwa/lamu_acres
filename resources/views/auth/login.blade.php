@@ -6,7 +6,13 @@
         <p class="mt-4 rounded-xl bg-sand-50 p-4 text-sm text-lamu-900">Sign in to continue your {{ $capability }} application. New here? <a href="{{ route('register', ['capability' => $capability]) }}" class="font-semibold underline">Register as a {{ $capability }}</a>.</p>
     @endif
 
-    <form method="POST" action="{{ route('login', array_filter(['capability' => $capability ?? null, 'return_to' => $returnTo ?? null])) }}" class="mt-8 space-y-4">
+    @if ($errors->has('session'))
+        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+            {{ $errors->first('session') }}
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('login', array_filter(['capability' => $capability ?? null, 'return_to' => $returnTo ?? null]), false) }}" data-turbo="false" class="mt-8 space-y-4">
         @csrf
         @if ($capability ?? null)
             <input type="hidden" name="capability" value="{{ $capability }}">
@@ -44,7 +50,7 @@
     </div>
     <details class="mt-6 border-t border-sand-200 pt-5" @if ($errors->has('phone')) open @endif>
         <summary class="cursor-pointer text-sm font-medium text-lamu-800">Use phone sign-in instead</summary>
-    <form method="POST" action="{{ route('login.phone') }}" class="mt-4 space-y-4">
+    <form method="POST" action="{{ route('login.phone', absolute: false) }}" data-turbo="false" class="mt-4 space-y-4">
         @csrf
         <h2 class="text-lg font-semibold text-lamu-900">Phone sign-in</h2>
         <p class="text-sm text-stone-600">Enter your phone number to request a sign-in code.</p>

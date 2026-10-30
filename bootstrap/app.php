@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\AuthenticateSession;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -60,4 +61,48 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (TokenMismatchException $exception, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Your session expired. Please refresh the page and try again.',
+                ], 419);
+            }
+
+            $input = $request->except('password', 'password_confirmation', '_token');
+            $sessionError = ['session' => 'Your session expired. Please submit the form again.'];
+
+            if ($request->routeIs('register')) {
+                return redirect()
+                    ->route('register', array_filter($request->only(['capability', 'return_to'])))
+                    ->withInput($input)
+                    ->withErrors($sessionError);
+            }
+
+            if ($request->routeIs('login')) {
+                return redirect()
+                    ->route('login', array_filter($request->only(['capability', 'return_to'])))
+                    ->withInput($input)
+                    ->withErrors($sessionError);
+            }
+
+            if ($request->routeIs('password.email')) {
+                return redirect()
+                    ->route('password.request')
+                    ->withInput($input)
+                    ->withErrors($sessionError);
+            }
+
+            if ($request->routeIs('password.update')) {
+                return redirect()
+                    ->route('password.reset', ['token' => $request->input('token'), 'email' => $request->input('email')])
+                    ->withInput($input)
+                    ->withErrors($sessionError);
+            }
+
+            return redirect()
+                ->back(fallback: route('home'))
+                ->withInput($input)
+                ->withErrors($sessionError);
+        });
     })->create();

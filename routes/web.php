@@ -82,7 +82,7 @@ Route::get('/land/item/{property}', [LandDirectoryController::class, 'showItem']
 Route::get('/land/{county}/{locality}/{property}', [LandDirectoryController::class, 'show'])->name('land.show');
 Route::get('/land/{county?}/{locality?}', [LandDirectoryController::class, 'index'])->name('land.index');
 
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', 'private.cache'])->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
     Route::post('/login/phone', [PhoneLoginController::class, 'store'])->name('login.phone');
