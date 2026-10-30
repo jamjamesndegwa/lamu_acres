@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\AgencyFeePolicy;
 use App\Models\CommissionPolicy;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -38,7 +39,7 @@ class CommercialSettingsTest extends FoundationTestCase
         $this->actingAs($admin)->get(route('admin.commercial.commissions'))
             ->assertOk()
             ->assertSee('No commission agreement has been recorded.')
-            ->assertSee('Save commission policy')
+            ->assertSee('Save sale commission policy')
             ->assertSee('Standard broker commission')
             ->assertSee('Open commission management')
             ->assertDontSee('Missing configuration: commission templates are not a managed contract.')
@@ -101,11 +102,12 @@ class CommercialSettingsTest extends FoundationTestCase
                 'default_funding_party' => 'buyer',
                 'default_payment_due_days' => '21',
                 'default_protection_months' => '9',
+                'default_calculation_basis' => 'agreed_sale_price',
                 'terms' => 'Buyer-funded broker commission at eight and a half percent unless otherwise agreed in writing.',
                 'apply_defaults' => '1',
             ])
             ->assertRedirect(route('admin.commercial.commissions'))
-            ->assertSessionHas('status', 'Commission policy updated.');
+            ->assertSessionHas('status', 'Outright sale commission policy updated.');
 
         $policy = CommissionPolicy::standard()->fresh();
         $this->assertSame('Broker desk standard', $policy->name);
@@ -113,6 +115,63 @@ class CommercialSettingsTest extends FoundationTestCase
         $this->assertSame('buyer', $policy->default_funding_party);
         $this->assertSame(21, $policy->default_payment_due_days);
         $this->assertTrue($policy->apply_defaults);
+    }
+
+    public function test_an_administrator_can_update_lease_commercial_policy_templates(): void
+    {
+        $admin = User::factory()->withRoles('admin')->create();
+
+        $this->actingAs($admin)->from(route('admin.commercial.commissions'))
+            ->put(route('admin.commercial.commissions.lease.update'), [
+                'name' => 'Approved lease broker template',
+                'default_calculation_basis' => 'first_year_rent_percent',
+                'default_rate_percent' => '12',
+                'default_fixed_amount' => '',
+                'default_monthly_rent_multiplier' => '',
+                'default_funding_party' => 'lessor',
+                'default_payment_due_days' => '14',
+                'default_protection_months' => '6',
+                'effective_from' => now()->toDateString(),
+                'terms' => 'Draft template only until commercial sign-off.',
+                'apply_defaults' => '1',
+            ])
+            ->assertRedirect(route('admin.commercial.commissions'))
+            ->assertSessionHas('status', 'Lease commission policy template updated.');
+
+        $leasePolicy = CommissionPolicy::leaseStandard()->fresh();
+        $this->assertSame('12.00', $leasePolicy->default_rate_percent);
+        $this->assertTrue($leasePolicy->apply_defaults);
+
+        $this->actingAs($admin)->from(route('admin.commercial.commissions'))
+            ->put(route('admin.commercial.agency-fees.update', 'lease_default'), [
+                'name' => 'Lease agency template',
+                'default_calculation_basis' => 'fixed',
+                'default_rate_percent' => '',
+                'default_fixed_amount' => '50000',
+                'default_monthly_rent_multiplier' => '',
+                'default_fee_payer' => 'lessor',
+                'effective_from' => '',
+                'terms' => 'Fixed lease agency fee template.',
+                'apply_defaults' => '0',
+            ])
+            ->assertRedirect(route('admin.commercial.commissions'))
+            ->assertSessionHas('status', 'Agency fee policy template updated.');
+
+        $this->assertSame(50_000, AgencyFeePolicy::leaseStandard()->fresh()->default_fixed_amount);
+    }
+
+    public function test_staff_without_commercial_permission_cannot_update_lease_policies(): void
+    {
+        $staff = User::factory()->withRoles('staff')->create();
+
+        $this->actingAs($staff)->put(route('admin.commercial.commissions.lease.update'), [
+            'name' => 'Blocked',
+            'default_calculation_basis' => 'fixed',
+            'default_funding_party' => 'lessor',
+            'default_payment_due_days' => '14',
+            'default_protection_months' => '6',
+            'terms' => 'Should not save.',
+        ])->assertForbidden();
     }
 
     public function test_a_super_administrator_can_open_the_operational_desks(): void

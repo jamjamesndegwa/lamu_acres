@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\GuardsEarnedCommercialTerms;
 use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionFunding;
 use App\Enums\CommissionStatus;
@@ -41,6 +42,22 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 ])]
 class CommissionAgreement extends Model
 {
+    use GuardsEarnedCommercialTerms;
+
+    protected static function booted(): void
+    {
+        static::guardEarnedCommercialTerms([
+            'calculation_basis',
+            'rate_percent',
+            'monthly_rent_multiplier',
+            'fixed_amount',
+            'funding_party',
+            'qualifying_event',
+            'calculation_snapshot',
+            'earned_amount',
+        ]);
+    }
+
     protected function casts(): array
     {
         return [

@@ -25,6 +25,7 @@ class CommissionPolicy extends Model
         'default_protection_months',
         'terms',
         'apply_defaults',
+        'effective_from',
     ];
 
     protected function casts(): array
@@ -36,7 +37,21 @@ class CommissionPolicy extends Model
             'default_payment_due_days' => 'integer',
             'default_protection_months' => 'integer',
             'apply_defaults' => 'boolean',
+            'effective_from' => 'date',
         ];
+    }
+
+    public function appliesForProposals(): bool
+    {
+        if (! $this->apply_defaults) {
+            return false;
+        }
+
+        if ($this->effective_from === null) {
+            return true;
+        }
+
+        return $this->effective_from->lte(now()->startOfDay());
     }
 
     public static function standard(): self

@@ -164,6 +164,18 @@ class CommissionDesk
             return null;
         }
 
+        if ($agreement->accepted_at === null || $agreement->accepted_by === null) {
+            return null;
+        }
+
+        if ($agreement->funding_party === null || $agreement->qualifying_event === null) {
+            return null;
+        }
+
+        if ($transaction->isLeaseDeal() && $agreement->calculation_basis === null) {
+            return null;
+        }
+
         if ($transaction->stage !== SalesStage::Completed || $transaction->completed_at === null) {
             return null;
         }
@@ -348,7 +360,7 @@ class CommissionDesk
     {
         $policy = CommissionPolicy::forDeal($transaction);
 
-        if (! $policy->apply_defaults) {
+        if (! $policy->appliesForProposals()) {
             return $data;
         }
 

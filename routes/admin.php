@@ -70,6 +70,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:admin'])
             Route::put('/plans', [SubscriptionPlanController::class, 'update'])->name('plans.update');
             Route::get('/commercial/commissions', [SubscriptionPlanController::class, 'commissions'])->name('commercial.commissions');
             Route::put('/commercial/commissions', [SubscriptionPlanController::class, 'updateCommissions'])->name('commercial.commissions.update');
+            Route::put('/commercial/commissions/lease', [SubscriptionPlanController::class, 'updateLeaseCommissions'])->name('commercial.commissions.lease.update');
+            Route::put('/commercial/agency-fees/{code}', [SubscriptionPlanController::class, 'updateAgencyFeePolicy'])->name('commercial.agency-fees.update');
             Route::get('/commercial/listings', [SubscriptionPlanController::class, 'listings'])->name('commercial.listings');
             Route::get('/commercial/verification', [SubscriptionPlanController::class, 'verification'])->name('commercial.verification');
         });

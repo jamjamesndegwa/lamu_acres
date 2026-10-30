@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\GuardsEarnedCommercialTerms;
 use App\Enums\AgencyFeePayer;
 use App\Enums\CommissionStatus;
 use App\Enums\FeeCalculationBasis;
@@ -39,6 +40,22 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class AgencyFeeAgreement extends Model
 {
+    use GuardsEarnedCommercialTerms;
+
+    protected static function booted(): void
+    {
+        static::guardEarnedCommercialTerms([
+            'calculation_basis',
+            'rate_percent',
+            'monthly_rent_multiplier',
+            'fixed_amount',
+            'fee_payer',
+            'qualifying_event',
+            'calculation_snapshot',
+            'earned_amount',
+        ]);
+    }
+
     protected function casts(): array
     {
         return [

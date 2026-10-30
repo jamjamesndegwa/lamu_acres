@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionFunding;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,6 +27,8 @@ class UpdateCommissionPolicyRequest extends FormRequest
             'default_funding_party' => ['required', Rule::enum(CommissionFunding::class)],
             'default_payment_due_days' => ['required', 'integer', 'min:1', 'max:365'],
             'default_protection_months' => ['required', 'integer', 'min:1', 'max:60'],
+            'default_calculation_basis' => ['nullable', Rule::enum(CommissionCalculationBasis::class)],
+            'effective_from' => ['nullable', 'date'],
             'terms' => ['required', 'string', 'max:5000'],
             'apply_defaults' => ['nullable', 'boolean'],
         ];

@@ -22,6 +22,7 @@ class AgencyFeePolicy extends Model
         'default_fee_payer',
         'terms',
         'apply_defaults',
+        'effective_from',
     ];
 
     protected function casts(): array
@@ -31,7 +32,36 @@ class AgencyFeePolicy extends Model
             'default_fixed_amount' => 'integer',
             'default_monthly_rent_multiplier' => 'decimal:2',
             'apply_defaults' => 'boolean',
+            'effective_from' => 'date',
         ];
+    }
+
+    public static function standard(): self
+    {
+        return self::query()->where('code', self::DEFAULT)->firstOrFail();
+    }
+
+    public static function leaseStandard(): self
+    {
+        return self::query()->where('code', self::LEASE_DEFAULT)->firstOrFail();
+    }
+
+    public static function forDeal(SalesTransaction $transaction): self
+    {
+        return $transaction->isLeaseDeal() ? self::leaseStandard() : self::standard();
+    }
+
+    public function appliesForProposals(): bool
+    {
+        if (! $this->apply_defaults) {
+            return false;
+        }
+
+        if ($this->effective_from === null) {
+            return true;
+        }
+
+        return $this->effective_from->lte(now()->startOfDay());
     }
 
     public function calculationBasis(): FeeCalculationBasis

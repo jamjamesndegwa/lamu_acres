@@ -1,70 +1,52 @@
-<x-crud-page title="Commission Policy" heading="Commission Policy">
+<x-crud-page title="Commercial policies" heading="Commercial policies">
     <p class="text-sm text-lamu-800/70">
-        Set the default template used when staff propose a broker commission. Each sale still records its own signed agreement; changing this policy does not rewrite agreements already on file.
+        Configure proposal templates for broker commission and Lamu Acres agency fees. Templates are not approved tariffs: staff must still propose and accept a deal-specific agreement before anything can be earned. Changing a template does not alter agreements already on file or earned snapshots.
     </p>
 
-    <form method="POST" action="{{ route('admin.commercial.commissions.update') }}" class="mt-6 max-w-3xl space-y-4 rounded-lg border border-sand-200 bg-white p-5" data-turbo-frame="_top" data-confirm="Save the commission policy?">
-        @csrf
-        @method('PUT')
-        <label class="block text-sm font-medium text-lamu-900">Policy name
-            <input name="name" value="{{ old('name', $policy->name) }}" required class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-            @error('name')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-        </label>
+    <section class="mt-8">
+        <h2 class="text-lg font-semibold text-lamu-900">Outright sale — broker commission</h2>
+        @include('admin.commercial.partials.commission-policy-form', [
+            'policy' => $saleCommissionPolicy,
+            'action' => route('admin.commercial.commissions.update'),
+            'commissionBases' => collect($commissionBases)->filter(fn ($basis) => ! $basis->isLease()),
+            'fundingParties' => $fundingParties,
+            'submitLabel' => 'Save sale commission policy',
+        ])
+    </section>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block text-sm font-medium text-lamu-900">Default rate (%)
-                <input name="default_rate_percent" value="{{ old('default_rate_percent', $policy->default_rate_percent) }}" inputmode="decimal" placeholder="e.g. 10" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-                @error('default_rate_percent')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm font-medium text-lamu-900">Or default fixed amount (KSh)
-                <input name="default_fixed_amount" value="{{ old('default_fixed_amount', $policy->default_fixed_amount) }}" inputmode="numeric" placeholder="Leave blank for rate only" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-                @error('default_fixed_amount')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-            </label>
+    <section class="mt-10">
+        <h2 class="text-lg font-semibold text-lamu-900">Lease — broker commission template</h2>
+        <p class="mt-1 text-sm text-lamu-800/70">Lease percentages in the database are draft values until commercial leadership approves them and enables auto-fill below.</p>
+        @include('admin.commercial.partials.lease-commission-policy-form', [
+            'policy' => $leaseCommissionPolicy,
+            'action' => route('admin.commercial.commissions.lease.update'),
+            'commissionBases' => collect($commissionBases)->filter(fn ($basis) => $basis->isLease() || $basis === \App\Enums\CommissionCalculationBasis::Fixed),
+            'fundingParties' => $fundingParties,
+        ])
+    </section>
+
+    <section class="mt-10 grid gap-8 lg:grid-cols-2">
+        <div>
+            <h2 class="text-lg font-semibold text-lamu-900">Outright sale — agency fee</h2>
+            @include('admin.commercial.partials.agency-fee-policy-form', [
+                'policy' => $saleAgencyFeePolicy,
+                'action' => route('admin.commercial.agency-fees.update', $saleAgencyFeePolicy->code),
+                'agencyFeeBases' => collect($agencyFeeBases)->filter(fn ($basis) => in_array($basis->value, ['agreed_sale_price', 'fixed'], true)),
+                'feePayers' => collect($feePayers)->filter(fn ($p) => $p !== \App\Enums\AgencyFeePayer::Lessor),
+            ])
         </div>
-
-        <div class="grid gap-4 sm:grid-cols-3">
-            <label class="block text-sm font-medium text-lamu-900">Default funding party
-                <select name="default_funding_party" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-                    @foreach ($fundingParties as $party)
-                        <option value="{{ $party->value }}" @selected(old('default_funding_party', $policy->default_funding_party) === $party->value)>{{ $party->label() }}</option>
-                    @endforeach
-                </select>
-                @error('default_funding_party')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm font-medium text-lamu-900">Payment due (days)
-                <input name="default_payment_due_days" value="{{ old('default_payment_due_days', $policy->default_payment_due_days) }}" required inputmode="numeric" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-                @error('default_payment_due_days')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-            </label>
-            <label class="block text-sm font-medium text-lamu-900">Protection period (months)
-                <input name="default_protection_months" value="{{ old('default_protection_months', $policy->default_protection_months) }}" required inputmode="numeric" class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">
-                @error('default_protection_months')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-            </label>
+        <div>
+            <h2 class="text-lg font-semibold text-lamu-900">Lease — agency fee template</h2>
+            @include('admin.commercial.partials.agency-fee-policy-form', [
+                'policy' => $leaseAgencyFeePolicy,
+                'action' => route('admin.commercial.agency-fees.update', $leaseAgencyFeePolicy->code),
+                'agencyFeeBases' => collect($agencyFeeBases)->filter(fn ($basis) => $basis !== \App\Enums\FeeCalculationBasis::AgreedSalePrice),
+                'feePayers' => $feePayers,
+            ])
         </div>
-
-        <label class="block text-sm font-medium text-lamu-900">Policy terms (shown to administrators and prefilled for staff)
-            <textarea name="terms" rows="5" required class="mt-1 w-full rounded-md border border-sand-200 px-3 py-2">{{ old('terms', $policy->terms) }}</textarea>
-            @error('terms')<span class="mt-1 block text-xs text-red-700">{{ $message }}</span>@enderror
-        </label>
-
-        <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="apply_defaults" value="1" @checked(old('apply_defaults', $policy->apply_defaults))>
-            Apply these defaults when staff propose a commission
-        </label>
-
-        <p class="text-sm text-lamu-800/70">Active summary: {{ $policy->summaryLabel() }}</p>
-
-        <button type="submit" class="rounded-md bg-lamu-800 px-4 py-2 text-sm font-medium text-white">Save commission policy</button>
-    </form>
+    </section>
 
     <div class="mt-8 grid gap-4 lg:grid-cols-2">
-        <div class="rounded-lg border border-sand-200 bg-white p-4">
-            <h2 class="text-sm font-semibold text-lamu-900">Supported funding parties</h2>
-            <ul class="mt-2 space-y-1 text-sm text-lamu-800/80">
-                @foreach ($fundingParties as $party)
-                    <li>{{ $party->label() }}</li>
-                @endforeach
-            </ul>
-        </div>
         <div class="rounded-lg border border-sand-200 bg-white p-4 text-sm text-lamu-800/80">
             @if ($canOpenCommissions)
                 <a href="{{ route('staff.commissions.index') }}" class="font-semibold text-lamu-800 underline">Open commission management</a>
@@ -97,7 +79,9 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2">
-                                @if ($agreement->rate_percent !== null)
+                                @if ($agreement->calculation_basis)
+                                    {{ $agreement->calculation_basis->label() }}
+                                @elseif ($agreement->rate_percent !== null)
                                     {{ $agreement->rate_percent }}% on this agreement
                                 @elseif ($agreement->fixed_amount !== null)
                                     Fixed {{ number_format($agreement->fixed_amount) }} on this agreement

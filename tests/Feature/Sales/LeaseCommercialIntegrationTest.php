@@ -44,19 +44,12 @@ class LeaseCommercialIntegrationTest extends FoundationTestCase
         $closing = app(ClosingDesk::class);
         $pipeline = app(SalesPipeline::class);
 
-        $commission = $commissions->propose($deal, $staff, [
-            'broker_id' => $broker->id,
-            'funding_party' => 'lessor',
-            'protection_ends_at' => now()->addMonths(6),
-        ]);
+        $commission = $commissions->propose($deal, $staff, $this->leaseCommissionProposal($broker->id));
         $this->assertSame(CommissionCalculationBasis::FirstYearRentPercent, $commission->calculation_basis);
         $this->assertSame(QualifyingEvent::LeaseConfirmed, $commission->qualifying_event);
         $commissions->accept($commission, $staff);
 
-        $agency = $agencyFees->propose($deal, $staff, [
-            'seller_id' => $lessor->id,
-            'fee_payer' => 'lessor',
-        ]);
+        $agency = $agencyFees->propose($deal, $staff, $this->leaseAgencyProposal($lessor->id));
         $this->assertSame(FeeCalculationBasis::FirstYearRentPercent, $agency->calculation_basis);
         $agencyFees->accept($agency, $staff);
 
@@ -143,11 +136,7 @@ class LeaseCommercialIntegrationTest extends FoundationTestCase
             'protection_ends_at' => now()->addMonths(3),
         ]);
 
-        $commission = $desk->propose($deal->refresh(), $staff, [
-            'broker_id' => $authorizedBroker->id,
-            'funding_party' => 'lessor',
-            'protection_ends_at' => now()->addMonths(3),
-        ]);
+        $commission = $desk->propose($deal->refresh(), $staff, $this->leaseCommissionProposal($authorizedBroker->id));
 
         $prepared = $this->prepareLeaseForConfirmation($deal->refresh(), $staff);
         $this->expectException(ValidationException::class);
@@ -164,11 +153,9 @@ class LeaseCommercialIntegrationTest extends FoundationTestCase
         [$staff, , $broker, , , $property, $deal] = $this->leaseDeal();
         $desk = app(CommissionDesk::class);
         $pipeline = app(SalesPipeline::class);
-        $agreement = $desk->propose($deal, $staff, [
-            'broker_id' => $broker->id,
-            'funding_party' => 'lessor',
+        $agreement = $desk->propose($deal, $staff, $this->leaseCommissionProposal($broker->id, [
             'protection_ends_at' => now()->addMonths(3),
-        ]);
+        ]));
         $desk->accept($agreement, $staff);
         $deal = $pipeline->outcome($deal, SalesOutcome::Cancelled, $staff, $deal->lock_version, 'Lessee withdrew before execution.');
         $this->assertNull($desk->eligibleAmount($agreement->refresh(), $deal->refresh()));
@@ -195,17 +182,10 @@ class LeaseCommercialIntegrationTest extends FoundationTestCase
         $agencyFees = app(AgencyFeeDesk::class);
         $closing = app(ClosingDesk::class);
 
-        $commission = $commissions->propose($deal, $staff, [
-            'broker_id' => $broker->id,
-            'funding_party' => 'lessor',
-            'protection_ends_at' => now()->addMonths(6),
-        ]);
+        $commission = $commissions->propose($deal, $staff, $this->leaseCommissionProposal($broker->id));
         $commissions->accept($commission, $staff);
 
-        $agency = $agencyFees->propose($deal, $staff, [
-            'seller_id' => $lessor->id,
-            'fee_payer' => 'lessor',
-        ]);
+        $agency = $agencyFees->propose($deal, $staff, $this->leaseAgencyProposal($lessor->id));
         $agencyFees->accept($agency, $staff);
 
         $deal = $this->prepareLeaseForConfirmation($deal, $staff);
@@ -342,5 +322,34 @@ class LeaseCommercialIntegrationTest extends FoundationTestCase
             ['county_id' => $county->id, 'slug' => 'shela-lease'],
             ['name' => 'Shela', 'kind' => 'place', 'is_active' => true]
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function leaseCommissionProposal(int $brokerId, array $overrides = []): array
+    {
+        return array_merge([
+            'broker_id' => $brokerId,
+            'calculation_basis' => CommissionCalculationBasis::FirstYearRentPercent->value,
+            'rate_percent' => 15,
+            'funding_party' => 'lessor',
+            'protection_ends_at' => now()->addMonths(6)->toDateString(),
+        ], $overrides);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function leaseAgencyProposal(int $sellerId, array $overrides = []): array
+    {
+        return array_merge([
+            'seller_id' => $sellerId,
+            'calculation_basis' => FeeCalculationBasis::FirstYearRentPercent->value,
+            'rate_percent' => 10,
+            'fee_payer' => 'lessor',
+        ], $overrides);
     }
 }

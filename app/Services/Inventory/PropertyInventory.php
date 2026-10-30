@@ -208,17 +208,31 @@ class PropertyInventory
 
     public function assertLeaseAcreageAvailable(Property $property, float $acreage): void
     {
-        $leased = round((float) $property->transactions()
-            ->where('kind', ListingPurpose::Lease)
-            ->whereNull('ended_at')
-            ->sum('acreage'), 4);
-
         $offered = round($property->offeredAcreage(), 4);
         $requested = round($acreage, 4);
 
+        $active = $property->transactions()
+            ->where('kind', ListingPurpose::Lease)
+            ->whereNull('ended_at')
+            ->get();
+
+        $leased = round((float) $active->sum('acreage'), 4);
+        $requestsWholeParcel = $requested + 0.0001 >= $offered;
+
+        foreach ($active as $existing) {
+            $existingAcres = round((float) $existing->acreage, 4);
+            $existingWholeParcel = $existingAcres + 0.0001 >= $offered;
+
+            if ($requestsWholeParcel || $existingWholeParcel) {
+                throw ValidationException::withMessages([
+                    'acreage' => 'This listing already has an active whole-parcel or exclusive lease, or the requested lease would take the full offered area. Acreage totals are checked only; map geometry is not verified.',
+                ]);
+            }
+        }
+
         if ($leased + $requested > $offered + 0.0001) {
             throw ValidationException::withMessages([
-                'acreage' => 'Active leases already cover part of this listing. The new lease would exceed the acreage offered.',
+                'acreage' => 'Active leases already cover part of this listing. The new lease would exceed the acreage offered. Acreage totals are checked only; map geometry is not verified.',
             ]);
         }
     }

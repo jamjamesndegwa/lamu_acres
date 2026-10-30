@@ -182,10 +182,7 @@ class SalesPipelineController extends Controller
                 : collect(),
             'canProposeCommission' => $request->user()->hasPermission('commissions.propose'),
             'commissionPolicy' => CommissionPolicy::forDeal($salesTransaction),
-            'agencyFeePolicy' => AgencyFeePolicy::query()->where(
-                'code',
-                $salesTransaction->isLeaseDeal() ? AgencyFeePolicy::LEASE_DEFAULT : AgencyFeePolicy::DEFAULT,
-            )->first(),
+            'agencyFeePolicy' => AgencyFeePolicy::forDeal($salesTransaction),
         ]);
     }
 

@@ -147,6 +147,18 @@ class AgencyFeeDesk
             return null;
         }
 
+        if ($agreement->accepted_at === null || $agreement->accepted_by === null) {
+            return null;
+        }
+
+        if ($agreement->fee_payer === null || $agreement->qualifying_event === null) {
+            return null;
+        }
+
+        if ($transaction->isLeaseDeal() && $agreement->calculation_basis === null) {
+            return null;
+        }
+
         if ($transaction->stage !== SalesStage::Completed || $transaction->completed_at === null) {
             return null;
         }
@@ -296,7 +308,7 @@ class AgencyFeeDesk
         $code = $transaction->isLeaseDeal() ? AgencyFeePolicy::LEASE_DEFAULT : AgencyFeePolicy::DEFAULT;
         $policy = AgencyFeePolicy::query()->where('code', $code)->first();
 
-        if ($policy === null || ! $policy->apply_defaults) {
+        if ($policy === null || ! $policy->appliesForProposals()) {
             return $data;
         }
 

@@ -7,9 +7,9 @@ use App\Enums\ListingPurpose;
 use App\Enums\PriceBasis;
 use App\Enums\PropertyAvailability;
 use App\Enums\PropertyStatus;
+use App\Enums\SalesOrigin;
 use App\Enums\SalesStage;
 use App\Enums\TransactionStatus;
-use App\Models\BuyerOffer;
 use App\Models\County;
 use App\Models\Locality;
 use App\Models\Property;
@@ -164,7 +164,7 @@ class LeaseLifecycleTest extends FoundationTestCase
         $buyer = User::factory()->withRoles('buyer')->create();
         $salesTransaction = SalesTransaction::query()->create([
             'reference' => 'STX-TEST-001',
-            'origin' => \App\Enums\SalesOrigin::Enquiry,
+            'origin' => SalesOrigin::Enquiry,
             'property_id' => $leaseProperty->id,
             'buyer_id' => $buyer->id,
             'assigned_to' => $staff->id,
@@ -190,6 +190,36 @@ class LeaseLifecycleTest extends FoundationTestCase
 
         $this->expectException(ValidationException::class);
         $closingDesk->complete($salesTransaction, $staff, 1);
+    }
+
+    public function test_exclusive_whole_parcel_leases_block_overlapping_active_leases(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.properties')->create();
+        $inventory = app(PropertyInventory::class);
+        $locality = $this->createLocality();
+
+        $property = Property::factory()->published()->listedIn($locality)->lease()->create([
+            'acreage' => 4,
+            'offered_acreage' => 4,
+        ]);
+
+        $property->transactions()->create([
+            'reference' => 'TX-PARTIAL',
+            'kind' => ListingPurpose::Lease,
+            'status' => TransactionStatus::Completed,
+            'amount' => 50_000,
+            'acreage' => 2,
+            'starts_on' => now()->toDateString(),
+            'confirmed_by' => $staff->id,
+            'confirmed_at' => now(),
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $inventory->recordLease($staff, $property, [
+            'starts_on' => now()->toDateString(),
+            'acreage' => 4,
+            'amount' => 80_000,
+        ]);
     }
 
     private function createLocality(): Locality

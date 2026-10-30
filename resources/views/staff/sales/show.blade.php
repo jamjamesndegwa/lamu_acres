@@ -372,10 +372,12 @@
         </ul>
         @if ($canProposeCommission)
             @php
-                $commissionDefaults = $commissionPolicy->apply_defaults ? $commissionPolicy->proposalDefaults() : [];
+                $commissionDefaults = $commissionPolicy->appliesForProposals() ? $commissionPolicy->proposalDefaults() : [];
             @endphp
-            @if ($commissionPolicy->apply_defaults)
-                <p class="mt-3 text-sm text-stone-600">Defaults from commission policy: {{ $commissionPolicy->summaryLabel() }}</p>
+            @if ($commissionPolicy->appliesForProposals())
+                <p class="mt-3 text-sm text-stone-600">Proposal auto-fill from policy template: {{ $commissionPolicy->summaryLabel() }}. Proposing and accepting an agreement is still required before anything is earned.</p>
+            @else
+                <p class="mt-3 text-sm text-amber-800">No commission auto-fill is active. Enter an explicit calculation basis, rate or fixed amount, funding party, and protection end on each agreement.</p>
             @endif
             <form method="POST" action="{{ route('staff.commissions.store', $transaction) }}" data-turbo-frame="_top" data-confirm="Propose this commission agreement? Proposing it does not earn or pay commission." class="mt-3 grid max-w-xl gap-2">
                 @csrf
