@@ -1,13 +1,13 @@
 <div class="workspace-sidebar-shell lg:h-full lg:shrink-0">
-    <div
+    <label
+        for="workspace-nav-open"
         id="workspace-drawer-backdrop"
-        class="workspace-drawer-backdrop fixed inset-0 z-40 bg-stone-900/50 lg:hidden"
+        class="workspace-drawer-backdrop fixed inset-0 z-[45] bg-stone-900/50 lg:hidden"
         aria-hidden="true"
-    ></div>
+    ></label>
 
     <aside
         id="workspace-sidebar"
-        data-open="false"
         class="workspace-drawer-panel fixed inset-y-0 left-0 z-50 flex h-dvh flex-col overflow-hidden bg-lamu-900 text-sand-50 lg:static lg:z-auto lg:h-full lg:translate-x-0"
     >
         <div class="flex items-center justify-between border-b border-white/10 px-4 py-4 lg:block">
@@ -17,14 +17,13 @@
                     <p class="mt-1 text-sm text-sand-200">{{ $eyebrow ?: $workspace->label() }}</p>
                 @endif
             </div>
-            <button
-                type="button"
-                data-workspace-drawer-close
-                class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-sand-100 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200 lg:hidden"
+            <label
+                for="workspace-nav-open"
+                class="inline-flex size-10 shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-lg text-sand-100 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sand-200 lg:hidden"
                 aria-label="Close menu"
             >
                 <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-            </button>
+            </label>
         </div>
 
         <nav class="sidebar-scroll min-h-0 flex-1 space-y-1 px-2 py-3" aria-label="Workspace">
@@ -78,7 +77,7 @@
                     <a
                         href="{{ $module['href'] }}"
                         data-module="{{ $module['key'] }}"
-                        data-workspace-drawer-close
+                        data-workspace-nav-close
                         @if ($module['active'])
                             aria-current="page"
                         @endif
@@ -98,7 +97,7 @@
                     <button
                         type="button"
                         wire:click="select('{{ $module['key'] }}')"
-                        data-workspace-drawer-close
+                        data-workspace-nav-close
                         data-module="{{ $module['key'] }}"
                         @if ($module['active'])
                             aria-current="page"
@@ -142,7 +141,7 @@
                     @elseif ($item['available'])
                         <a
                             href="{{ $item['href'] }}"
-                            data-workspace-drawer-close
+                            data-workspace-nav-close
                             @if ($item['active'])
                                 aria-current="page"
                             @endif

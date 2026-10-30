@@ -24,7 +24,7 @@
         transition: opacity 180ms ease-out;
     }
 
-    html.workspace-drawer-open .workspace-drawer-backdrop {
+    body:has(#workspace-nav-open:checked) .workspace-drawer-backdrop {
         opacity: 1;
         pointer-events: auto;
     }
@@ -36,12 +36,12 @@
         will-change: transform;
     }
 
-    html.workspace-drawer-open #workspace-sidebar {
+    body:has(#workspace-nav-open:checked) #workspace-sidebar {
         transform: translateX(0);
         pointer-events: auto;
     }
 
-    html.workspace-drawer-open {
+    body:has(#workspace-nav-open:checked) {
         overflow: hidden;
     }
 

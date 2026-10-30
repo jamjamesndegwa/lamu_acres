@@ -390,32 +390,12 @@ function hidePageLoading() {
 
 let livewireNavigationPending = false
 
-const WORKSPACE_DRAWER_CLASS = 'workspace-drawer-open'
+function closeWorkspaceNav() {
+    const input = document.getElementById('workspace-nav-open')
 
-function setWorkspaceDrawerOpen(open) {
-    document.documentElement.classList.toggle(WORKSPACE_DRAWER_CLASS, open)
-
-    const sidebar = document.getElementById('workspace-sidebar')
-
-    if (sidebar) {
-        sidebar.dataset.open = open ? 'true' : 'false'
+    if (input instanceof HTMLInputElement) {
+        input.checked = false
     }
-
-    document.querySelectorAll('[data-workspace-drawer-toggle]').forEach((button) => {
-        button.setAttribute('aria-expanded', open ? 'true' : 'false')
-    })
-}
-
-function toggleWorkspaceDrawer() {
-    setWorkspaceDrawerOpen(! document.documentElement.classList.contains(WORKSPACE_DRAWER_CLASS))
-}
-
-function closeWorkspaceDrawer() {
-    setWorkspaceDrawerOpen(false)
-}
-
-function bindWorkspaceDrawer() {
-    setWorkspaceDrawerOpen(document.documentElement.classList.contains(WORKSPACE_DRAWER_CLASS))
 }
 
 function shouldSkipPageLoadingForTurboFetch(event) {
@@ -483,36 +463,19 @@ document.addEventListener('turbo:frame-load', (event) => {
     hidePageLoading()
 
     if (event.target instanceof HTMLElement && event.target.id === 'workspace-main') {
-        closeWorkspaceDrawer()
+        closeWorkspaceNav()
         window.Livewire?.dispatch('refresh-workspace-sidebar')
     }
 })
 document.addEventListener('turbo:fetch-request-error', hidePageLoading)
 document.addEventListener('turbo:frame-missing', hidePageLoading)
-document.addEventListener('DOMContentLoaded', () => {
-    hidePageLoading()
-    bindWorkspaceDrawer()
-})
+document.addEventListener('DOMContentLoaded', hidePageLoading)
 
 document.addEventListener('click', (event) => {
-    if (event.target.closest('[data-workspace-drawer-toggle]')) {
-        event.preventDefault()
-        event.stopPropagation()
-        toggleWorkspaceDrawer()
-
-        return
-    }
-
-    if (event.target.closest('[data-workspace-drawer-close]') || event.target.closest('#workspace-drawer-backdrop')) {
-        closeWorkspaceDrawer()
+    if (event.target.closest('[data-workspace-nav-close]')) {
+        closeWorkspaceNav()
     }
 }, true)
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        closeWorkspaceDrawer()
-    }
-})
 
 function sameOriginPage(url) {
     return url.origin === window.location.origin
@@ -741,6 +704,7 @@ document.addEventListener('submit', (event) => {
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+        closeWorkspaceNav()
         clearModalFrame()
     }
 })
