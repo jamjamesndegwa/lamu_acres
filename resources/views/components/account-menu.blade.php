@@ -55,9 +55,6 @@
             @else
                 <a href="{{ route('workspaces.index') }}" data-turbo-frame="_top" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Account &amp; workspaces</a>
             @endif
-            @if (count($workspaces) > 1 && $workspace === null)
-                <a id="switch-workspace" href="{{ route('workspaces.index') }}" data-turbo-frame="modal" onclick="this.closest('details')?.removeAttribute('open')" class="block rounded-lg px-3 py-2 text-sm hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Switch Workspace</a>
-            @endif
             <form method="POST" action="{{ route('logout') }}" data-turbo="false" data-confirm="Log out of Lamu Acres?" class="pt-1">
                 @csrf
                 <button type="submit" class="w-full rounded-full border border-lamu-900 px-3 py-2 text-sm font-medium text-lamu-900 hover:bg-lamu-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lamu-700">Logout</button>

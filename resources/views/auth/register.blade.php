@@ -60,17 +60,8 @@
                 <span>SMS me Lamu Acres news and land opportunities (requires a phone number)</span>
             </label>
         </fieldset>
-        <div>
-            <label for="password" class="block text-sm font-medium">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="new-password" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
-            @error('password')
-                <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
-            @enderror
-        </div>
-        <div>
-            <label for="password_confirmation" class="block text-sm font-medium">Confirm password</label>
-            <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
-        </div>
+        <x-password-field name="password" label="Password" required autocomplete="new-password" />
+        <x-password-field name="password_confirmation" label="Confirm password" required autocomplete="new-password" />
         <button type="submit" class="w-full rounded-full bg-lamu-900 px-4 py-3 text-sm font-medium text-white">{{ $selectedCapability ? 'Create account & continue to '.$selectedCapability.' application' : 'Create account' }}</button>
     </form>
 

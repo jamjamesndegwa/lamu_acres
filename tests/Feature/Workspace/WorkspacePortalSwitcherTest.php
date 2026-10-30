@@ -54,4 +54,17 @@ class WorkspacePortalSwitcherTest extends FoundationTestCase
 
         $this->assertSame('investor', session('workspace'));
     }
+
+    public function test_admin_workspace_account_menu_offers_switch_workspace(): void
+    {
+        $superAdmin = User::factory()->withRoles('super_admin')->create();
+
+        $this->actingAs($superAdmin)
+            ->withSession(['workspace' => 'admin'])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Switch workspace', false)
+            ->assertSee('Open Operations workspace', false)
+            ->assertSee(route('workspaces.index'), false);
+    }
 }

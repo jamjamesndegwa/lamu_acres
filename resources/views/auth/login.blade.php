@@ -24,13 +24,7 @@
                 <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
             @enderror
         </div>
-        <div>
-            <label for="password" class="block text-sm font-medium">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password" class="mt-2 h-12 w-full rounded-lg border border-sand-200 bg-white px-3 focus:border-lamu-800 focus:outline-none focus:ring-2 focus:ring-lamu-100">
-            @error('password')
-                <p class="mt-1 text-sm text-red-700">{{ $message }}</p>
-            @enderror
-        </div>
+        <x-password-field name="password" label="Password" required autocomplete="current-password" />
         <label class="flex items-center gap-2 text-sm">
             <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
             Remember me
