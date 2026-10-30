@@ -94,6 +94,7 @@ class SalesCreateContext
         return $property->owners
             ->filter(fn ($owner) => $owner->user !== null)
             ->map(fn ($owner) => [
+                'user_id' => $owner->user_id,
                 'name' => $owner->user->name,
                 'relationship' => $owner->relationship->label(),
                 'status' => $owner->status->label(),
@@ -303,6 +304,7 @@ class SalesCreateContext
     ): array {
         $suggestions = [
             'origin' => null,
+            'seller_id' => null,
             'enquiry_id' => null,
             'broker_introduction_id' => null,
             'sale_instruction_id' => null,
@@ -312,6 +314,7 @@ class SalesCreateContext
 
         if ($property !== null) {
             $suggestions['acreage'] = $property->remainingAcreage();
+            $suggestions['seller_id'] = $property->preferredSellerUserId();
         }
 
         $primaryOffer = $matchingOffers[0] ?? null;

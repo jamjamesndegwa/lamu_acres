@@ -184,7 +184,9 @@
         <article class="mt-6 rounded-2xl border border-sand-200 bg-white p-5">
             <h2 class="font-semibold text-lamu-900">{{ $transaction->property->title }}</h2>
             <p class="mt-2 text-sm text-stone-600">{{ $transaction->property->locationLabel() }}</p>
-            @php($stock = $transaction->property->inventorySnapshot())
+            @php
+                $stock = $transaction->property->inventorySnapshot();
+            @endphp
             @if ($transaction->property->acreage)
                 <p class="mt-1 text-sm">{{ number_format($stock['registered_acreage'], 2) }} acres registered · {{ number_format($stock['sold_acreage'], 2) }} sold · {{ number_format($stock['remaining_acreage'], 2) }} remaining · {{ number_format($stock['available_acreage'], 2) }} available to market</p>
             @endif
@@ -298,23 +300,10 @@
             @endforelse
         </ol>
 
-        <h2 class="mt-8 font-semibold text-lamu-900">Closing evidence</h2>
-        @php $closingEvidence = app(\App\Services\Sales\ClosingDesk::class)->evidenceCatalog($transaction); @endphp
-        @foreach ($closingEvidence as $code => $label)
-            @php $current = $transaction->evidence->firstWhere('code', $code); @endphp
-            <form method="POST" action="{{ route('staff.sales.evidence', $transaction) }}" data-turbo-frame="_top" data-confirm="Update this closing document?" class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                @csrf
-                <input type="hidden" name="code" value="{{ $code }}">
-                <span class="w-40">{{ $label }}</span>
-                <span class="text-stone-500">{{ $current?->state?->label() ?? 'Not recorded' }}</span>
-                <select name="state" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
-                    @foreach (\App\Enums\ClosingEvidenceState::cases() as $state)
-                        <option value="{{ $state->value }}" @selected($current?->state === $state)>{{ $state->label() }}</option>
-                    @endforeach
-                </select>
-                <button class="rounded-full border border-sand-200 px-4 py-2">Save</button>
-            </form>
-        @endforeach
+        @include('staff.sales.partials.closing-evidence', [
+            'transaction' => $transaction,
+            'evidenceCatalog' => $evidenceCatalog,
+        ])
 
         <h2 class="mt-8 font-semibold text-lamu-900">{{ $transaction->isLeaseDeal() ? 'Confirm lease commercially' : 'Complete transaction' }}</h2>
         @if ($transaction->stage === \App\Enums\SalesStage::CompletionPending)
@@ -348,7 +337,7 @@
         @if (auth()->user()->hasPermission('agency.propose'))
             <form method="POST" action="{{ route('staff.agency-fees.store', $transaction) }}" data-turbo-frame="_top" class="mt-3 grid max-w-xl gap-2">
                 @csrf
-                <input type="hidden" name="seller_id" value="{{ $transaction->property->owners()->where('status', \App\Enums\OwnerLinkStatus::Verified)->value('user_id') }}">
+                <input type="hidden" name="seller_id" value="{{ $transaction->property->preferredSellerUserId() }}">
                 <select name="fee_payer" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
                     <option value="seller">Seller pays</option>
                     <option value="buyer">Buyer pays</option>

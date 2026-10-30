@@ -4,6 +4,7 @@ namespace Tests\Feature\Sales;
 
 use App\Enums\PropertyStatus;
 use App\Enums\SaleMode;
+use App\Enums\SalesOrigin;
 use App\Enums\SalesStage;
 use App\Models\Enquiry;
 use App\Models\Property;
@@ -108,5 +109,26 @@ class SalesPipelineTest extends FoundationTestCase
             ->assertRedirect();
 
         $this->assertNull(SalesTransaction::query()->where('sale_instruction_id', $instruction->id)->first()->buyer_id);
+    }
+
+    public function test_sales_show_closing_tab_lists_evidence_catalog(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $property = Property::factory()->published()->create();
+        $transaction = SalesTransaction::query()->create([
+            'reference' => 'ST-TEST0001',
+            'property_id' => $property->id,
+            'origin' => SalesOrigin::Listed,
+            'stage' => SalesStage::CompletionPending,
+            'acreage' => 5,
+            'lock_version' => 0,
+            'opened_at' => now(),
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('staff.sales.show', $transaction).'?tab=closing')
+            ->assertOk()
+            ->assertSee('Closing evidence')
+            ->assertSee('Transfer instrument');
     }
 }

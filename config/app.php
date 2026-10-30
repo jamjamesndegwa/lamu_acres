@@ -43,6 +43,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Friendly error pages
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, web requests that fail with a server error show the branded
+    | errors/500 view instead of the debug exception page (even if APP_DEBUG
+    | is true). JSON and API requests are unaffected.
+    |
+    */
+
+    'friendly_error_pages' => (bool) env('FRIENDLY_ERROR_PAGES', ! env('APP_DEBUG', false)),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

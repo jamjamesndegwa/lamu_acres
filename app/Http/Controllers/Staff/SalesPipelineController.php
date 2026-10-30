@@ -12,8 +12,11 @@ use App\Models\BrokerIntroduction;
 use App\Models\CommissionPolicy;
 use App\Models\Enquiry;
 use App\Models\Property;
+use App\Models\SaleInstruction;
 use App\Models\SalesTransaction;
+use App\Models\SourcingRequest;
 use App\Models\User;
+use App\Services\Sales\ClosingDesk;
 use App\Services\Sales\SalesCreateContext;
 use App\Services\Sales\SalesPipeline;
 use App\Services\Sales\SalesReassessment;
@@ -52,10 +55,18 @@ class SalesPipelineController extends Controller
         return view('staff.sales.create', [
             'origins' => SalesOrigin::cases(),
             'agents' => User::permission('staff.sales')->orderBy('name')->get(['id', 'name']),
-            'properties' => Property::query()->orderBy('title')->limit(200)->get(['id', 'title', 'status']),
+            'properties' => Property::query()
+                ->with(['owners.user:id,name'])
+                ->orderBy('title')
+                ->limit(200)
+                ->get([
+                    'id', 'title', 'status', 'parent_id', 'acreage', 'offered_acreage', 'minimum_acreage',
+                ]),
             'buyers' => User::role('buyer')->orderBy('name')->limit(200)->get(['id', 'name']),
             'enquiries' => Enquiry::query()->with('property:id,title')->latest()->limit(100)->get(),
             'introductions' => BrokerIntroduction::query()->latest()->limit(100)->get(['id', 'reference', 'buyer_name']),
+            'sourcingRequests' => SourcingRequest::query()->with('buyer:id,name')->latest()->limit(100)->get(['id', 'reference', 'buyer_id']),
+            'saleInstructions' => SaleInstruction::query()->with(['property:id,title', 'seller:id,name'])->latest()->limit(100)->get(['id', 'property_id', 'seller_id', 'kind']),
         ]);
     }
 
@@ -91,12 +102,7 @@ class SalesPipelineController extends Controller
                 Rule::exists('users', 'id'),
                 Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Offer),
             ],
-            'enquiry_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('enquiries', 'id'),
-                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Enquiry),
-            ],
+            'enquiry_id' => ['nullable', 'integer', Rule::exists('enquiries', 'id')],
             'sourcing_request_id' => [
                 'nullable',
                 'integer',
@@ -109,12 +115,7 @@ class SalesPipelineController extends Controller
                 Rule::exists('broker_introductions', 'id'),
                 Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Introduction),
             ],
-            'sale_instruction_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('sale_instructions', 'id'),
-                Rule::requiredIf(fn (): bool => $request->enum('origin', SalesOrigin::class) === SalesOrigin::Instruction),
-            ],
+            'sale_instruction_id' => ['nullable', 'integer', Rule::exists('sale_instructions', 'id')],
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'acreage' => ['nullable', 'numeric', 'gt:0'],
         ]);
@@ -183,6 +184,7 @@ class SalesPipelineController extends Controller
             'canProposeCommission' => $request->user()->hasPermission('commissions.propose'),
             'commissionPolicy' => CommissionPolicy::forDeal($salesTransaction),
             'agencyFeePolicy' => AgencyFeePolicy::forDeal($salesTransaction),
+            'evidenceCatalog' => app(ClosingDesk::class)->evidenceCatalog($salesTransaction),
         ]);
     }
 

@@ -6,6 +6,7 @@ use App\Enums\OfferStatus;
 use App\Enums\OwnerLinkStatus;
 use App\Enums\OwnerRelationship;
 use App\Enums\SaleMode;
+use App\Enums\SalesOrigin;
 use App\Models\Enquiry;
 use App\Models\Offer;
 use App\Models\Property;
@@ -61,6 +62,8 @@ class SalesCreateContextTest extends FoundationTestCase
         $context = app(SalesCreateContext::class)->assemble($property->id, $buyer->id, null);
 
         $this->assertSame('Plot Owner', $context['sellers'][0]['name']);
+        $this->assertSame($seller->id, $context['sellers'][0]['user_id']);
+        $this->assertSame($seller->id, $context['suggestions']['seller_id']);
         $this->assertCount(1, $context['matching_offers']);
         $this->assertSame(3_500_000, $context['matching_offers'][0]['amount']);
         $this->assertSame('offer', $context['suggestions']['origin']);
@@ -85,10 +88,28 @@ class SalesCreateContextTest extends FoundationTestCase
             ->get(route('staff.sales.create'))
             ->assertOk()
             ->assertSee('Deal intelligence')
-            ->assertSee('data-sales-create', false);
+            ->assertSee('data-sales-create', false)
+            ->assertSee('data-sales-create-seller', false);
     }
 
-    public function test_opening_from_enquiry_origin_without_enquiry_shows_validation_not_404(): void
+    public function test_opening_listed_property_sale_without_linked_records(): void
+    {
+        $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
+        $property = Property::factory()->published()->create();
+
+        $this->actingAs($staff)
+            ->post(route('staff.sales.store'), [
+                'origin' => SalesOrigin::Listed->value,
+                'property_id' => $property->id,
+            ])
+            ->assertRedirect();
+
+        $transaction = SalesTransaction::query()->firstOrFail();
+        $this->assertSame(SalesOrigin::Listed, $transaction->origin);
+        $this->assertNull($transaction->sale_instruction_id);
+    }
+
+    public function test_opening_from_enquiry_origin_without_enquiry_opens_transaction(): void
     {
         $staff = User::factory()->withRoles('staff')->withPermissions('staff.sales')->create();
         $property = Property::factory()->published()->create();
@@ -99,9 +120,11 @@ class SalesCreateContextTest extends FoundationTestCase
                 'origin' => 'enquiry',
                 'property_id' => $property->id,
             ])
-            ->assertRedirect(route('staff.sales.create'))
-            ->assertSessionHasErrors('enquiry_id');
+            ->assertRedirect();
 
-        $this->assertSame(0, SalesTransaction::query()->count());
+        $this->assertSame(1, SalesTransaction::query()->count());
+        $transaction = SalesTransaction::query()->firstOrFail();
+        $this->assertNull($transaction->enquiry_id);
+        $this->assertNull($transaction->buyer_id);
     }
 }

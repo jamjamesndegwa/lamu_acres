@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -61,6 +62,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (Throwable $exception, Request $request) {
+            if (! config('app.friendly_error_pages') || $request->expectsJson()) {
+                return null;
+            }
+
+            $status = $exception instanceof HttpExceptionInterface
+                ? $exception->getStatusCode()
+                : 500;
+
+            if ($status !== 500) {
+                return null;
+            }
+
+            return response()->view('errors.500', [], 500);
+        });
 
         $exceptions->render(function (TokenMismatchException $exception, Request $request) {
             if ($request->expectsJson()) {

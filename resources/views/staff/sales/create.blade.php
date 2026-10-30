@@ -1,5 +1,5 @@
 <x-crud-page title="Create sale" :close="route('staff.sales.index')" size="xl">
-    <p class="mt-3 max-w-2xl text-sm text-stone-600">Link the buyer, the property, and the enquiry or referral that opened the deal. Opening a transaction does not complete a sale.</p>
+    <p class="mt-3 max-w-2xl text-sm text-stone-600">Choose the listed property and link a buyer or supporting records when you have them. Opening a transaction does not complete a sale.</p>
     @if ($errors->any())
         <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p class="font-medium">This transaction could not be opened.</p>
@@ -25,7 +25,7 @@
             <label class="block text-sm font-medium text-stone-700">Origin
                 <select name="origin" data-sales-create-field data-sales-create-suggest="origin" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2" required>
                     @foreach ($origins as $origin)
-                        <option value="{{ $origin->value }}">{{ $origin->label() }}</option>
+                        <option value="{{ $origin->value }}" @selected(old('origin', \App\Enums\SalesOrigin::Listed->value) === $origin->value)>{{ $origin->label() }}</option>
                     @endforeach
                 </select>
             </label>
@@ -33,9 +33,23 @@
                 <select name="property_id" data-sales-create-field required class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
                     <option value="">Select a property</option>
                     @foreach ($properties as $property)
-                        <option value="{{ $property->id }}">{{ $property->title }} · {{ $property->status->label() }}</option>
+                        @php($sellerOptions = $property->sellerDeskOptions())
+                        <option
+                            value="{{ $property->id }}"
+                            data-remaining-acreage="{{ $property->remainingAcreage() }}"
+                            data-offered-acreage="{{ $property->offered_acreage }}"
+                            data-minimum-acreage="{{ $property->minimum_acreage }}"
+                            data-sellers="{{ e(json_encode($sellerOptions)) }}"
+                            data-preferred-seller-id="{{ $property->preferredSellerUserId() }}"
+                        >{{ $property->title }} · {{ $property->status->label() }}</option>
                     @endforeach
                 </select>
+            </label>
+            <label class="block text-sm font-medium text-stone-700">Seller
+                <select data-sales-create-seller data-sales-create-suggest="seller_id" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2" aria-label="Seller on this property">
+                    <option value="">Select a property first</option>
+                </select>
+                <p class="mt-1 text-xs text-stone-500">Filled from verified owners on the selected listing. Choose another owner if several are linked.</p>
             </label>
             <label class="block text-sm font-medium text-stone-700">Buyer
                 <select name="buyer_id" data-sales-create-field class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -49,7 +63,7 @@
                 <select name="enquiry_id" data-sales-create-suggest="enquiry_id" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
                     <option value="">None</option>
                     @foreach ($enquiries as $enquiry)
-                        <option value="{{ $enquiry->id }}">Enquiry {{ $enquiry->id }}{{ $enquiry->property ? ' · '.$enquiry->property->title : '' }}</option>
+                        <option value="{{ $enquiry->id }}" data-property-id="{{ $enquiry->property_id }}">Enquiry {{ $enquiry->id }}{{ $enquiry->property ? ' · '.$enquiry->property->title : '' }}</option>
                     @endforeach
                 </select>
             </label>
@@ -61,14 +75,26 @@
                     @endforeach
                 </select>
             </label>
-            <label class="block text-sm font-medium text-stone-700">Sourcing request id
-                <input name="sourcing_request_id" placeholder="Sourcing request id" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+            <label class="block text-sm font-medium text-stone-700">Sourcing request
+                <select name="sourcing_request_id" data-sales-create-suggest="sourcing_request_id" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="">None</option>
+                    @foreach ($sourcingRequests as $sourcingRequest)
+                        <option value="{{ $sourcingRequest->id }}">{{ $sourcingRequest->reference }} · {{ $sourcingRequest->buyer?->name ?? 'Buyer' }}</option>
+                    @endforeach
+                </select>
             </label>
-            <label class="block text-sm font-medium text-stone-700">Sale instruction id
-                <input name="sale_instruction_id" data-sales-create-suggest="sale_instruction_id" placeholder="Sale instruction id" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+            <label class="block text-sm font-medium text-stone-700">Sale instruction
+                <select name="sale_instruction_id" data-sales-create-suggest="sale_instruction_id" data-sales-create-field class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="">None</option>
+                    @foreach ($saleInstructions as $instruction)
+                        <option value="{{ $instruction->id }}" data-property-id="{{ $instruction->property_id }}">#{{ $instruction->id }} · {{ $instruction->property?->title ?? 'Property' }}{{ $instruction->seller ? ' · '.$instruction->seller->name : '' }} · {{ $instruction->kind }}</option>
+                    @endforeach
+                </select>
             </label>
             <label class="block text-sm font-medium text-stone-700">Acreage
-                <input name="acreage" data-sales-create-suggest="acreage" placeholder="Acreage" class="mt-1 w-full rounded-lg border border-sand-200 px-3 py-2">
+                <select name="acreage" data-sales-create-suggest="acreage" data-sales-create-acreage class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
+                    <option value="">Default (remaining on property)</option>
+                </select>
             </label>
             <label class="block text-sm font-medium text-stone-700">Agent
                 <select name="assigned_to" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">

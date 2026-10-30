@@ -818,6 +818,11 @@ document.addEventListener('turbo:frame-load', (event) => {
     if (event.target instanceof HTMLElement) {
         bindPurchasePricing(event.target)
         if (event.target.id === 'sales-create-context') {
+            const form = event.target.closest('form[data-sales-create]')
+            if (form instanceof HTMLFormElement) {
+                refreshSalesCreateSellerOptions(form)
+                refreshSalesCreateAcreageOptions(form)
+            }
             applySalesCreateSuggestions(event.target.closest('form[data-sales-create]'), event.target)
         }
     }
@@ -833,6 +838,107 @@ function salesCreateParams(form) {
     if (origin) params.set('origin', origin)
 
     return params
+}
+
+function refreshSalesCreateSellerOptions(form) {
+    const propertySelect = form.querySelector('[name="property_id"]')
+    const sellerSelect = form.querySelector('[data-sales-create-seller]')
+    if (!(propertySelect instanceof HTMLSelectElement) || !(sellerSelect instanceof HTMLSelectElement)) {
+        return
+    }
+
+    const selected = propertySelect.selectedOptions[0]
+    sellerSelect.innerHTML = ''
+
+    if (!(selected instanceof HTMLOptionElement) || selected.value === '') {
+        const placeholder = document.createElement('option')
+        placeholder.value = ''
+        placeholder.textContent = 'Select a property first'
+        sellerSelect.appendChild(placeholder)
+
+        return
+    }
+
+    let sellers = []
+    try {
+        sellers = JSON.parse(selected.dataset.sellers || '[]')
+    } catch {
+        sellers = []
+    }
+
+    if (sellers.length === 0) {
+        const empty = document.createElement('option')
+        empty.value = ''
+        empty.textContent = 'No owner linked on this property'
+        sellerSelect.appendChild(empty)
+
+        return
+    }
+
+    const placeholder = document.createElement('option')
+    placeholder.value = ''
+    placeholder.textContent = 'Select seller'
+    sellerSelect.appendChild(placeholder)
+
+    sellers.forEach((seller) => {
+        const option = document.createElement('option')
+        option.value = String(seller.id)
+        option.textContent = `${seller.name} · ${seller.relationship} · ${seller.status}`
+        sellerSelect.appendChild(option)
+    })
+
+    const preferred = selected.dataset.preferredSellerId
+    if (preferred && [...sellerSelect.options].some((option) => option.value === preferred)) {
+        sellerSelect.value = preferred
+    } else if (sellers.length === 1) {
+        sellerSelect.value = String(sellers[0].id)
+    }
+}
+
+function refreshSalesCreateAcreageOptions(form) {
+    const propertySelect = form.querySelector('[name="property_id"]')
+    const acreageSelect = form.querySelector('[data-sales-create-acreage]')
+    if (!(propertySelect instanceof HTMLSelectElement) || !(acreageSelect instanceof HTMLSelectElement)) {
+        return
+    }
+
+    const selected = propertySelect.selectedOptions[0]
+    const previous = acreageSelect.value
+    acreageSelect.querySelectorAll('option:not([value=""])').forEach((option) => option.remove())
+
+    const addOption = (value, label) => {
+        if (!value || Number.isNaN(Number(value)) || Number(value) <= 0) {
+            return
+        }
+        const option = document.createElement('option')
+        option.value = String(value)
+        option.textContent = label
+        acreageSelect.appendChild(option)
+    }
+
+    if (selected instanceof HTMLOptionElement && selected.value !== '') {
+        addOption(selected.dataset.remainingAcreage, `${selected.dataset.remainingAcreage} acres (remaining)`)
+        addOption(selected.dataset.offeredAcreage, `${selected.dataset.offeredAcreage} acres (listed offer)`)
+        addOption(selected.dataset.minimumAcreage, `${selected.dataset.minimumAcreage} acres (minimum partial)`)
+    }
+
+    if (previous !== '' && [...acreageSelect.options].some((option) => option.value === previous)) {
+        acreageSelect.value = previous
+    }
+}
+
+function filterSalesCreatePropertyLinks(form) {
+    const propertyId = form.querySelector('[name="property_id"]')?.value
+    form.querySelectorAll('[data-property-id]').forEach((option) => {
+        if (!(option instanceof HTMLOptionElement)) {
+            return
+        }
+        const matches = !propertyId || option.dataset.propertyId === propertyId
+        option.hidden = !matches
+        if (!matches && option.selected) {
+            option.parentElement.value = ''
+        }
+    })
 }
 
 function refreshSalesCreateContext(form) {
@@ -864,7 +970,19 @@ function applySalesCreateSuggestions(form, frameRoot) {
 
         if (field instanceof HTMLSelectElement || field instanceof HTMLInputElement) {
             if (field.value !== '') return
-            field.value = String(value)
+
+            const stringValue = String(value)
+            if (field instanceof HTMLSelectElement && field.dataset.salesCreateAcreage !== undefined) {
+                const hasOption = [...field.options].some((option) => option.value === stringValue)
+                if (!hasOption && stringValue !== '') {
+                    const option = document.createElement('option')
+                    option.value = stringValue
+                    option.textContent = `${stringValue} acres (suggested)`
+                    field.appendChild(option)
+                }
+            }
+
+            field.value = stringValue
         }
     })
 }
@@ -875,7 +993,12 @@ function bindSalesCreateContext(root = document) {
         form.dataset.salesCreateBound = 'true'
 
         form.querySelectorAll('[data-sales-create-field]').forEach((field) => {
-            field.addEventListener('change', () => refreshSalesCreateContext(form))
+            field.addEventListener('change', () => {
+                refreshSalesCreateSellerOptions(form)
+                refreshSalesCreateAcreageOptions(form)
+                filterSalesCreatePropertyLinks(form)
+                refreshSalesCreateContext(form)
+            })
         })
 
         form.addEventListener('click', (event) => {
@@ -889,6 +1012,9 @@ function bindSalesCreateContext(root = document) {
             refreshSalesCreateContext(form)
         })
 
+        refreshSalesCreateSellerOptions(form)
+        refreshSalesCreateAcreageOptions(form)
+        filterSalesCreatePropertyLinks(form)
         refreshSalesCreateContext(form)
     })
 }

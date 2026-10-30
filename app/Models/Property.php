@@ -8,6 +8,8 @@ use App\Enums\LandUse;
 use App\Enums\ListingPurpose;
 use App\Enums\MarketingRole;
 use App\Enums\OccupationStatus;
+use App\Enums\OwnerLinkStatus;
+use App\Enums\OwnerRelationship;
 use App\Enums\OwnershipStructure;
 use App\Enums\ParcelReferenceType;
 use App\Enums\PriceBasis;
@@ -28,6 +30,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 #[Fillable([
     'reference',
@@ -578,6 +581,47 @@ class Property extends Model
     public function owners(): HasMany
     {
         return $this->hasMany(PropertyOwner::class);
+    }
+
+    /**
+     * @return Collection<int, PropertyOwner>
+     */
+    public function sellerFacingOwners(): Collection
+    {
+        return $this->owners
+            ->filter(fn (PropertyOwner $owner): bool => $owner->user_id !== null
+                && in_array($owner->relationship, OwnerRelationship::sellerFacing(), true));
+    }
+
+    public function preferredSellerUserId(): ?int
+    {
+        $owners = $this->sellerFacingOwners();
+        if ($owners->isEmpty()) {
+            return $this->owners->first(fn (PropertyOwner $owner): bool => $owner->user_id !== null)?->user_id;
+        }
+
+        $verified = $owners->filter(fn (PropertyOwner $owner): bool => $owner->status === OwnerLinkStatus::Verified);
+        $pool = $verified->isNotEmpty() ? $verified : $owners;
+
+        return $pool->first(fn (PropertyOwner $owner): bool => $owner->relationship === OwnerRelationship::Owner)?->user_id
+            ?? $pool->first()?->user_id;
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, relationship: string, status: string}>
+     */
+    public function sellerDeskOptions(): array
+    {
+        return $this->owners
+            ->filter(fn (PropertyOwner $owner): bool => $owner->user !== null)
+            ->map(fn (PropertyOwner $owner): array => [
+                'id' => (int) $owner->user_id,
+                'name' => (string) $owner->user->name,
+                'relationship' => $owner->relationship->label(),
+                'status' => $owner->status->label(),
+            ])
+            ->values()
+            ->all();
     }
 
     public function ownershipDocuments(): HasMany

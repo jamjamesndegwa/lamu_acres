@@ -4,6 +4,8 @@ namespace App\Enums;
 
 enum SalesOrigin: string
 {
+    case Listed = 'listed';
+
     case Enquiry = 'enquiry';
     case Sourcing = 'sourcing';
     case Introduction = 'introduction';
@@ -13,6 +15,7 @@ enum SalesOrigin: string
     public function label(): string
     {
         return match ($this) {
+            self::Listed => 'Listed property',
             self::Enquiry => 'Buyer enquiry',
             self::Sourcing => 'Buyer sourcing request',
             self::Introduction => 'Broker introduction',

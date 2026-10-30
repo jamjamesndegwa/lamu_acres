@@ -426,10 +426,10 @@ class SalesPipeline
             'sale_instruction_id' => null,
         ];
 
-        if ($origin === SalesOrigin::Enquiry) {
-            $enquiry = Enquiry::query()->find($data['enquiry_id'] ?? null);
+        if ($origin === SalesOrigin::Enquiry && filled($data['enquiry_id'] ?? null)) {
+            $enquiry = Enquiry::query()->find($data['enquiry_id']);
             if ($enquiry === null) {
-                throw ValidationException::withMessages(['enquiry_id' => 'Select the enquiry that opened this sale.']);
+                throw ValidationException::withMessages(['enquiry_id' => 'Select a valid enquiry.']);
             }
             $this->sameProperty($enquiry->property_id, $property->id, 'enquiry_id');
             $links['enquiry_id'] = $enquiry->id;
@@ -439,7 +439,7 @@ class SalesPipeline
         if ($origin === SalesOrigin::Sourcing) {
             $request = SourcingRequest::query()->find($data['sourcing_request_id'] ?? null);
             if ($request === null) {
-                throw ValidationException::withMessages(['sourcing_request_id' => 'Enter a valid sourcing request id.']);
+                throw ValidationException::withMessages(['sourcing_request_id' => 'Select the sourcing request for this sale.']);
             }
             $links['sourcing_request_id'] = $request->id;
             $links['buyer_id'] = $request->buyer_id;
@@ -457,10 +457,10 @@ class SalesPipeline
             $links['buyer_id'] = $introduction->buyer_id ?: $links['buyer_id'];
         }
 
-        if ($origin === SalesOrigin::Instruction) {
-            $instruction = SaleInstruction::query()->find($data['sale_instruction_id'] ?? null);
+        if ($origin === SalesOrigin::Instruction && filled($data['sale_instruction_id'] ?? null)) {
+            $instruction = SaleInstruction::query()->find($data['sale_instruction_id']);
             if ($instruction === null) {
-                throw ValidationException::withMessages(['sale_instruction_id' => 'Enter a valid sale instruction id.']);
+                throw ValidationException::withMessages(['sale_instruction_id' => 'Select a valid seller instruction.']);
             }
             $this->sameProperty($instruction->property_id, $property->id, 'sale_instruction_id');
             $links['sale_instruction_id'] = $instruction->id;
@@ -484,7 +484,9 @@ class SalesPipeline
             }
         }
 
-        if ($origin !== SalesOrigin::Instruction && $links['buyer_id'] === null) {
+        $buyerOptional = in_array($origin, [SalesOrigin::Listed, SalesOrigin::Instruction, SalesOrigin::Enquiry], true);
+
+        if (! $buyerOptional && $links['buyer_id'] === null) {
             throw ValidationException::withMessages(['buyer_id' => 'Link the buyer who is party to this sale.']);
         }
 
