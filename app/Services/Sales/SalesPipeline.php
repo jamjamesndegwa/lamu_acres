@@ -2,6 +2,8 @@
 
 namespace App\Services\Sales;
 
+use App\Enums\DealKind;
+use App\Enums\RentFrequency;
 use App\Enums\SalesOrigin;
 use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
@@ -15,12 +17,15 @@ use App\Models\User;
 use App\Notifications\TemplatedDeskNotification;
 use App\Notifications\WorkAssignedNotification;
 use App\Services\Communications\SalesFinanceNotifier;
+use App\Services\Inventory\PropertyInventory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class SalesPipeline
 {
+    public function __construct(private LeaseCommercialTerms $leaseTerms) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -33,8 +38,15 @@ class SalesPipeline
         $acreage = (float) ($data['acreage'] ?? $property->remainingAcreage());
         app(SaleModeTerms::class)->validateTransactionAcreage($property, $acreage);
 
+        if ($property->isLease()) {
+            throw ValidationException::withMessages([
+                'property_id' => 'Open a lease deal file for lease listings instead of a sale transaction.',
+            ]);
+        }
+
         $transaction = SalesTransaction::query()->create([
             'reference' => $this->reference(),
+            'deal_kind' => DealKind::Sale,
             'property_id' => $property->id,
             'buyer_id' => $links['buyer_id'],
             'origin' => $origin,
@@ -64,6 +76,69 @@ class SalesPipeline
         }
 
         return $transaction;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function openLease(User $actor, array $data): SalesTransaction
+    {
+        $origin = SalesOrigin::from((string) $data['origin']);
+        $property = Property::query()->findOrFail($data['property_id']);
+
+        if (! $property->isLease()) {
+            throw ValidationException::withMessages([
+                'property_id' => 'Choose a lease listing to open a lease deal.',
+            ]);
+        }
+
+        $buyerId = $data['buyer_id'] ?? null;
+        $links = $this->links($origin, $property, $buyerId, $data);
+        $acreage = round((float) ($data['acreage'] ?? $property->offeredAcreage()), 4);
+        app(PropertyInventory::class)->assertLeaseAcreageAvailable($property, $acreage);
+
+        $transaction = SalesTransaction::query()->create([
+            'reference' => $this->reference(),
+            'deal_kind' => DealKind::Lease,
+            'property_id' => $property->id,
+            'buyer_id' => $links['buyer_id'],
+            'origin' => $origin,
+            'enquiry_id' => $links['enquiry_id'],
+            'sourcing_request_id' => $links['sourcing_request_id'],
+            'broker_introduction_id' => $links['broker_introduction_id'],
+            'sale_instruction_id' => $links['sale_instruction_id'],
+            'assigned_to' => $data['assigned_to'] ?? $actor->id,
+            'stage' => SalesStage::Enquiry,
+            'acreage' => $acreage,
+            'lock_version' => 0,
+            'opened_at' => now(),
+        ]);
+
+        $this->timeline($transaction, $actor, 'Lease deal opened from '.$origin->label().'.', true);
+        $this->audit($transaction, $actor, 'lease_opened', ['origin' => $origin->value]);
+        $assignee = User::query()->find($transaction->assigned_to);
+        if ($assignee !== null && ! $assignee->is($actor) && $assignee->hasPermission('staff.sales')) {
+            $assignee->notify(new WorkAssignedNotification('Lease deal', $transaction->id, route('staff.sales.show', $transaction)));
+        }
+
+        return $transaction;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function updateLeaseCommercialTerms(SalesTransaction $transaction, User $actor, int $version, array $data): SalesTransaction
+    {
+        return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($data, $actor): void {
+            $this->guardOpen($locked);
+            $this->leaseTerms->applyCommercialTerms($locked, $data);
+            app(PropertyInventory::class)->assertLeaseAcreageAvailable($locked->property, (float) $locked->acreage);
+            $this->timeline($locked, $actor, 'Lease commercial terms updated.', true);
+            $this->audit($locked, $actor, 'lease_terms_updated', [
+                'agreed_rent' => $locked->agreed_rent,
+                'rent_frequency' => $locked->rent_frequency instanceof RentFrequency ? $locked->rent_frequency->value : $locked->rent_frequency,
+            ]);
+        });
     }
 
     public function assign(SalesTransaction $transaction, User $agent, User $actor, int $version): SalesTransaction
@@ -180,6 +255,11 @@ class SalesPipeline
     {
         return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($price, $actor): void {
             $this->guardOpen($locked);
+            if ($locked->isLeaseDeal()) {
+                throw ValidationException::withMessages([
+                    'agreed_price' => 'Lease deals record agreed rent instead of a sale price.',
+                ]);
+            }
             $locked->agreed_price = $price;
             $this->timeline($locked, $actor, 'Agreed price recorded as KSh '.number_format($price).'.', true);
             $this->audit($locked, $actor, 'price_agreed', ['agreed_price' => $price]);
@@ -196,15 +276,26 @@ class SalesPipeline
         return $this->mutate($transaction, $version, function (SalesTransaction $locked) use ($acreage, $actor): void {
             $this->guardOpen($locked);
             $requested = round($acreage, 4);
-            $remaining = round($locked->property->remainingAcreage(), 4);
 
-            if ($requested <= 0 || $requested > $remaining + 0.0001) {
-                throw ValidationException::withMessages([
-                    'acreage' => 'The agreed acreage cannot exceed the land still held.',
-                ]);
+            if ($locked->isLeaseDeal()) {
+                app(PropertyInventory::class)->assertLeaseAcreageAvailable($locked->property, $requested);
+                $offered = round($locked->property->offeredAcreage(), 4);
+                if ($requested <= 0 || $requested > $offered + 0.0001) {
+                    throw ValidationException::withMessages([
+                        'acreage' => 'The leased area cannot be larger than the acreage offered.',
+                    ]);
+                }
+            } else {
+                $remaining = round($locked->property->remainingAcreage(), 4);
+
+                if ($requested <= 0 || $requested > $remaining + 0.0001) {
+                    throw ValidationException::withMessages([
+                        'acreage' => 'The agreed acreage cannot exceed the land still held.',
+                    ]);
+                }
+
+                app(SaleModeTerms::class)->validateTransactionAcreage($locked->property->fresh(), $requested);
             }
-
-            app(SaleModeTerms::class)->validateTransactionAcreage($locked->property->fresh(), $requested);
 
             $locked->acreage = $requested;
             $this->timeline($locked, $actor, 'Agreed acreage recorded as '.rtrim(rtrim(number_format($requested, 4, '.', ''), '0'), '.').' acres.', true);

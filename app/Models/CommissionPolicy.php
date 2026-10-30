@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionFunding;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -10,10 +11,14 @@ class CommissionPolicy extends Model
 {
     public const DEFAULT = 'default';
 
+    public const LEASE_DEFAULT = 'lease_default';
+
     protected $fillable = [
         'code',
         'name',
+        'default_calculation_basis',
         'default_rate_percent',
+        'default_monthly_rent_multiplier',
         'default_fixed_amount',
         'default_funding_party',
         'default_payment_due_days',
@@ -26,6 +31,7 @@ class CommissionPolicy extends Model
     {
         return [
             'default_rate_percent' => 'decimal:2',
+            'default_monthly_rent_multiplier' => 'decimal:2',
             'default_fixed_amount' => 'integer',
             'default_payment_due_days' => 'integer',
             'default_protection_months' => 'integer',
@@ -36,6 +42,23 @@ class CommissionPolicy extends Model
     public static function standard(): self
     {
         return self::query()->where('code', self::DEFAULT)->firstOrFail();
+    }
+
+    public static function leaseStandard(): self
+    {
+        return self::query()->where('code', self::LEASE_DEFAULT)->firstOrFail();
+    }
+
+    public static function forDeal(SalesTransaction $transaction): self
+    {
+        return $transaction->isLeaseDeal() ? self::leaseStandard() : self::standard();
+    }
+
+    public function calculationBasis(): CommissionCalculationBasis
+    {
+        $basis = $this->default_calculation_basis ?? CommissionCalculationBasis::AgreedSalePrice->value;
+
+        return CommissionCalculationBasis::from($basis);
     }
 
     public function fundingParty(): CommissionFunding
@@ -54,8 +77,10 @@ class CommissionPolicy extends Model
     public function proposalDefaults(): array
     {
         return [
+            'calculation_basis' => $this->default_calculation_basis ?? CommissionCalculationBasis::AgreedSalePrice->value,
             'rate_percent' => $this->default_rate_percent,
             'fixed_amount' => $this->default_fixed_amount,
+            'monthly_rent_multiplier' => $this->default_monthly_rent_multiplier,
             'funding_party' => $this->default_funding_party,
             'payment_due_days' => $this->default_payment_due_days,
             'protection_ends_at' => $this->defaultProtectionEndsAt()->toDateString(),

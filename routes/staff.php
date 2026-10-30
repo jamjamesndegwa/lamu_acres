@@ -216,6 +216,8 @@ Route::middleware(['auth', 'private.cache', 'workspace:staff'])
             Route::post('/sales/{salesTransaction}/closing', [ClosingController::class, 'review'])->name('sales.closing');
             Route::post('/sales/{salesTransaction}/evidence', [ClosingController::class, 'evidence'])->name('sales.evidence');
             Route::post('/sales/{salesTransaction}/completion', [ClosingController::class, 'complete'])->name('sales.complete');
+            Route::post('/sales/{salesTransaction}/lease-confirmation', [ClosingController::class, 'confirmLease'])->name('sales.lease.confirm');
+            Route::post('/sales/leases', [SalesPipelineController::class, 'storeLease'])->name('sales.leases.store');
             Route::post('/sales/{salesTransaction}/commission', [CommissionAgreementController::class, 'store'])->name('commissions.store');
             Route::post('/sales/{salesTransaction}/agency-fee', [AgencyFeeAgreementController::class, 'store'])->name('agency-fees.store');
         });

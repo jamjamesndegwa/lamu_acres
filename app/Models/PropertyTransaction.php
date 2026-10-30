@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'reference',
     'property_id',
+    'sales_transaction_id',
     'status',
     'amount',
     'statement',
@@ -37,6 +38,11 @@ class PropertyTransaction extends Model
             'confirmed_at' => 'datetime',
             'ended_at' => 'datetime',
         ];
+    }
+
+    public function salesTransaction(): BelongsTo
+    {
+        return $this->belongsTo(SalesTransaction::class);
     }
 
     public function property(): BelongsTo

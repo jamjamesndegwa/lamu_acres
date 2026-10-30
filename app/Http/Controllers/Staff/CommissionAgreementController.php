@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionFunding;
 use App\Http\Controllers\Controller;
 use App\Models\CommissionAgreement;
@@ -31,7 +32,9 @@ class CommissionAgreementController extends Controller
             'broker_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'buyer_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'monthly_rent_multiplier' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'fixed_amount' => ['nullable', 'integer', 'min:0'],
+            'calculation_basis' => ['nullable', Rule::enum(CommissionCalculationBasis::class)],
             'funding_party' => ['required', Rule::enum(CommissionFunding::class)],
             'protection_ends_at' => ['required', 'date', 'after:today'],
             'payment_due_days' => ['nullable', 'integer', 'min:0', 'max:365'],

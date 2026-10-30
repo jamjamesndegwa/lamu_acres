@@ -19,7 +19,7 @@
 @endphp
 
 <x-workspace-layout :heading="$transaction->reference">
-    <p class="mt-3 text-sm text-stone-600">{{ $transaction->property->title }} · {{ $transaction->origin->label() }} · {{ $transaction->stage->label() }}</p>
+    <p class="mt-3 text-sm text-stone-600">{{ $transaction->property->title }} · {{ $transaction->dealKind()->label() }} · {{ $transaction->origin->label() }} · {{ $transaction->stage->label() }}</p>
     <p class="mt-1 text-sm">{{ $transaction->buyer?->name ?? 'Buyer not linked' }} · {{ $transaction->agent?->name ?? 'Unassigned' }}</p>
     @if (! empty($reassessmentMessage))
         <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{{ $reassessmentMessage }}</p>
@@ -54,8 +54,16 @@
                 @endif
             </article>
             <article class="rounded-2xl border border-sand-200 bg-white p-5">
-                <h2 class="font-semibold text-lamu-900">Price</h2>
-                <p class="mt-2 text-sm">{{ $transaction->agreed_price ? 'KSh '.number_format($transaction->agreed_price) : 'No agreed price' }}</p>
+                <h2 class="font-semibold text-lamu-900">{{ $transaction->isLeaseDeal() ? 'Rent' : 'Price' }}</h2>
+                @if ($transaction->isLeaseDeal())
+                    <p class="mt-2 text-sm">{{ $transaction->agreed_rent ? 'KSh '.number_format($transaction->agreed_rent).' '.$transaction->rent_frequency?->label() : 'No agreed rent' }}</p>
+                    <p class="mt-1 text-sm text-stone-600">{{ $transaction->lease_starts_on?->toFormattedDateString() ?? 'Commencement not set' }} to {{ $transaction->lease_ends_on?->toFormattedDateString() ?? 'open end' }}</p>
+                    @if ($transaction->lease_premium)
+                        <p class="mt-1 text-sm text-stone-600">Premium KSh {{ number_format($transaction->lease_premium) }}</p>
+                    @endif
+                @else
+                    <p class="mt-2 text-sm">{{ $transaction->agreed_price ? 'KSh '.number_format($transaction->agreed_price) : 'No agreed price' }}</p>
+                @endif
                 <p class="mt-1 text-sm text-stone-600">{{ $transaction->acreage ? $transaction->acreage.' acres' : 'Acreage not stated' }}</p>
             </article>
             @if ($transaction->enquiry?->purchase_request)
@@ -96,6 +104,18 @@
                 </label>
                 <input name="reason" placeholder="Reason, required for an outcome" class="rounded-lg border border-sand-200 px-3 py-2">
                 <input name="agreed_price" placeholder="Agreed price" class="rounded-lg border border-sand-200 px-3 py-2">
+                @if ($transaction->isLeaseDeal())
+                    <input type="date" name="lease_starts_on" value="{{ old('lease_starts_on', $transaction->lease_starts_on?->toDateString()) }}" class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Lease starts on">
+                    <input type="date" name="lease_ends_on" value="{{ old('lease_ends_on', $transaction->lease_ends_on?->toDateString()) }}" class="rounded-lg border border-sand-200 px-3 py-2" aria-label="Lease ends on">
+                    <select name="rent_frequency" class="rounded-lg border border-sand-200 bg-white px-3 py-2">
+                        <option value="">Rent frequency</option>
+                        @foreach (\App\Enums\RentFrequency::cases() as $frequency)
+                            <option value="{{ $frequency->value }}" @selected(old('rent_frequency', $transaction->rent_frequency?->value) === $frequency->value)>{{ $frequency->label() }}</option>
+                        @endforeach
+                    </select>
+                    <input name="agreed_rent" value="{{ old('agreed_rent', $transaction->agreed_rent) }}" placeholder="Agreed rent" class="rounded-lg border border-sand-200 px-3 py-2">
+                    <input name="lease_premium" value="{{ old('lease_premium', $transaction->lease_premium) }}" placeholder="Lease premium (optional)" class="rounded-lg border border-sand-200 px-3 py-2">
+                @endif
                 <input name="acreage" placeholder="Agreed acreage" class="rounded-lg border border-sand-200 px-3 py-2">
                 <label class="text-sm font-medium text-stone-700">Agent
                     <select name="assigned_to" class="mt-1 w-full rounded-lg border border-sand-200 bg-white px-3 py-2">
@@ -279,7 +299,8 @@
         </ol>
 
         <h2 class="mt-8 font-semibold text-lamu-900">Closing evidence</h2>
-        @foreach (\App\Services\Sales\ClosingDesk::EVIDENCE as $code => $label)
+        @php $closingEvidence = app(\App\Services\Sales\ClosingDesk::class)->evidenceCatalog($transaction); @endphp
+        @foreach ($closingEvidence as $code => $label)
             @php $current = $transaction->evidence->firstWhere('code', $code); @endphp
             <form method="POST" action="{{ route('staff.sales.evidence', $transaction) }}" data-turbo-frame="_top" data-confirm="Update this closing document?" class="mt-3 flex flex-wrap items-center gap-2 text-sm">
                 @csrf
@@ -295,10 +316,16 @@
             </form>
         @endforeach
 
-        <h2 class="mt-8 font-semibold text-lamu-900">Complete transaction</h2>
+        <h2 class="mt-8 font-semibold text-lamu-900">{{ $transaction->isLeaseDeal() ? 'Confirm lease commercially' : 'Complete transaction' }}</h2>
         @if ($transaction->stage === \App\Enums\SalesStage::CompletionPending)
-            <p class="mt-2 max-w-2xl text-sm text-stone-600">Completion is restricted to the sales desk, and only while the deal is in the completion queue. Confirming it updates inventory.</p>
-            <form method="POST" action="{{ route('staff.sales.complete', $transaction) }}" data-turbo-frame="_top" data-confirm="Complete {{ $transaction->reference }} and update inventory? Resulting state: Completed." class="mt-4">
+            <p class="mt-2 max-w-2xl text-sm text-stone-600">
+                @if ($transaction->isLeaseDeal())
+                    Lease confirmation records inventory and earns accepted commercial agreements. It does not register the lease legally.
+                @else
+                    Completion is restricted to the sales desk, and only while the deal is in the completion queue. Confirming it updates inventory.
+                @endif
+            </p>
+            <form method="POST" action="{{ route($transaction->isLeaseDeal() ? 'staff.sales.lease.confirm' : 'staff.sales.complete', $transaction) }}" data-turbo-frame="_top" data-confirm="{{ $transaction->isLeaseDeal() ? 'Confirm this lease commercially?' : 'Complete '.$transaction->reference.' and update inventory?' }}" class="mt-4">
                 @csrf
                 <input type="hidden" name="lock_version" value="{{ $transaction->lock_version }}">
                 <button class="rounded-full bg-lamu-900 px-5 py-3 text-sm font-medium text-white">Confirm completion</button>

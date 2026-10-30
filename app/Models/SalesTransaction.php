@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\DealKind;
+use App\Enums\RentFrequency;
 use App\Enums\SalesOrigin;
 use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'reference',
+    'deal_kind',
     'property_id',
     'buyer_id',
     'origin',
@@ -25,8 +28,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'stage',
     'outcome',
     'agreed_price',
+    'agreed_rent',
+    'lease_premium',
     'acreage',
     'currency',
+    'lease_starts_on',
+    'lease_ends_on',
+    'rent_frequency',
+    'property_transaction_id',
     'lock_version',
     'opened_at',
     'completed_at',
@@ -37,11 +46,17 @@ class SalesTransaction extends Model
     protected function casts(): array
     {
         return [
+            'deal_kind' => DealKind::class,
             'origin' => SalesOrigin::class,
             'stage' => SalesStage::class,
             'outcome' => SalesOutcome::class,
             'agreed_price' => 'integer',
+            'agreed_rent' => 'integer',
+            'lease_premium' => 'integer',
             'acreage' => 'decimal:4',
+            'rent_frequency' => RentFrequency::class,
+            'lease_starts_on' => 'date',
+            'lease_ends_on' => 'date',
             'lock_version' => 'integer',
             'opened_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -127,6 +142,21 @@ class SalesTransaction extends Model
     public function audits(): HasMany
     {
         return $this->hasMany(SalesAudit::class)->latest();
+    }
+
+    public function propertyTransaction(): BelongsTo
+    {
+        return $this->belongsTo(PropertyTransaction::class, 'property_transaction_id');
+    }
+
+    public function dealKind(): DealKind
+    {
+        return $this->deal_kind ?? DealKind::Sale;
+    }
+
+    public function isLeaseDeal(): bool
+    {
+        return $this->dealKind() === DealKind::Lease;
     }
 
     public function isOpen(): bool

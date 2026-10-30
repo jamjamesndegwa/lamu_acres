@@ -32,6 +32,15 @@ class ClosingDesk
         'possession' => 'Possession note',
     ];
 
+    /**
+     * @var array<string, string>
+     */
+    public const LEASE_EVIDENCE = [
+        'lessor_authority' => 'Lessor authority to lease',
+        'lease_confirmation' => 'Executed lease confirmation',
+        'broker_mandate' => 'Broker introduction or mandate',
+    ];
+
     public function __construct(
         private SalesPipeline $pipeline,
         private CommissionDesk $commissions,
@@ -39,9 +48,38 @@ class ClosingDesk
         private PropertyInventory $inventory,
     ) {}
 
+    public function evidence(SalesTransaction $transaction, User $actor, string $code, ClosingEvidenceState $state, ?string $note): void
+    {
+        $catalog = $this->evidenceCatalog($transaction);
+        if (! array_key_exists($code, $catalog)) {
+            throw ValidationException::withMessages(['code' => 'Choose a required closing document.']);
+        }
+
+        $this->seedEvidence($transaction);
+        $item = $transaction->evidence()->where('code', $code)->firstOrFail();
+        $item->state = $state;
+        $item->note = $note ?: $item->note;
+        $item->reviewed_by = $actor->id;
+        $item->save();
+
+        app(SalesFinanceNotifier::class)->closingEvidenceUpdated(
+            $transaction,
+            $catalog[$code] ?? $code,
+            $state,
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function evidenceCatalog(SalesTransaction $transaction): array
+    {
+        return $transaction->isLeaseDeal() ? self::LEASE_EVIDENCE : self::EVIDENCE;
+    }
+
     public function seedEvidence(SalesTransaction $transaction): void
     {
-        foreach (self::EVIDENCE as $code => $label) {
+        foreach ($this->evidenceCatalog($transaction) as $code => $label) {
             $transaction->evidence()->firstOrCreate(
                 ['code' => $code],
                 ['state' => ClosingEvidenceState::Missing, 'note' => $label],
@@ -69,26 +107,6 @@ class ClosingDesk
         ]);
         $this->pipeline->audit($transaction, $actor, 'closing_'.$decision, ['reason' => $reason]);
         app(SalesFinanceNotifier::class)->closingReview($transaction, $decision);
-    }
-
-    public function evidence(SalesTransaction $transaction, User $actor, string $code, ClosingEvidenceState $state, ?string $note): void
-    {
-        if (! array_key_exists($code, self::EVIDENCE)) {
-            throw ValidationException::withMessages(['code' => 'Choose a required closing document.']);
-        }
-
-        $this->seedEvidence($transaction);
-        $item = $transaction->evidence()->where('code', $code)->firstOrFail();
-        $item->state = $state;
-        $item->note = $note ?: $item->note;
-        $item->reviewed_by = $actor->id;
-        $item->save();
-
-        app(SalesFinanceNotifier::class)->closingEvidenceUpdated(
-            $transaction,
-            self::EVIDENCE[$code] ?? $code,
-            $state,
-        );
     }
 
     public function complete(SalesTransaction $transaction, User $actor, int $version): SalesTransaction
@@ -133,6 +151,12 @@ class ClosingDesk
                 ]);
             }
 
+            if ($locked->isLeaseDeal()) {
+                throw ValidationException::withMessages([
+                    'stage' => 'Use lease confirmation for this deal file instead of sale completion.',
+                ]);
+            }
+
             app(SalesReassessment::class)->blockIfStale($locked);
 
             $property = $locked->property()->lockForUpdate()->firstOrFail();
@@ -154,6 +178,86 @@ class ClosingDesk
             $this->earnCommissions($locked, $actor);
             $this->earnAgencyFees($locked, $actor);
             $this->announce($locked, MessageEvent::ClosingCompleted, 'The sale is completed.', 'sale:'.$locked->id);
+
+            return $locked->refresh();
+        });
+    }
+
+    public function confirmLease(SalesTransaction $transaction, User $actor, int $version): SalesTransaction
+    {
+        return DB::transaction(function () use ($transaction, $actor, $version): SalesTransaction {
+            $locked = SalesTransaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+
+            if ((int) $locked->lock_version !== $version) {
+                throw ValidationException::withMessages([
+                    'lock_version' => 'This transaction was updated by someone else. Reload it and try again.',
+                ]);
+            }
+
+            if (! $locked->isLeaseDeal()) {
+                throw ValidationException::withMessages(['deal_kind' => 'Only a lease deal file can be confirmed this way.']);
+            }
+
+            if ($locked->stage === SalesStage::Completed) {
+                throw ValidationException::withMessages(['stage' => 'This lease deal is already confirmed.']);
+            }
+
+            if ($locked->stage !== SalesStage::CompletionPending || $locked->outcome !== null) {
+                throw ValidationException::withMessages([
+                    'stage' => 'Lease confirmation is only available from completion pending.',
+                ]);
+            }
+
+            if ($locked->property_transaction_id !== null) {
+                throw ValidationException::withMessages(['lease' => 'This lease deal has already been confirmed on inventory.']);
+            }
+
+            $authorized = $locked->closingReviews()->where('decision', 'authorized')->exists();
+            if (! $authorized) {
+                throw ValidationException::withMessages(['closing' => 'An authorized closing review is required.']);
+            }
+
+            $this->seedEvidence($locked);
+            $catalog = $this->evidenceCatalog($locked);
+            $missing = $locked->evidence()
+                ->whereIn('code', array_keys($catalog))
+                ->where('state', '!=', ClosingEvidenceState::Accepted->value)
+                ->count();
+            if ($missing > 0) {
+                throw ValidationException::withMessages(['evidence' => 'Every required lease confirmation document must be accepted.']);
+            }
+
+            if ($locked->agreed_rent === null || $locked->rent_frequency === null || $locked->lease_starts_on === null || $locked->acreage === null) {
+                throw ValidationException::withMessages(['agreed_rent' => 'Record lease rent, frequency, commencement, and leased area before confirmation.']);
+            }
+
+            if (! $locked->property->isLease()) {
+                throw ValidationException::withMessages(['property' => 'The linked property is not a lease listing.']);
+            }
+
+            $this->inventory->recordLease($actor, $locked->property, [
+                'starts_on' => $locked->lease_starts_on->toDateString(),
+                'ends_on' => $locked->lease_ends_on?->toDateString(),
+                'acreage' => (float) $locked->acreage,
+                'amount' => (int) $locked->agreed_rent,
+                'terms' => $locked->documents()->latest()->value('note'),
+                'statement' => 'Lease confirmed through deal '.$locked->reference.'. Legal registration remains with the legal team.',
+            ], $locked);
+
+            $locked->stage = SalesStage::Completed;
+            $locked->completed_at = now();
+            $locked->lock_version = $version + 1;
+            $locked->save();
+
+            $this->pipeline->timeline($locked, $actor, 'Lease commercially confirmed.', true);
+            $this->pipeline->audit($locked, $actor, 'lease_confirmed', [
+                'agreed_rent' => $locked->agreed_rent,
+                'acreage' => (string) $locked->acreage,
+            ]);
+
+            $this->earnCommissions($locked, $actor);
+            $this->earnAgencyFees($locked, $actor);
+            $this->announce($locked, MessageEvent::ClosingCompleted, 'The lease is commercially confirmed.', 'lease:'.$locked->id);
 
             return $locked->refresh();
         });
@@ -289,19 +393,21 @@ class ClosingDesk
                 continue;
             }
 
-            $amount = $this->commissions->eligibleAmount($agreement, $transaction);
-            if ($amount === null || $amount < 0) {
+            $earning = $this->commissions->qualifyForEarning($agreement, $transaction);
+            if ($earning === null) {
                 continue;
             }
 
             $agreement->status = CommissionStatus::Earned;
-            $agreement->earned_amount = $amount;
+            $agreement->earned_amount = $earning['amount'];
+            $agreement->calculation_snapshot = $earning['snapshot'];
             $agreement->paid_amount = 0;
             $agreement->save();
             $this->pipeline->audit($transaction, $actor, 'commission_earned', [
                 'agreement_id' => $agreement->id,
-                'amount' => $amount,
+                'amount' => $earning['amount'],
                 'agreed_price' => $transaction->agreed_price,
+                'calculation_basis' => $earning['snapshot']['calculation_basis'] ?? null,
             ], $agreement->id);
             app(SalesFinanceNotifier::class)->commissionEarned($agreement);
         }
@@ -319,20 +425,21 @@ class ClosingDesk
                 continue;
             }
 
-            $amount = $this->agencyFees->eligibleAmount($agreement, $transaction);
+            $earning = $this->agencyFees->qualifyForEarning($agreement, $transaction);
 
-            if ($amount === null || $amount < 0) {
+            if ($earning === null) {
                 continue;
             }
 
             $agreement->status = CommissionStatus::Earned;
-            $agreement->earned_amount = $amount;
+            $agreement->earned_amount = $earning['amount'];
+            $agreement->calculation_snapshot = $earning['snapshot'];
             $agreement->collected_amount = 0;
             $agreement->save();
 
             $this->pipeline->audit($transaction, $actor, 'agency_fee_earned', [
                 'agreement_id' => $agreement->id,
-                'amount' => $amount,
+                'amount' => $earning['amount'],
                 'agreed_price' => $transaction->agreed_price,
             ]);
             app(SalesFinanceNotifier::class)->agencyFeePayable($agreement);

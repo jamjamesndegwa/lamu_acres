@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionFunding;
 use App\Enums\CommissionStatus;
 use App\Enums\QualifyingEvent;
@@ -19,7 +20,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'property_id',
     'rate_percent',
     'fixed_amount',
+    'calculation_basis',
+    'monthly_rent_multiplier',
     'earned_amount',
+    'calculation_snapshot',
     'paid_amount',
     'funding_party',
     'protection_starts_at',
@@ -42,7 +46,10 @@ class CommissionAgreement extends Model
         return [
             'rate_percent' => 'decimal:2',
             'fixed_amount' => 'integer',
+            'calculation_basis' => CommissionCalculationBasis::class,
+            'monthly_rent_multiplier' => 'decimal:2',
             'earned_amount' => 'integer',
+            'calculation_snapshot' => 'array',
             'paid_amount' => 'integer',
             'funding_party' => CommissionFunding::class,
             'protection_starts_at' => 'datetime',

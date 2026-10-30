@@ -135,12 +135,32 @@ class PropertyInventory
      *
      * @param  array{starts_on: string, ends_on?: string|null, acreage: float|string, amount: int|string, terms?: string|null, statement?: string|null}  $data
      */
-    public function recordLease(User $actor, Property $property, array $data): PropertyTransaction
+    public function recordLease(User $actor, Property $property, array $data, ?SalesTransaction $salesTransaction = null): PropertyTransaction
     {
         if (! $property->isLease()) {
             throw ValidationException::withMessages([
                 'lease' => 'Only a lease listing can have a lease recorded. Sales close through the sales desk.',
             ]);
+        }
+
+        if ($salesTransaction !== null) {
+            if (! $salesTransaction->isLeaseDeal()) {
+                throw ValidationException::withMessages([
+                    'lease' => 'This sales file is not a lease deal.',
+                ]);
+            }
+
+            if ($salesTransaction->property_id !== $property->id) {
+                throw ValidationException::withMessages([
+                    'lease' => 'The lease deal belongs to a different property.',
+                ]);
+            }
+
+            if ($salesTransaction->property_transaction_id !== null) {
+                throw ValidationException::withMessages([
+                    'lease' => 'This lease deal has already been confirmed on inventory.',
+                ]);
+            }
         }
 
         if (! in_array(PropertyStatus::Leased, $property->allowedTransitions(), true)) {
@@ -157,7 +177,9 @@ class PropertyInventory
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $property, $data, $acreage): PropertyTransaction {
+        $this->assertLeaseAcreageAvailable($property, $acreage);
+
+        return DB::transaction(function () use ($actor, $property, $data, $acreage, $salesTransaction): PropertyTransaction {
             $lease = $property->transactions()->create([
                 'reference' => 'TX-'.strtoupper(Str::random(8)),
                 'kind' => ListingPurpose::Lease,
@@ -170,12 +192,35 @@ class PropertyInventory
                 'statement' => $data['statement'] ?? 'Lease confirmed by staff.',
                 'confirmed_by' => $actor->id,
                 'confirmed_at' => now(),
+                'sales_transaction_id' => $salesTransaction?->id,
             ]);
+
+            if ($salesTransaction !== null) {
+                $salesTransaction->property_transaction_id = $lease->id;
+                $salesTransaction->save();
+            }
 
             $this->transition($actor, $property, PropertyStatus::Leased);
 
             return $lease;
         });
+    }
+
+    public function assertLeaseAcreageAvailable(Property $property, float $acreage): void
+    {
+        $leased = round((float) $property->transactions()
+            ->where('kind', ListingPurpose::Lease)
+            ->whereNull('ended_at')
+            ->sum('acreage'), 4);
+
+        $offered = round($property->offeredAcreage(), 4);
+        $requested = round($acreage, 4);
+
+        if ($leased + $requested > $offered + 0.0001) {
+            throw ValidationException::withMessages([
+                'acreage' => 'Active leases already cover part of this listing. The new lease would exceed the acreage offered.',
+            ]);
+        }
     }
 
     /**

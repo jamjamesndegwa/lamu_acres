@@ -2,12 +2,14 @@
 
 namespace App\Services\Sales;
 
+use App\Enums\CommissionCalculationBasis;
 use App\Enums\CommissionStatus;
 use App\Enums\FeeCalculationBasis;
 use App\Enums\PaymentReconciliation;
 use App\Enums\QualifyingEvent;
 use App\Enums\SalesStage;
 use App\Models\AgencyFeeAgreement;
+use App\Models\AgencyFeePolicy;
 use App\Models\AgencyFeeReceipt;
 use App\Models\SalesTransaction;
 use App\Models\User;
@@ -18,7 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 class AgencyFeeDesk
 {
-    public function __construct(private SalesPipeline $pipeline) {}
+    public function __construct(
+        private SalesPipeline $pipeline,
+        private LeaseCommercialTerms $leaseTerms,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -26,22 +31,26 @@ class AgencyFeeDesk
     public function propose(SalesTransaction $transaction, User $actor, array $data): AgencyFeeAgreement
     {
         $this->guardOpenClaim($transaction);
+        $this->guardCommercialPropose($transaction);
+        $data = $this->mergeProposalDefaults($transaction, $data);
 
-        if (blank($data['rate_percent'] ?? null) && blank($data['fixed_amount'] ?? null)) {
-            throw ValidationException::withMessages([
-                'rate_percent' => 'Agree a percentage or a fixed agency fee.',
-            ]);
-        }
+        $basis = $this->resolveProposalBasis($transaction, $data);
+        $this->validateProposalInputs($transaction, $basis, $data);
+
+        $qualifyingEvent = $transaction->isLeaseDeal()
+            ? QualifyingEvent::LeaseConfirmed
+            : QualifyingEvent::SaleCompleted;
 
         $agreement = $transaction->agencyFeeAgreements()->create([
             'reference' => $this->reference(),
             'property_id' => $transaction->property_id,
             'seller_id' => $data['seller_id'],
             'fee_payer' => $data['fee_payer'],
-            'calculation_basis' => FeeCalculationBasis::AgreedSalePrice,
+            'calculation_basis' => $basis,
             'rate_percent' => $data['rate_percent'] ?? null,
+            'monthly_rent_multiplier' => $data['monthly_rent_multiplier'] ?? null,
             'fixed_amount' => $data['fixed_amount'] ?? null,
-            'qualifying_event' => QualifyingEvent::SaleCompleted,
+            'qualifying_event' => $qualifyingEvent,
             'effective_from' => $data['effective_from'] ?? now(),
             'effective_until' => $data['effective_until'] ?? null,
             'terms' => $data['terms'] ?? null,
@@ -55,6 +64,7 @@ class AgencyFeeDesk
         $this->pipeline->audit($transaction, $actor, 'agency_fee_proposed', [
             'agreement_id' => $agreement->id,
             'status' => CommissionStatus::Proposed->value,
+            'calculation_basis' => $basis->value,
         ]);
 
         return $agreement;
@@ -94,9 +104,13 @@ class AgencyFeeDesk
             $locked->status = CommissionStatus::Superseded;
             $locked->save();
 
-            $next = $locked->replicate(['accepted_at', 'accepted_by', 'earned_amount', 'collected_amount', 'dispute_reason']);
+            $next = $locked->replicate(['accepted_at', 'accepted_by', 'earned_amount', 'collected_amount', 'calculation_snapshot', 'dispute_reason']);
             $next->reference = $locked->reference;
+            $next->calculation_basis = isset($data['calculation_basis'])
+                ? FeeCalculationBasis::from((string) $data['calculation_basis'])
+                : $locked->calculation_basis;
             $next->rate_percent = $data['rate_percent'] ?? $locked->rate_percent;
+            $next->monthly_rent_multiplier = $data['monthly_rent_multiplier'] ?? $locked->monthly_rent_multiplier;
             $next->fixed_amount = $data['fixed_amount'] ?? $locked->fixed_amount;
             $next->fee_payer = $data['fee_payer'] ?? $locked->fee_payer;
             $next->terms = $data['terms'] ?? $locked->terms;
@@ -119,6 +133,16 @@ class AgencyFeeDesk
 
     public function eligibleAmount(AgencyFeeAgreement $agreement, SalesTransaction $transaction): ?int
     {
+        $earning = $this->qualifyForEarning($agreement, $transaction);
+
+        return $earning['amount'] ?? null;
+    }
+
+    /**
+     * @return array{amount: int, snapshot: array<string, mixed>}|null
+     */
+    public function qualifyForEarning(AgencyFeeAgreement $agreement, SalesTransaction $transaction): ?array
+    {
         if ($agreement->status !== CommissionStatus::Accepted) {
             return null;
         }
@@ -127,7 +151,15 @@ class AgencyFeeDesk
             return null;
         }
 
-        if ($agreement->qualifying_event !== QualifyingEvent::SaleCompleted) {
+        if ($transaction->outcome !== null && $transaction->outcome->terminal()) {
+            return null;
+        }
+
+        $expectedEvent = $transaction->isLeaseDeal()
+            ? QualifyingEvent::LeaseConfirmed
+            : QualifyingEvent::SaleCompleted;
+
+        if ($agreement->qualifying_event !== $expectedEvent) {
             return null;
         }
 
@@ -139,19 +171,144 @@ class AgencyFeeDesk
             return null;
         }
 
-        if ($transaction->agreed_price === null) {
+        $basis = $this->resolveAgreementBasis($agreement);
+        $amount = $this->leaseTerms->calculateAmount(
+            CommissionCalculationBasis::from($basis->value),
+            $transaction,
+            $agreement->rate_percent !== null ? (float) $agreement->rate_percent : null,
+            $agreement->fixed_amount !== null ? (int) $agreement->fixed_amount : null,
+            $agreement->monthly_rent_multiplier !== null ? (float) $agreement->monthly_rent_multiplier : null,
+        );
+
+        if ($amount === null || $amount < 0) {
             return null;
         }
 
-        if ($agreement->fixed_amount !== null) {
-            return (int) $agreement->fixed_amount;
+        return [
+            'amount' => $amount,
+            'snapshot' => [
+                'calculation_basis' => $basis->value,
+                'rate_percent' => $agreement->rate_percent,
+                'monthly_rent_multiplier' => $agreement->monthly_rent_multiplier,
+                'fixed_amount' => $agreement->fixed_amount,
+                'inputs' => $this->leaseTerms->calculationInputs($transaction),
+                'agreed_price' => $transaction->agreed_price,
+                'qualifying_event' => $expectedEvent->value,
+            ],
+        ];
+    }
+
+    private function guardCommercialPropose(SalesTransaction $transaction): void
+    {
+        if ($transaction->stage === SalesStage::Completed) {
+            throw ValidationException::withMessages(['stage' => 'Commercial agreements cannot be proposed on a completed deal.']);
         }
 
-        if ($agreement->rate_percent !== null) {
-            return (int) round(((int) $transaction->agreed_price) * ((float) $agreement->rate_percent) / 100);
+        if ($transaction->outcome !== null && $transaction->outcome->terminal()) {
+            throw ValidationException::withMessages(['outcome' => 'This deal is closed and cannot accept new agency-fee terms.']);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveProposalBasis(SalesTransaction $transaction, array $data): FeeCalculationBasis
+    {
+        if (filled($data['calculation_basis'] ?? null)) {
+            $basis = FeeCalculationBasis::from((string) $data['calculation_basis']);
+        } elseif (filled($data['fixed_amount'] ?? null)) {
+            $basis = FeeCalculationBasis::Fixed;
+        } elseif ($transaction->isLeaseDeal()) {
+            throw ValidationException::withMessages([
+                'calculation_basis' => 'Choose how the lease agency fee is calculated.',
+            ]);
+        } else {
+            $basis = FeeCalculationBasis::AgreedSalePrice;
         }
 
-        return null;
+        if ($transaction->isLeaseDeal() && $basis === FeeCalculationBasis::AgreedSalePrice) {
+            throw ValidationException::withMessages([
+                'calculation_basis' => 'Sale-price agency fees cannot be used on a lease deal.',
+            ]);
+        }
+
+        if (! $transaction->isLeaseDeal() && $basis !== FeeCalculationBasis::AgreedSalePrice && $basis !== FeeCalculationBasis::Fixed) {
+            throw ValidationException::withMessages([
+                'calculation_basis' => 'Lease agency fee bases cannot be used on an outright sale.',
+            ]);
+        }
+
+        return $basis;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function validateProposalInputs(SalesTransaction $transaction, FeeCalculationBasis $basis, array $data): void
+    {
+        if ($basis === FeeCalculationBasis::Fixed && blank($data['fixed_amount'] ?? null)) {
+            throw ValidationException::withMessages(['fixed_amount' => 'Record the fixed agency fee amount.']);
+        }
+
+        if (in_array($basis, [FeeCalculationBasis::AgreedSalePrice, FeeCalculationBasis::FirstYearRentPercent, FeeCalculationBasis::LeasePremiumPercent], true)
+            && blank($data['rate_percent'] ?? null)) {
+            throw ValidationException::withMessages(['rate_percent' => 'Agree a percentage rate.']);
+        }
+
+        if ($basis === FeeCalculationBasis::MonthlyRentMultiple && blank($data['monthly_rent_multiplier'] ?? null)) {
+            throw ValidationException::withMessages(['monthly_rent_multiplier' => 'Agree how many months of rent the agency fee equals.']);
+        }
+
+        if ($basis === FeeCalculationBasis::LeasePremiumPercent && blank($transaction->lease_premium)) {
+            throw ValidationException::withMessages(['lease_premium' => 'Record a lease premium on the deal before using a premium-based agency fee.']);
+        }
+
+        if ($transaction->isLeaseDeal() && in_array($basis, [FeeCalculationBasis::FirstYearRentPercent, FeeCalculationBasis::MonthlyRentMultiple], true)
+            && ($transaction->agreed_rent === null || $transaction->rent_frequency === null)) {
+            throw ValidationException::withMessages(['agreed_rent' => 'Record lease rent terms on the deal before proposing rent-based agency fees.']);
+        }
+
+        if (! $transaction->isLeaseDeal() && $basis === FeeCalculationBasis::AgreedSalePrice
+            && blank($data['rate_percent'] ?? null) && blank($data['fixed_amount'] ?? null)) {
+            throw ValidationException::withMessages(['rate_percent' => 'Agree a percentage or a fixed agency fee.']);
+        }
+    }
+
+    private function resolveAgreementBasis(AgencyFeeAgreement $agreement): FeeCalculationBasis
+    {
+        if ($agreement->calculation_basis instanceof FeeCalculationBasis) {
+            return $agreement->calculation_basis;
+        }
+
+        if ($agreement->calculation_basis !== null) {
+            return FeeCalculationBasis::from((string) $agreement->calculation_basis);
+        }
+
+        return FeeCalculationBasis::AgreedSalePrice;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function mergeProposalDefaults(SalesTransaction $transaction, array $data): array
+    {
+        $code = $transaction->isLeaseDeal() ? AgencyFeePolicy::LEASE_DEFAULT : AgencyFeePolicy::DEFAULT;
+        $policy = AgencyFeePolicy::query()->where('code', $code)->first();
+
+        if ($policy === null || ! $policy->apply_defaults) {
+            return $data;
+        }
+
+        $defaults = $policy->proposalDefaults();
+
+        foreach ($defaults as $key => $value) {
+            if (! array_key_exists($key, $data) || blank($data[$key])) {
+                $data[$key] = $value;
+            }
+        }
+
+        return $data;
     }
 
     public function initiateReceipt(

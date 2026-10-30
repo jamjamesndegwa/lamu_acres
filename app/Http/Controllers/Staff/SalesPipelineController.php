@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Enums\RentFrequency;
 use App\Enums\SalesOrigin;
 use App\Enums\SalesOutcome;
 use App\Enums\SalesStage;
 use App\Http\Controllers\Controller;
+use App\Models\AgencyFeePolicy;
 use App\Models\BrokerIntroduction;
 use App\Models\CommissionPolicy;
 use App\Models\Enquiry;
@@ -124,6 +126,26 @@ class SalesPipelineController extends Controller
             ->with('status', 'Transaction '.$transaction->reference.' opened.');
     }
 
+    public function storeLease(Request $request, SalesPipeline $pipeline): RedirectResponse
+    {
+        $this->authorizeDesk($request);
+        $data = $request->validate([
+            'origin' => ['required', Rule::enum(SalesOrigin::class)],
+            'property_id' => ['required', 'integer', Rule::exists('properties', 'id')],
+            'buyer_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'enquiry_id' => ['nullable', 'integer', Rule::exists('enquiries', 'id')],
+            'broker_introduction_id' => ['nullable', 'integer', Rule::exists('broker_introductions', 'id')],
+            'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'acreage' => ['nullable', 'numeric', 'gt:0'],
+        ]);
+
+        $transaction = $pipeline->openLease($request->user(), $data);
+
+        return redirect()
+            ->route('staff.sales.show', $transaction)
+            ->with('status', 'Lease deal '.$transaction->reference.' opened.');
+    }
+
     public function show(Request $request, SalesTransaction $salesTransaction): View
     {
         $this->authorizeDesk($request);
@@ -159,7 +181,11 @@ class SalesPipelineController extends Controller
                 ? User::role('broker')->orderBy('name')->get(['id', 'name'])
                 : collect(),
             'canProposeCommission' => $request->user()->hasPermission('commissions.propose'),
-            'commissionPolicy' => CommissionPolicy::standard(),
+            'commissionPolicy' => CommissionPolicy::forDeal($salesTransaction),
+            'agencyFeePolicy' => AgencyFeePolicy::query()->where(
+                'code',
+                $salesTransaction->isLeaseDeal() ? AgencyFeePolicy::LEASE_DEFAULT : AgencyFeePolicy::DEFAULT,
+            )->first(),
         ]);
     }
 
@@ -174,6 +200,11 @@ class SalesPipelineController extends Controller
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'agreed_price' => ['nullable', 'integer', 'min:0'],
             'acreage' => ['nullable', 'numeric', 'gt:0'],
+            'lease_starts_on' => ['nullable', 'date'],
+            'lease_ends_on' => ['nullable', 'date', 'after_or_equal:lease_starts_on'],
+            'rent_frequency' => ['nullable', Rule::enum(RentFrequency::class)],
+            'agreed_rent' => ['nullable', 'integer', 'min:0'],
+            'lease_premium' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $version = (int) $data['lock_version'];
@@ -190,6 +221,11 @@ class SalesPipelineController extends Controller
 
         if (filled($data['acreage'] ?? null)) {
             $salesTransaction = $pipeline->agreeAcreage($salesTransaction, (float) $data['acreage'], $request->user(), $version);
+            $version = $salesTransaction->lock_version;
+        }
+
+        if ($salesTransaction->isLeaseDeal() && filled($data['agreed_rent'] ?? null)) {
+            $salesTransaction = $pipeline->updateLeaseCommercialTerms($salesTransaction, $request->user(), $version, $data);
             $version = $salesTransaction->lock_version;
         }
 

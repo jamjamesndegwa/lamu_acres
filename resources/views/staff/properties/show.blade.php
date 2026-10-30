@@ -272,7 +272,7 @@
                     @if ($errors->hasAny(['lease', 'acreage', 'starts_on', 'ends_on', 'amount']))
                         <p class="text-sm text-red-700 sm:col-span-2" role="alert">{{ $errors->first() }}</p>
                     @endif
-                    <p class="text-sm text-stone-600 sm:col-span-2">Only record a lease once it has been executed and confirmed. Registration and legal completion remain with the legal team.</p>
+                    <p class="text-sm text-stone-600 sm:col-span-2">Only record a lease once it has been executed and confirmed. For broker commission and agency fees, open a lease deal in the sales pipeline and confirm it there. This form is a legacy inventory statement only.</p>
                     <button class="rounded-full bg-lamu-900 px-4 py-2 text-sm font-medium text-white sm:col-span-2 sm:justify-self-start">Record lease</button>
                 </form>
             @endif

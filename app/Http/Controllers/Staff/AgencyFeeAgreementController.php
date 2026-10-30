@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Enums\AgencyFeePayer;
+use App\Enums\FeeCalculationBasis;
 use App\Http\Controllers\Controller;
 use App\Models\AgencyFeeAgreement;
 use App\Models\SalesTransaction;
@@ -31,7 +32,9 @@ class AgencyFeeAgreementController extends Controller
             'seller_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'fee_payer' => ['required', Rule::enum(AgencyFeePayer::class)],
             'rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'monthly_rent_multiplier' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'fixed_amount' => ['nullable', 'integer', 'min:0'],
+            'calculation_basis' => ['nullable', Rule::enum(FeeCalculationBasis::class)],
             'terms' => ['nullable', 'string', 'max:5000'],
             'effective_until' => ['nullable', 'date', 'after:today'],
         ]);

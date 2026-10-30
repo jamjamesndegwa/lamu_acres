@@ -6,6 +6,7 @@ enum CommissionFunding: string
 {
     case Buyer = 'buyer';
     case Seller = 'seller';
+    case Lessor = 'lessor';
     case Brokerage = 'brokerage';
 
     public function label(): string
@@ -13,6 +14,7 @@ enum CommissionFunding: string
         return match ($this) {
             self::Buyer => 'Buyer',
             self::Seller => 'Seller',
+            self::Lessor => 'Lessor',
             self::Brokerage => 'Brokerage',
         };
     }

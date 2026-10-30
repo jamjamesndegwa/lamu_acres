@@ -3,15 +3,12 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Enums\ClosingEvidenceState;
-use App\Enums\PaymentReconciliation;
 use App\Http\Controllers\Controller;
-use App\Models\CommissionAgreement;
 use App\Models\SalesTransaction;
 use App\Services\Sales\ClosingDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 
 class ClosingController extends Controller
 {
@@ -31,7 +28,7 @@ class ClosingController extends Controller
     {
         abort_unless($request->user()->hasPermission('staff.sales'), 403);
         $data = $request->validate([
-            'code' => ['required', Rule::in(array_keys(ClosingDesk::EVIDENCE))],
+            'code' => ['required', Rule::in(array_keys($desk->evidenceCatalog($salesTransaction)))],
             'state' => ['required', Rule::enum(ClosingEvidenceState::class)],
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -47,5 +44,14 @@ class ClosingController extends Controller
         $desk->complete($salesTransaction, $request->user(), (int) $data['lock_version']);
 
         return back()->with('status', 'Sale completed. Inventory was updated with the transaction.');
+    }
+
+    public function confirmLease(Request $request, SalesTransaction $salesTransaction, ClosingDesk $desk): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('staff.sales'), 403);
+        $data = $request->validate(['lock_version' => ['required', 'integer']]);
+        $desk->confirmLease($salesTransaction, $request->user(), (int) $data['lock_version']);
+
+        return back()->with('status', 'Lease commercially confirmed. Inventory and commercial obligations were updated.');
     }
 }
